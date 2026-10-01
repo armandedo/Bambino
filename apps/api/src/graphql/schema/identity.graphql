@@ -1,0 +1,144 @@
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum ConsentType {
+  TERMS_OF_SERVICE
+  PRIVACY_POLICY
+  CHILD_DATA_PROCESSING
+  MARKETING
+}
+
+enum DataRequestType {
+  EXPORT
+  DELETION
+}
+
+enum DataRequestStatus {
+  REQUESTED
+  PROCESSING
+  COMPLETED
+  REJECTED
+}
+
+type User {
+  id: ID!
+  email: String
+  emailVerified: Boolean!
+  phone: String
+  firstName: String!
+  lastName: String!
+  preferredLocale: String!
+  "Role keys, e.g. CUSTOMER. Clients use these for navigation only; the server re-checks permissions."
+  roles: [String!]!
+  permissions: [String!]!
+  addresses: [Address!]!
+  createdAt: DateTime!
+}
+
+type Address {
+  id: ID!
+  label: String
+  recipientName: String!
+  phone: String!
+  countryCode: String!
+  region: String
+  district: String
+  sector: String
+  street: String
+  directions: String
+  isDefault: Boolean!
+}
+
+"""
+Web clients receive the refresh token as an httpOnly cookie and `refreshToken` is null.
+Mobile clients receive it here and keep it in the device's secure storage.
+"""
+type AuthPayload {
+  user: User!
+  "Null for web clients, which receive it as an httpOnly cookie."
+  accessToken: String
+  accessTokenExpiresAt: DateTime!
+  refreshToken: String
+}
+
+type DataRequest {
+  id: ID!
+  type: DataRequestType!
+  status: DataRequestStatus!
+  requestedAt: DateTime!
+  completedAt: DateTime
+}
+
+input ConsentInput {
+  type: ConsentType!
+  documentVersion: String!
+  granted: Boolean!
+}
+
+input RegisterInput {
+  email: String!
+  password: String!
+  firstName: String!
+  lastName: String!
+  phone: String
+  "Must include granted TERMS_OF_SERVICE, PRIVACY_POLICY and CHILD_DATA_PROCESSING."
+  consents: [ConsentInput!]!
+}
+
+input LoginInput {
+  email: String!
+  password: String!
+}
+
+input UpdateProfileInput {
+  firstName: String
+  lastName: String
+  phone: String
+  preferredLocale: String
+}
+
+input AddressInput {
+  label: String
+  recipientName: String!
+  phone: String!
+  countryCode: String!
+  region: String
+  district: String
+  sector: String
+  street: String
+  directions: String
+  isDefault: Boolean
+}
+
+extend type Query {
+  "Null when not signed in."
+  me: User
+  myDataRequests: [DataRequest!]! @authenticated
+}
+
+type Mutation {
+  register(input: RegisterInput!): AuthPayload!
+  login(input: LoginInput!): AuthPayload!
+  "Rotates the refresh token. `refreshToken` is omitted by web clients (cookie is used)."
+  refreshSession(refreshToken: String): AuthPayload!
+  logout(refreshToken: String): Boolean!
+  "Always returns true, whether or not the address is registered, so accounts cannot be enumerated."
+  requestPasswordReset(email: String!): Boolean!
+  resetPassword(token: String!, newPassword: String!): Boolean!
+  changePassword(currentPassword: String!, newPassword: String!): Boolean! @authenticated
+  requestEmailVerification: Boolean! @authenticated
+  verifyEmail(token: String!): Boolean!
+
+  updateProfile(input: UpdateProfileInput!): User! @authenticated
+  createAddress(input: AddressInput!): Address! @authenticated
+  updateAddress(id: ID!, input: AddressInput!): Address! @authenticated
+  deleteAddress(id: ID!): Boolean! @authenticated
+  recordConsent(input: ConsentInput!): Boolean! @authenticated
+
+  requestDataExport: DataRequest! @authenticated
+  "Requires the current password. Starts the deletion workflow; it does not delete immediately."
+  requestAccountDeletion(currentPassword: String!): DataRequest! @authenticated
+}

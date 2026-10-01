@@ -1,0 +1,87 @@
+enum ProductSort {
+  NEWEST
+  PRICE_ASC
+  PRICE_DESC
+  NAME_ASC
+}
+
+type Category {
+  id: ID!
+  slug: String!
+  name: String!
+  description: String
+  parent: Category
+  children: [Category!]!
+}
+
+type Product {
+  id: ID!
+  slug: String!
+  name: String!
+  description: String!
+  brand: String!
+  category: Category!
+  material: String
+  sustainabilityInfo: String
+  careInstructions: String
+  subscriptionEligible: Boolean!
+  oneTimeEligible: Boolean!
+  images: [ProductImage!]!
+  variants: [ProductVariant!]!
+  "Lowest active variant price, for listing pages."
+  priceFrom: Money
+  "Public queries only return active products; staff queries also return inactive ones."
+  isActive: Boolean!
+}
+
+type ProductImage {
+  id: ID!
+  url: String!
+  altText: String!
+}
+
+type ProductVariant {
+  id: ID!
+  sku: String!
+  size: Size!
+  color: String!
+  price: Money!
+  "Units that can be ordered now (on hand minus reserved). Exact counts are staff-only."
+  inStock: Boolean!
+  "Whether a tagged garment can be reserved now for a subscription cycle or an exchange (new or reused)."
+  availableForSubscription: Boolean!
+}
+
+type ProductEdge {
+  cursor: String!
+  node: Product!
+}
+
+type ProductConnection {
+  edges: [ProductEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+input ProductFilter {
+  search: String
+  categorySlug: String
+  sizeCodes: [ID!]
+  minPrice: MinorUnits
+  maxPrice: MinorUnits
+  inStockOnly: Boolean
+  subscriptionEligible: Boolean
+  oneTimeEligible: Boolean
+}
+
+extend type Query {
+  "Cursor-paginated. `first` is capped server-side."
+  products(
+    filter: ProductFilter
+    sort: ProductSort = NEWEST
+    first: Int = 24
+    after: String
+  ): ProductConnection!
+  product(slug: String!): Product
+  categories: [Category!]!
+}

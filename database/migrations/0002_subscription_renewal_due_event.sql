@@ -1,0 +1,1 @@
+ALTER TYPE "public"."subscription_event_type" ADD VALUE 'RENEWAL_DUE' BEFORE 'RENEWED';

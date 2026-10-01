@@ -1,0 +1,73 @@
+enum PaymentProvider {
+  MTN_MOMO
+  AIRTEL_MONEY
+  CARD
+  "Development and test only. Rejected by the server in production."
+  MOCK
+}
+
+enum PaymentStatus {
+  INITIATED
+  PENDING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+  EXPIRED
+  REFUNDED
+}
+
+type Payment {
+  id: ID!
+  orderId: ID
+  subscriptionId: ID
+  provider: PaymentProvider!
+  status: PaymentStatus!
+  amount: Money!
+  "Customer-safe, translated reason. Provider error text is never exposed."
+  failureMessage: String
+  initiatedAt: DateTime!
+  expiresAt: DateTime
+  completedAt: DateTime
+}
+
+type PaymentMethod {
+  id: ID!
+  provider: PaymentProvider!
+  "Wallet number with the middle digits hidden."
+  maskedMsisdn: String
+  label: String
+  isDefault: Boolean!
+}
+
+input InitiatePaymentInput {
+  "Client-generated UUID. Re-sending the same key returns the original payment; it never charges twice."
+  idempotencyKey: String!
+  orderId: ID!
+  provider: PaymentProvider!
+  "Mobile money wallet number in E.164. Omit to use `paymentMethodId`."
+  msisdn: String
+  paymentMethodId: ID
+}
+
+input PaymentMethodInput {
+  provider: PaymentProvider!
+  msisdn: String!
+  label: String
+  isDefault: Boolean
+}
+
+extend type Query {
+  "Clients poll this while a mobile money prompt is awaiting approval on the customer's phone."
+  payment(id: ID!): Payment @authenticated
+  myPaymentMethods: [PaymentMethod!]! @authenticated
+}
+
+extend type Mutation {
+  """
+  Asks the provider to collect the order's server-calculated total. There is no amount
+  argument. The result is PENDING; SUCCEEDED is only ever set from the provider's confirmation.
+  """
+  initiatePayment(input: InitiatePaymentInput!): Payment! @authenticated
+  addPaymentMethod(input: PaymentMethodInput!): PaymentMethod! @authenticated
+  removePaymentMethod(id: ID!): Boolean! @authenticated
+}

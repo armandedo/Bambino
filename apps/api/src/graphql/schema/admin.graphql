@@ -1,0 +1,463 @@
+# Staff operations. Every field here carries @requires; a test fails the build if one does not.
+
+# --- Shared admin types -------------------------------------------------------
+
+type AdminCustomer {
+  id: ID!
+  email: String
+  phone: String
+  firstName: String!
+  lastName: String!
+  status: UserStatus!
+  createdAt: DateTime!
+  babyProfiles: [BabyProfile!]!
+  subscriptions: [Subscription!]!
+  exchangeCreditBalance: Money!
+}
+
+type AdminCustomerPage {
+  items: [AdminCustomer!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type AdminOrder {
+  order: Order!
+  customer: AdminCustomer!
+}
+
+type AdminOrderPage {
+  items: [AdminOrder!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type AdminSubscriptionPage {
+  items: [AdminSubscription!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type AdminSubscription {
+  subscription: Subscription!
+  customer: AdminCustomer!
+  renewalAttempts: Int!
+}
+
+type AdminPayment {
+  payment: Payment!
+  customer: AdminCustomer!
+  providerReference: String
+  transactions: [PaymentTransaction!]!
+}
+
+type PaymentTransaction {
+  id: ID!
+  type: String!
+  resultingStatus: PaymentStatus!
+  amount: Money!
+  createdAt: DateTime!
+}
+
+type AdminPaymentPage {
+  items: [AdminPayment!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type InventoryItem {
+  id: ID!
+  variant: ProductVariant!
+  product: Product!
+  locationCode: String!
+  quantityOnHand: Int!
+  quantityReserved: Int!
+  quantityAvailable: Int!
+  reorderThreshold: Int!
+  belowThreshold: Boolean!
+}
+
+type InventoryPage {
+  items: [InventoryItem!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type Garment {
+  id: ID!
+  tagCode: String!
+  variant: ProductVariant!
+  product: Product!
+  status: GarmentStatus!
+  condition: GarmentCondition!
+  lifecycleCount: Int!
+  currentCustomer: AdminCustomer
+  procuredAt: DateTime!
+  lastInspectedAt: DateTime
+  "Statuses the lifecycle allows from the current one."
+  allowedNextStatuses: [GarmentStatus!]!
+  events: [GarmentLifecycleEvent!]!
+}
+
+type GarmentLifecycleEvent {
+  id: ID!
+  eventType: String!
+  previousStatus: GarmentStatus
+  newStatus: GarmentStatus!
+  previousCondition: GarmentCondition
+  newCondition: GarmentCondition!
+  actorName: String
+  occurredAt: DateTime!
+}
+
+type GarmentPage {
+  items: [Garment!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type AdminReturn {
+  returnRequest: ReturnRequest!
+  customer: AdminCustomer!
+}
+
+type AdminReturnPage {
+  items: [AdminReturn!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type AdminExchange {
+  exchange: Exchange!
+  customer: AdminCustomer!
+}
+
+type AdminExchangePage {
+  items: [AdminExchange!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type AdminDelivery {
+  delivery: Delivery!
+  orderNumber: String
+  returnNumber: String
+  recipientName: String!
+  phone: String!
+}
+
+type AdminDeliveryPage {
+  items: [AdminDelivery!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+  FREE_SHIPPING
+}
+
+enum PromotionScope {
+  ORDER
+  SUBSCRIPTION
+}
+
+type Promotion {
+  id: ID!
+  code: String
+  name: String!
+  scope: PromotionScope!
+  discountType: DiscountType!
+  percentBasisPoints: Int
+  fixedAmount: Money
+  minSubtotal: Money!
+  maxRedemptions: Int
+  maxRedemptionsPerUser: Int!
+  redemptionCount: Int!
+  startsAt: DateTime!
+  endsAt: DateTime
+  isActive: Boolean!
+}
+
+type Role {
+  id: ID!
+  key: String!
+  name: String!
+  isSystem: Boolean!
+  permissions: [String!]!
+}
+
+type StaffUser {
+  id: ID!
+  email: String
+  firstName: String!
+  lastName: String!
+  roles: [Role!]!
+}
+
+type AuditLogEntry {
+  id: ID!
+  actorId: ID
+  actorName: String
+  action: String!
+  entityType: String!
+  entityId: String!
+  "JSON-encoded snapshot."
+  previousValue: String
+  "JSON-encoded snapshot."
+  newValue: String
+  ipAddress: String
+  createdAt: DateTime!
+}
+
+type AuditLogPage {
+  items: [AuditLogEntry!]!
+  pageInfo: PageInfo!
+}
+
+"""
+Every number is computed from transactional data for the requested period.
+A ratio is null when there is not yet enough data to compute it honestly.
+"""
+type AdminMetrics {
+  periodStart: DateTime!
+  periodEnd: DateTime!
+  totalCustomers: Int!
+  newCustomers: Int!
+  activeSubscribers: Int!
+  monthlyRecurringRevenue: Money!
+  subscriptionRevenue: Money!
+  oneTimeRevenue: Money!
+  averageRevenuePerSubscriber: Money
+  paymentSuccessRate: Float
+  orders: Int!
+  pendingOrders: Int!
+  pendingReturns: Int!
+  openExchangeRequests: Int!
+  lowStockItems: Int!
+  garmentsInCirculation: Int!
+  garmentsReturned: Int!
+  garmentsRefurbished: Int!
+  garmentsReused: Int!
+  garmentsRecycled: Int!
+  averageGarmentLifecycleCount: Float
+  subscriptionChurnRate: Float
+  customerRetentionRate: Float
+  onTimeDeliveryRate: Float
+}
+
+"""
+Where to upload a file directly to object storage. The client sends the file with `method`
+to `uploadUrl`, including `headers`, before `expiresAt`; the API never receives the bytes.
+"""
+type MediaUpload {
+  mediaAssetId: ID!
+  uploadUrl: String!
+  method: String!
+  headers: [HttpHeader!]!
+  expiresAt: DateTime!
+}
+
+type HttpHeader {
+  name: String!
+  value: String!
+}
+
+# --- Inputs -------------------------------------------------------------------
+
+input PageInput {
+  first: Int = 25
+  after: String
+}
+
+input CategoryInput {
+  id: ID
+  parentId: ID
+  slug: String!
+  name: String!
+  description: String
+  sortOrder: Int
+  isActive: Boolean
+}
+
+input ProductInput {
+  slug: String!
+  name: String!
+  description: String!
+  brand: String!
+  categoryId: ID!
+  material: String
+  sustainabilityInfo: String
+  careInstructions: String
+  subscriptionEligible: Boolean!
+  oneTimeEligible: Boolean!
+  isActive: Boolean!
+}
+
+input VariantInput {
+  id: ID
+  productId: ID!
+  sku: String!
+  sizeCode: ID!
+  color: String!
+  priceAmount: MinorUnits!
+  isActive: Boolean
+}
+
+input InventoryAdjustmentInput {
+  variantId: ID!
+  locationCode: String!
+  "Signed change to stock on hand."
+  onHandDelta: Int!
+  note: String!
+}
+
+input SubscriptionPlanInput {
+  id: ID
+  code: String!
+  name: String!
+  description: String!
+  billingInterval: BillingInterval!
+  priceAmount: MinorUnits!
+  itemsPerCycle: Int!
+  allowedCategoryIds: [ID!]!
+  exchangesPerCycle: Int
+  isActive: Boolean!
+}
+
+input GarmentTransitionInput {
+  garmentId: ID!
+  status: GarmentStatus!
+  condition: GarmentCondition
+  note: String
+}
+
+input InspectionInput {
+  returnItemId: ID!
+  condition: GarmentCondition!
+  outcome: ReturnItemOutcome!
+  notes: String
+  "Where the garment goes next: AVAILABLE_FOR_REUSE, REFURBISHING, RESALE or RECYCLE."
+  garmentStatus: GarmentStatus!
+}
+
+input DeliveryUpdateInput {
+  deliveryId: ID!
+  status: DeliveryStatus!
+  trackingNumber: String
+  estimatedDeliveryDate: Date
+  note: String
+}
+
+input PromotionInput {
+  id: ID
+  code: String
+  name: String!
+  scope: PromotionScope!
+  discountType: DiscountType!
+  percentBasisPoints: Int
+  fixedAmount: MinorUnits
+  minSubtotalAmount: MinorUnits
+  maxRedemptions: Int
+  maxRedemptionsPerUser: Int
+  startsAt: DateTime!
+  endsAt: DateTime
+  isActive: Boolean!
+}
+
+# --- Operations ---------------------------------------------------------------
+
+extend type Query {
+  adminMetrics(periodStart: DateTime!, periodEnd: DateTime!): AdminMetrics!
+    @requires(permission: "report:read")
+
+  adminCustomers(search: String, page: PageInput): AdminCustomerPage! @requires(permission: "customer:read")
+  adminCustomer(id: ID!): AdminCustomer @requires(permission: "customer:read")
+  adminBabyProfiles(customerId: ID!): [BabyProfile!]! @requires(permission: "baby_profile:read")
+
+  "Includes inactive products, unlike the public `products` query."
+  adminProducts(filter: ProductFilter, page: PageInput): ProductConnection!
+    @requires(permission: "product:read")
+  "Includes inactive products."
+  adminProduct(id: ID!): Product @requires(permission: "product:read")
+  adminInventory(belowThresholdOnly: Boolean, page: PageInput): InventoryPage!
+    @requires(permission: "inventory:read")
+
+  adminGarments(status: GarmentStatus, variantId: ID, page: PageInput): GarmentPage!
+    @requires(permission: "garment:read")
+  adminGarment(id: ID, tagCode: String): Garment @requires(permission: "garment:read")
+
+  adminOrders(status: OrderStatus, search: String, page: PageInput): AdminOrderPage!
+    @requires(permission: "order:read")
+  adminOrder(id: ID!): AdminOrder @requires(permission: "order:read")
+  adminSubscriptions(status: SubscriptionStatus, page: PageInput): AdminSubscriptionPage!
+    @requires(permission: "subscription:read")
+  adminSubscriptionPlans: [SubscriptionPlan!]! @requires(permission: "subscription:read")
+  adminPayments(status: PaymentStatus, page: PageInput): AdminPaymentPage!
+    @requires(permission: "payment:read")
+  adminReturns(status: ReturnStatus, page: PageInput): AdminReturnPage! @requires(permission: "return:read")
+  adminReturn(id: ID!): AdminReturn @requires(permission: "return:read")
+  adminExchanges(status: ExchangeStatus, page: PageInput): AdminExchangePage!
+    @requires(permission: "exchange:read")
+  adminDeliveries(status: DeliveryStatus, page: PageInput): AdminDeliveryPage!
+    @requires(permission: "delivery:read")
+  adminPromotions: [Promotion!]! @requires(permission: "promotion:read")
+
+  adminRoles: [Role!]! @requires(permission: "user_role:read")
+  adminStaffUsers: [StaffUser!]! @requires(permission: "user_role:read")
+  adminAuditLogs(entityType: String, entityId: String, actorId: ID, page: PageInput): AuditLogPage!
+    @requires(permission: "audit_log:read")
+}
+
+extend type Mutation {
+  adminUpsertCategory(input: CategoryInput!): Category! @requires(permission: "product:write")
+  adminCreateProduct(input: ProductInput!): Product! @requires(permission: "product:write")
+  adminUpdateProduct(id: ID!, input: ProductInput!): Product! @requires(permission: "product:write")
+  "Price changes are written to the audit log."
+  adminUpsertVariant(input: VariantInput!): ProductVariant! @requires(permission: "product:write")
+  adminAdjustInventory(input: InventoryAdjustmentInput!): InventoryItem!
+    @requires(permission: "inventory:write")
+
+  "Step 1 of adding a product image: reserves a storage key and returns a signed upload URL. JPEG, PNG or WebP, at most 5 MB."
+  adminCreateProductImageUpload(productId: ID!, contentType: String!, byteSize: Int!): MediaUpload!
+    @requires(permission: "product:write")
+  "Step 2: after the upload succeeds, checks the stored file and attaches it to the product."
+  adminAddProductImage(productId: ID!, mediaAssetId: ID!, altText: String!, sortOrder: Int): Product!
+    @requires(permission: "product:write")
+  "Detaches an image from its product. The stored file is kept."
+  adminRemoveProductImage(imageId: ID!): Product! @requires(permission: "product:write")
+
+  "Creates `quantity` garments for a variant, each with a unique tag code, in PROCURED."
+  adminRegisterGarments(variantId: ID!, quantity: Int!): [Garment!]! @requires(permission: "garment:write")
+  adminTransitionGarment(input: GarmentTransitionInput!): Garment! @requires(permission: "garment:write")
+
+  adminUpdateOrderStatus(orderId: ID!, status: OrderStatus!, note: String): Order!
+    @requires(permission: "order:write")
+  adminUpdateDelivery(input: DeliveryUpdateInput!): Delivery! @requires(permission: "delivery:write")
+
+  adminUpsertSubscriptionPlan(input: SubscriptionPlanInput!): SubscriptionPlan!
+    @requires(permission: "plan:write")
+  adminCancelSubscription(id: ID!, reason: String!): Subscription! @requires(permission: "subscription:write")
+
+  "Asks the provider for the payment's true status and applies it. Never sets a status by hand."
+  adminReconcilePayment(id: ID!): Payment! @requires(permission: "payment:write")
+
+  adminApproveReturn(id: ID!): ReturnRequest! @requires(permission: "return:write")
+  adminRejectReturn(id: ID!, reason: String!): ReturnRequest! @requires(permission: "return:write")
+  adminMarkReturnReceived(id: ID!): ReturnRequest! @requires(permission: "return:write")
+  "Records the condition, decides the item, moves the garment on and, if accepted, issues exchange credit."
+  adminRecordInspection(input: InspectionInput!): ReturnRequest! @requires(permission: "return:write")
+  adminCompleteReturn(id: ID!): ReturnRequest! @requires(permission: "return:write")
+
+  adminApproveExchange(id: ID!): Exchange! @requires(permission: "exchange:write")
+  adminRejectExchange(id: ID!, reason: String!): Exchange! @requires(permission: "exchange:write")
+  "Signed manual correction to a customer's credit, recorded in the ledger and the audit log."
+  adminAdjustExchangeCredit(customerId: ID!, amount: MinorUnits!, note: String!): ExchangeCreditEntry!
+    @requires(permission: "exchange:write")
+
+  adminUpsertPromotion(input: PromotionInput!): Promotion! @requires(permission: "promotion:write")
+
+  adminAssignRole(userId: ID!, roleKey: String!): StaffUser! @requires(permission: "user_role:write")
+  adminRevokeRole(userId: ID!, roleKey: String!): StaffUser! @requires(permission: "user_role:write")
+}

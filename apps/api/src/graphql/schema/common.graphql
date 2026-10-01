@@ -1,0 +1,50 @@
+"ISO-8601 timestamp in UTC, e.g. 2026-09-30T08:15:00Z."
+scalar DateTime
+
+"Calendar date, YYYY-MM-DD."
+scalar Date
+
+"""
+Integer count of a currency's minor unit (RWF 10,500 = 10500). Serialised as a JSON
+integer; may exceed 32 bits, so it is not an Int.
+"""
+scalar MinorUnits
+
+"The caller must be signed in. Ownership of the requested data is checked in the service layer."
+directive @authenticated on FIELD_DEFINITION
+
+"The caller must hold this permission (see PERMISSIONS in @bambino/types)."
+directive @requires(permission: String!) on FIELD_DEFINITION
+
+type Money {
+  amount: MinorUnits!
+  "ISO 4217 code."
+  currency: String!
+}
+
+type PageInfo {
+  endCursor: String
+  hasNextPage: Boolean!
+}
+
+"Market settings the clients need to render prices, addresses and payment choices."
+type Market {
+  code: String!
+  name: String!
+  currency: String!
+  defaultLocale: String!
+  supportedLocales: [String!]!
+  timezone: String!
+  paymentProviders: [PaymentProvider!]!
+  addressFormat: [AddressField!]!
+}
+
+type AddressField {
+  key: String!
+  labelKey: String!
+  required: Boolean!
+}
+
+type Query {
+  market: Market!
+}

@@ -1,0 +1,34 @@
+type Notification {
+  id: ID!
+  "A NotificationType, e.g. ORDER_SHIPPED. Clients render the text from their translations."
+  type: String!
+  params: [NotificationParam!]!
+  read: Boolean!
+  createdAt: DateTime!
+}
+
+type NotificationParam {
+  name: String!
+  value: String!
+}
+
+type NotificationEdge {
+  cursor: String!
+  node: Notification!
+}
+
+type NotificationConnection {
+  edges: [NotificationEdge!]!
+  pageInfo: PageInfo!
+  unreadCount: Int!
+}
+
+extend type Query {
+  "In-app notifications only."
+  myNotifications(first: Int = 20, after: String): NotificationConnection! @authenticated
+}
+
+extend type Mutation {
+  markNotificationRead(id: ID!): Notification! @authenticated
+  markAllNotificationsRead: Int! @authenticated
+}

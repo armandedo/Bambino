@@ -1,0 +1,176 @@
+enum GarmentStatus {
+  PROCURED
+  AVAILABLE
+  RESERVED
+  WITH_CUSTOMER
+  RETURN_REQUESTED
+  RETURNED
+  INSPECTION
+  REFURBISHING
+  AVAILABLE_FOR_REUSE
+  RESALE
+  RECYCLE
+  RETIRED
+}
+
+enum GarmentCondition {
+  NEW
+  EXCELLENT
+  GOOD
+  FAIR
+  DAMAGED
+  RECYCLE
+}
+
+enum ReturnStatus {
+  REQUESTED
+  APPROVED
+  IN_TRANSIT
+  RECEIVED
+  INSPECTING
+  ACCEPTED
+  REJECTED
+  REFURBISHING
+  COMPLETED
+}
+
+enum ReturnReason {
+  OUTGROWN
+  WRONG_SIZE
+  DEFECTIVE
+  NOT_AS_EXPECTED
+  OTHER
+}
+
+enum ReturnItemOutcome {
+  ACCEPTED
+  REJECTED
+}
+
+enum ExchangeStatus {
+  REQUESTED
+  APPROVED
+  FULFILLING
+  COMPLETED
+  REJECTED
+  CANCELLED
+}
+
+enum ExchangeCreditEntryType {
+  EARNED
+  REDEEMED
+  EXPIRED
+  ADJUSTMENT
+}
+
+"A physical garment as its current holder sees it."
+type CustomerGarment {
+  id: ID!
+  tagCode: String!
+  product: Product!
+  size: Size!
+  color: String!
+  status: GarmentStatus!
+  receivedAt: DateTime
+}
+
+type ReturnRequest {
+  id: ID!
+  returnNumber: String!
+  status: ReturnStatus!
+  reason: ReturnReason!
+  customerNote: String
+  rejectionReason: String
+  items: [ReturnItem!]!
+  pickup: Delivery
+  createdAt: DateTime!
+  completedAt: DateTime
+}
+
+type ReturnItem {
+  id: ID!
+  garment: CustomerGarment!
+  reportedFit: FitOutcome
+  inspectedCondition: GarmentCondition
+  outcome: ReturnItemOutcome
+  creditEarned: Money
+}
+
+type Exchange {
+  id: ID!
+  exchangeNumber: String!
+  status: ExchangeStatus!
+  returnRequest: ReturnRequest
+  items: [ExchangeItem!]!
+  replacementOrder: Order
+  createdAt: DateTime!
+  completedAt: DateTime
+}
+
+type ExchangeItem {
+  id: ID!
+  returnItem: ReturnItem
+  requestedVariant: ProductVariant!
+  product: Product!
+}
+
+type ExchangeCreditEntry {
+  id: ID!
+  type: ExchangeCreditEntryType!
+  "Signed: positive adds credit, negative spends it."
+  amount: Money!
+  note: String
+  createdAt: DateTime!
+}
+
+type ExchangeCreditSummary {
+  balance: Money!
+  entries: [ExchangeCreditEntry!]!
+}
+
+input ReturnItemInput {
+  garmentId: ID!
+  reportedFit: FitOutcome
+}
+
+input RequestReturnInput {
+  items: [ReturnItemInput!]!
+  reason: ReturnReason!
+  customerNote: String
+  "Address to collect from. Omit when the customer will drop the garments off."
+  pickupAddressId: ID
+}
+
+input ExchangeItemInput {
+  "The returned garment this replaces, when the exchange follows a return."
+  returnItemId: ID
+  requestedVariantId: ID!
+}
+
+input CreateExchangeInput {
+  idempotencyKey: String!
+  returnRequestId: ID
+  items: [ExchangeItemInput!]!
+  shippingAddressId: ID!
+  deliveryOptionCode: ID!
+}
+
+extend type Query {
+  "Garments the caller currently holds and could return."
+  myGarments: [CustomerGarment!]! @authenticated
+  myReturns: [ReturnRequest!]! @authenticated
+  returnRequest(id: ID!): ReturnRequest @authenticated
+  myExchanges: [Exchange!]! @authenticated
+  myExchangeCredits: ExchangeCreditSummary! @authenticated
+}
+
+extend type Mutation {
+  requestReturn(input: RequestReturnInput!): ReturnRequest! @authenticated
+  "Creates the exchange and its replacement order (PENDING_PAYMENT, or PAID if fully covered)."
+  createExchange(input: CreateExchangeInput!): Exchange! @authenticated
+  """
+  Applies the caller's available credit to one of their orders that is still PENDING_PAYMENT.
+  The server decides the amount (the lesser of balance and amount due) and re-totals the order.
+  """
+  applyExchangeCredit(orderId: ID!): Order! @authenticated
+}

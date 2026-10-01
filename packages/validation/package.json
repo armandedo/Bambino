@@ -1,0 +1,19 @@
+{
+  "name": "@bambino/validation",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@bambino/config": "workspace:*",
+    "@bambino/types": "workspace:*",
+    "zod": "^4.6.5"
+  }
+}

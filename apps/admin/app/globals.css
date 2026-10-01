@@ -1,0 +1,10 @@
+@import 'tailwindcss';
+@import '@bambino/ui/theme.css';
+@import '@bambino/ui/base.css';
+
+@source '../../../packages/ui/src';
+
+@theme {
+  --font-display: var(--font-nunito), ui-rounded, 'Segoe UI', system-ui, sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, 'Segoe UI', Roboto, sans-serif;
+}

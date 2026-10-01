@@ -1,0 +1,179 @@
+enum OrderType {
+  ONE_TIME
+  SUBSCRIPTION_CYCLE
+  EXCHANGE_REPLACEMENT
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  PAID
+  PROCESSING
+  PACKED
+  READY_FOR_DISPATCH
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+  RETURN_REQUESTED
+  RETURNED
+}
+
+enum DeliveryStatus {
+  PENDING
+  ASSIGNED
+  PICKED_UP
+  IN_TRANSIT
+  DELIVERED
+  FAILED
+  CANCELLED
+}
+
+enum DeliveryDirection {
+  OUTBOUND
+  RETURN_PICKUP
+}
+
+type Cart {
+  id: ID!
+  items: [CartItem!]!
+  "Computed on the server from current prices on every read."
+  subtotal: Money!
+  itemCount: Int!
+}
+
+type CartItem {
+  id: ID!
+  variant: ProductVariant!
+  product: Product!
+  quantity: Int!
+  lineTotal: Money!
+}
+
+type DeliveryOption {
+  code: ID!
+  name: String!
+  fee: Money!
+  estimatedDaysMin: Int!
+  estimatedDaysMax: Int!
+}
+
+"Every figure is calculated by the server. Clients display these values and never send amounts."
+type OrderTotals {
+  subtotal: Money!
+  discount: Money!
+  creditApplied: Money!
+  shipping: Money!
+  tax: Money!
+  total: Money!
+}
+
+type CheckoutPreview {
+  totals: OrderTotals!
+  "Set when a promotion code was supplied but could not be applied."
+  promotionError: String
+  availableCredit: Money!
+}
+
+type Order {
+  id: ID!
+  orderNumber: String!
+  type: OrderType!
+  status: OrderStatus!
+  items: [OrderItem!]!
+  totals: OrderTotals!
+  shippingAddress: OrderAddress!
+  deliveryOption: DeliveryOption
+  delivery: Delivery
+  payments: [Payment!]!
+  statusHistory: [OrderStatusEvent!]!
+  placedAt: DateTime!
+  paidAt: DateTime
+}
+
+type OrderItem {
+  id: ID!
+  productName: String!
+  sku: String!
+  sizeCode: String!
+  color: String!
+  unitPrice: Money!
+  quantity: Int!
+  lineTotal: Money!
+  product: Product
+}
+
+type OrderAddress {
+  recipientName: String!
+  phone: String!
+  countryCode: String!
+  region: String
+  district: String
+  sector: String
+  street: String
+  directions: String
+}
+
+type OrderStatusEvent {
+  status: OrderStatus!
+  occurredAt: DateTime!
+}
+
+type Delivery {
+  id: ID!
+  direction: DeliveryDirection!
+  status: DeliveryStatus!
+  provider: String!
+  trackingNumber: String
+  estimatedDeliveryDate: Date
+  deliveredAt: DateTime
+  events: [DeliveryEvent!]!
+}
+
+type DeliveryEvent {
+  status: DeliveryStatus!
+  note: String
+  occurredAt: DateTime!
+}
+
+type OrderEdge {
+  cursor: String!
+  node: Order!
+}
+
+type OrderConnection {
+  edges: [OrderEdge!]!
+  pageInfo: PageInfo!
+}
+
+input CheckoutInput {
+  shippingAddressId: ID!
+  deliveryOptionCode: ID!
+  promotionCode: String
+  applyExchangeCredit: Boolean = false
+}
+
+input CreateOrderInput {
+  "Client-generated UUID. Re-sending the same key returns the original order instead of creating another."
+  idempotencyKey: String!
+  checkout: CheckoutInput!
+}
+
+extend type Query {
+  myCart: Cart @authenticated
+  deliveryOptions: [DeliveryOption!]!
+  "What the caller's cart would cost with these choices. Nothing is created."
+  checkoutPreview(input: CheckoutInput!): CheckoutPreview! @authenticated
+  myOrders(first: Int = 20, after: String): OrderConnection! @authenticated
+  order(id: ID!): Order @authenticated
+}
+
+extend type Mutation {
+  "Returns the caller's active cart, creating an empty one if needed."
+  createCart: Cart! @authenticated
+  addToCart(variantId: ID!, quantity: Int = 1): Cart! @authenticated
+  updateCartItem(itemId: ID!, quantity: Int!): Cart! @authenticated
+  removeFromCart(itemId: ID!): Cart! @authenticated
+  "Turns the caller's cart into an order in PENDING_PAYMENT and reserves stock."
+  createOrder(input: CreateOrderInput!): Order! @authenticated
+  "Only while the order is PENDING_PAYMENT."
+  cancelOrder(id: ID!): Order! @authenticated
+}

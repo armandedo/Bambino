@@ -1,0 +1,122 @@
+enum BillingInterval {
+  MONTHLY
+  QUARTERLY
+  ANNUAL
+}
+
+enum SubscriptionStatus {
+  PENDING
+  ACTIVE
+  PAUSED
+  PAST_DUE
+  CANCELLED
+  EXPIRED
+}
+
+enum SubscriptionEventType {
+  CREATED
+  ACTIVATED
+  RENEWAL_DUE
+  RENEWED
+  PAYMENT_FAILED
+  PAUSED
+  RESUMED
+  PLAN_CHANGE_SCHEDULED
+  PLAN_CHANGED
+  CANCELLATION_SCHEDULED
+  CANCELLED
+  EXPIRED
+}
+
+enum SubscriptionItemStatus {
+  SELECTED
+  SHIPPED
+  WITH_CUSTOMER
+  RETURNED
+}
+
+type SubscriptionPlan {
+  id: ID!
+  code: String!
+  name: String!
+  description: String!
+  billingInterval: BillingInterval!
+  price: Money!
+  itemsPerCycle: Int!
+  allowedCategories: [Category!]!
+  "Null means unlimited."
+  exchangesPerCycle: Int
+  "False for plans no longer offered. Only staff queries return inactive plans."
+  isActive: Boolean!
+}
+
+type Subscription {
+  id: ID!
+  status: SubscriptionStatus!
+  plan: SubscriptionPlan!
+  "Takes effect at the next renewal."
+  pendingPlan: SubscriptionPlan
+  babyProfile: BabyProfile!
+  price: Money!
+  currentPeriodStart: DateTime
+  currentPeriodEnd: DateTime
+  nextBillingAt: DateTime
+  cancelAtPeriodEnd: Boolean!
+  pausedAt: DateTime
+  resumeAt: DateTime
+  "Items for the current cycle."
+  items: [SubscriptionItem!]!
+  "The order awaiting payment for the first or the upcoming period, if any."
+  orderAwaitingPayment: Order
+  history: [SubscriptionEvent!]!
+  "Which actions the server will currently accept, so clients need not re-implement lifecycle rules."
+  canPause: Boolean!
+  canResume: Boolean!
+  canCancel: Boolean!
+  createdAt: DateTime!
+}
+
+type SubscriptionItem {
+  id: ID!
+  cycleNumber: Int!
+  variant: ProductVariant!
+  product: Product!
+  status: SubscriptionItemStatus!
+  "Tag of the physical garment once one has been assigned."
+  garmentTagCode: String
+}
+
+type SubscriptionEvent {
+  type: SubscriptionEventType!
+  status: SubscriptionStatus!
+  occurredAt: DateTime!
+}
+
+input CreateSubscriptionInput {
+  idempotencyKey: String!
+  planId: ID!
+  babyProfileId: ID!
+  shippingAddressId: ID!
+  deliveryOptionCode: ID!
+  promotionCode: String
+  "A saved wallet used to request renewal payments automatically."
+  paymentMethodId: ID
+}
+
+extend type Query {
+  subscriptionPlans: [SubscriptionPlan!]!
+  mySubscriptions: [Subscription!]! @authenticated
+  subscription(id: ID!): Subscription @authenticated
+}
+
+extend type Mutation {
+  "Creates a PENDING subscription and its first order. It becomes ACTIVE only when that order's payment succeeds."
+  createSubscription(input: CreateSubscriptionInput!): Subscription! @authenticated
+  pauseSubscription(id: ID!, resumeAt: DateTime): Subscription! @authenticated
+  resumeSubscription(id: ID!): Subscription! @authenticated
+  "By default the subscription runs to the end of the paid period."
+  cancelSubscription(id: ID!, reason: String, immediately: Boolean = false): Subscription! @authenticated
+  "Takes effect at the next renewal (current placeholder policy; see docs/08-open-questions.md, item 6)."
+  changeSubscriptionPlan(id: ID!, planId: ID!): Subscription! @authenticated
+  selectSubscriptionItems(id: ID!, variantIds: [ID!]!): Subscription! @authenticated
+}

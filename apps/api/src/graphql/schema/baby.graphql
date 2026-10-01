@@ -1,0 +1,122 @@
+enum BabySex {
+  FEMALE
+  MALE
+  UNSPECIFIED
+}
+
+enum FitPreference {
+  SNUG
+  REGULAR
+  ROOMY
+}
+
+enum MeasurementSource {
+  PARENT
+  STAFF
+}
+
+enum FitOutcome {
+  TOO_SMALL
+  GOOD_FIT
+  TOO_LARGE
+}
+
+type Size {
+  code: ID!
+  label: String!
+  sortOrder: Int!
+}
+
+type BabyProfile {
+  id: ID!
+  nickname: String!
+  dateOfBirth: Date!
+  ageInDays: Int!
+  sex: BabySex
+  fitPreference: FitPreference!
+  currentSize: Size
+  latestMeasurement: BabyMeasurement
+  "Growth history, newest first."
+  measurements: [BabyMeasurement!]!
+  latestRecommendation: SizingRecommendation
+  sizingHistory: [SizingRecommendation!]!
+}
+
+"Lengths in millimetres and weight in grams, so no value is a floating-point number."
+type BabyMeasurement {
+  id: ID!
+  measuredAt: DateTime!
+  heightMm: Int
+  weightG: Int
+  chestMm: Int
+  waistMm: Int
+  footLengthMm: Int
+  source: MeasurementSource!
+}
+
+type SizingRecommendation {
+  id: ID!
+  babyProfileId: ID!
+  recommendedSize: Size!
+  nextSize: Size
+  "0 to 1."
+  confidence: Float!
+  "Translation keys with parameters; clients render the sentence in the user's language."
+  explanation: [SizingReason!]!
+  "Identifies the engine that produced this, e.g. `rules`. Shown so the UI never implies ML where rules ran."
+  provider: String!
+  createdAt: DateTime!
+}
+
+type SizingReason {
+  key: String!
+  params: [SizingReasonParam!]!
+}
+
+type SizingReasonParam {
+  name: String!
+  value: String!
+}
+
+input MeasurementInput {
+  heightMm: Int
+  weightG: Int
+  chestMm: Int
+  waistMm: Int
+  footLengthMm: Int
+}
+
+input CreateBabyProfileInput {
+  nickname: String!
+  dateOfBirth: Date!
+  sex: BabySex
+  fitPreference: FitPreference
+  currentSizeCode: ID
+  measurement: MeasurementInput
+}
+
+input UpdateBabyProfileInput {
+  nickname: String
+  dateOfBirth: Date
+  sex: BabySex
+  fitPreference: FitPreference
+  currentSizeCode: ID
+}
+
+extend type Query {
+  sizes: [Size!]!
+  myBabyProfiles: [BabyProfile!]! @authenticated
+  babyProfile(id: ID!): BabyProfile @authenticated
+  "Latest stored recommendation for one of the caller's babies."
+  sizingRecommendation(babyProfileId: ID!): SizingRecommendation @authenticated
+}
+
+extend type Mutation {
+  createBabyProfile(input: CreateBabyProfileInput!): BabyProfile! @authenticated
+  updateBabyProfile(id: ID!, input: UpdateBabyProfileInput!): BabyProfile! @authenticated
+  deleteBabyProfile(id: ID!): Boolean! @authenticated
+  addBabyMeasurement(babyProfileId: ID!, input: MeasurementInput!): BabyMeasurement! @authenticated
+  "Runs the sizing engine on the baby's current data and stores the inputs and result."
+  createSizingRecommendation(babyProfileId: ID!): SizingRecommendation! @authenticated
+  submitFitFeedback(recommendationId: ID!, sizeCode: ID!, outcome: FitOutcome!): Boolean! @authenticated
+}

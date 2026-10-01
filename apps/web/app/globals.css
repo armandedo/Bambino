@@ -1,0 +1,12 @@
+@import 'tailwindcss';
+@import '@bambino/ui/theme.css';
+@import '@bambino/ui/base.css';
+
+/* Tailwind scans this app by default; the shared components live in the ui package. */
+@source '../../../packages/ui/src';
+
+/* next/font serves the brand fonts under generated family names, exposed as these variables on <html>. */
+@theme {
+  --font-display: var(--font-nunito), ui-rounded, 'Segoe UI', system-ui, sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, 'Segoe UI', Roboto, sans-serif;
+}
