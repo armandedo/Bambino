@@ -7,7 +7,7 @@ export default function robots(): MetadataRoute.Robots {
   const launched = process.env.SITE_INDEXING === 'true';
   return {
     rules: launched
-      ? { userAgent: '*', allow: '/', disallow: ['/account', '/checkout', '/cart', '/preview'] }
+      ? { userAgent: '*', allow: '/', disallow: ['/dashboard', '/account', '/checkout', '/cart', '/preview'] }
       : { userAgent: '*', disallow: '/' },
     sitemap: `${SITE_URL}/sitemap.xml`,
   };

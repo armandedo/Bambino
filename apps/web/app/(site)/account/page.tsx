@@ -1,204 +1,355 @@
 'use client';
 
-import { RequestEmailVerificationMutation } from '@bambino/api-client';
 import {
-  Alert,
-  Button,
-  Card,
-  CardHeader,
-  EmptyState,
-  MoneyText,
-  StatusBadge,
-  buttonClasses,
-} from '@bambino/ui';
-import { useMutation } from '@tanstack/react-query';
-import NextLink from 'next/link';
+  ChangePasswordMutation,
+  DeleteAddressMutation,
+  MyDataRequestsQuery,
+  RequestAccountDeletionMutation,
+  RequestDataExportMutation,
+  UpdateProfileMutation,
+  type Viewer,
+} from '@bambino/api-client';
+import { Alert, Badge, Button, Card, CardHeader, Modal, StatusBadge, TextField } from '@bambino/ui';
+import { passwordSchema, phoneSchema } from '@bambino/validation';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
+import { type FormEvent, useState } from 'react';
+import { AddressForm } from '@/components/address-form';
+import { formatAddress } from '@/components/checkout-parts';
 import { QueryState } from '@/components/query-state';
 import { api } from '@/lib/browser-api';
-import { errorMessage, formatDate, notificationText } from '@/lib/messages';
-import { useBabies, useCredits, useNotifications, useOrders, useSubscriptions } from '@/lib/queries';
-import { useSession } from '@/lib/session';
-import { PageTitle } from './account-nav';
+import { errorMessage, fieldErrors, formatDate, validationMessage } from '@/lib/messages';
+import { ME_KEY, useSession } from '@/lib/session';
+import { PageTitle } from '../dashboard/account-nav';
 
-function VerifyEmailBanner() {
-  const resend = useMutation({ mutationFn: () => api.request(RequestEmailVerificationMutation) });
+function ProfileSection({ viewer }: { viewer: Viewer }) {
+  const queryClient = useQueryClient();
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const save = useMutation({
+    mutationFn: async (input: { firstName: string; lastName: string; phone: string | null }) =>
+      (await api.request(UpdateProfileMutation, { input })).updateProfile,
+    onSuccess: (user) => queryClient.setQueryData(ME_KEY, user),
+    onError: (error) => setErrors(fieldErrors(error)),
+  });
+  function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const phone = String(form.get('phone') ?? '').trim();
+    if (phone && !phoneSchema.safeParse(phone).success) {
+      setErrors({ phone: validationMessage('validation.phone.invalid') ?? '' });
+      return;
+    }
+    setErrors({});
+    save.mutate({
+      firstName: String(form.get('firstName') ?? ''),
+      lastName: String(form.get('lastName') ?? ''),
+      phone: phone === '' ? null : phone,
+    });
+  }
   return (
-    <Alert
-      tone="warning"
-      title="Please confirm your email address"
-      action={
-        resend.isSuccess ? (
-          <p className="text-sm font-medium">Sent. Check your inbox.</p>
-        ) : (
-          <Button size="sm" variant="outline" loading={resend.isPending} onClick={() => resend.mutate()}>
-            Send the link again
-          </Button>
-        )
-      }
-    >
-      We sent you a link when you signed up. {resend.isError ? errorMessage(resend.error) : null}
-    </Alert>
+    <Card as="section" aria-labelledby="profile">
+      <CardHeader
+        title={<span id="profile">Profile</span>}
+        description={viewer.email ?? undefined}
+        level={2}
+        action={
+          viewer.emailVerified ? (
+            <Badge tone="success">Email verified</Badge>
+          ) : (
+            <Badge tone="warning">Email not verified</Badge>
+          )
+        }
+      />
+      <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <TextField
+            label="First name"
+            name="firstName"
+            defaultValue={viewer.firstName}
+            autoComplete="given-name"
+            error={errors.firstName}
+          />
+          <TextField
+            label="Last name"
+            name="lastName"
+            defaultValue={viewer.lastName}
+            autoComplete="family-name"
+            error={errors.lastName}
+          />
+          <TextField
+            label="Phone"
+            name="phone"
+            type="tel"
+            defaultValue={viewer.phone ?? ''}
+            autoComplete="tel"
+            error={errors.phone}
+          />
+        </div>
+        {save.isSuccess ? (
+          <p className="text-sm font-medium text-success-foreground" role="status">
+            Saved.
+          </p>
+        ) : null}
+        {save.isError ? (
+          <Alert tone="danger" live>
+            {errorMessage(save.error)}
+          </Alert>
+        ) : null}
+        <Button type="submit" className="w-fit" loading={save.isPending}>
+          Save profile
+        </Button>
+      </form>
+    </Card>
   );
 }
 
-export default function AccountOverviewPage() {
-  const { viewer } = useSession();
-  const babies = useBabies();
-  const subscriptions = useSubscriptions();
-  const orders = useOrders();
-  const credits = useCredits();
-  const notifications = useNotifications();
+function AddressesSection({ viewer }: { viewer: Viewer }) {
+  const queryClient = useQueryClient();
+  const [adding, setAdding] = useState(false);
+  const remove = useMutation({
+    mutationFn: (id: string) => api.request(DeleteAddressMutation, { id }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ME_KEY }),
+  });
+  return (
+    <Card as="section" aria-labelledby="addresses" className="flex flex-col gap-4">
+      <CardHeader
+        title={<span id="addresses">Addresses</span>}
+        level={2}
+        action={
+          <Button size="sm" variant="outline" onClick={() => setAdding(true)}>
+            Add address
+          </Button>
+        }
+      />
+      {viewer.addresses.length === 0 ? <p className="text-foreground-muted">No saved addresses.</p> : null}
+      <ul className="flex flex-col gap-2">
+        {viewer.addresses.map((address) => (
+          <li
+            key={address.id}
+            className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-3 text-sm"
+          >
+            <span>
+              <span className="font-semibold">
+                {address.label ? `${address.label}: ` : ''}
+                {address.recipientName}
+              </span>{' '}
+              {address.isDefault ? <Badge tone="brand">Default</Badge> : null}
+              <span className="block text-foreground-muted">
+                {formatAddress(address)} · {address.phone}
+              </span>
+            </span>
+            <Button
+              size="sm"
+              variant="ghost"
+              loading={remove.isPending && remove.variables === address.id}
+              onClick={() => remove.mutate(address.id)}
+            >
+              Remove<span className="sr-only"> address for {address.recipientName}</span>
+            </Button>
+          </li>
+        ))}
+      </ul>
+      {remove.isError ? (
+        <Alert tone="danger" live>
+          {errorMessage(remove.error)}
+        </Alert>
+      ) : null}
+      <Modal open={adding} onClose={() => setAdding(false)} title="New address" size="lg">
+        {adding ? <AddressForm onSaved={() => setAdding(false)} onCancel={() => setAdding(false)} /> : null}
+      </Modal>
+    </Card>
+  );
+}
 
+function SecuritySection() {
+  const [error, setError] = useState<string | undefined>();
+  const change = useMutation({
+    mutationFn: (input: { currentPassword: string; newPassword: string }) =>
+      api.request(ChangePasswordMutation, input),
+  });
+  return (
+    <Card as="section" aria-labelledby="security">
+      <CardHeader title={<span id="security">Password</span>} level={2} />
+      <form
+        method="post"
+        className="flex flex-col gap-4"
+        noValidate
+        onSubmit={(event) => {
+          event.preventDefault();
+          const form = new FormData(event.currentTarget);
+          const newPassword = String(form.get('newPassword') ?? '');
+          const parsed = passwordSchema.safeParse(newPassword);
+          if (!parsed.success) {
+            setError(validationMessage(parsed.error.issues[0]?.message));
+            return;
+          }
+          setError(undefined);
+          change.mutate({ currentPassword: String(form.get('currentPassword') ?? ''), newPassword });
+          event.currentTarget.reset();
+        }}
+      >
+        <div className="grid gap-4 sm:grid-cols-2">
+          <TextField
+            label="Current password"
+            name="currentPassword"
+            type="password"
+            autoComplete="current-password"
+          />
+          <TextField
+            label="New password"
+            name="newPassword"
+            type="password"
+            autoComplete="new-password"
+            hint="At least 10 characters."
+            error={error}
+          />
+        </div>
+        {change.isSuccess ? (
+          <p className="text-sm font-medium text-success-foreground" role="status">
+            Password changed. Other devices have been signed out.
+          </p>
+        ) : null}
+        {change.isError ? (
+          <Alert tone="danger" live>
+            {errorMessage(change.error)}
+          </Alert>
+        ) : null}
+        <Button type="submit" variant="outline" className="w-fit" loading={change.isPending}>
+          Change password
+        </Button>
+      </form>
+    </Card>
+  );
+}
+
+function PrivacySection() {
+  const router = useRouter();
+  const { signOut } = useSession();
+  const queryClient = useQueryClient();
+  const requests = useQuery({
+    queryKey: ['data-requests'],
+    queryFn: async () => (await api.request(MyDataRequestsQuery)).myDataRequests,
+  });
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ['data-requests'] });
+  const exportData = useMutation({
+    mutationFn: () => api.request(RequestDataExportMutation),
+    onSuccess: refresh,
+  });
+  const [deleting, setDeleting] = useState(false);
+  const [password, setPassword] = useState('');
+  const deletion = useMutation({
+    mutationFn: () => api.request(RequestAccountDeletionMutation, { currentPassword: password }),
+    onSuccess: async () => {
+      setDeleting(false);
+      await signOut();
+      router.replace('/');
+    },
+  });
+  return (
+    <Card as="section" aria-labelledby="privacy" className="flex flex-col gap-4">
+      <CardHeader
+        title={<span id="privacy">Your data</span>}
+        description="Get a copy of your data, or ask us to delete your account."
+        level={2}
+      />
+      <QueryState query={requests} what="your requests">
+        {(list) =>
+          list.length === 0 ? null : (
+            <ul className="flex flex-col gap-1 text-sm">
+              {list.map((request) => (
+                <li key={request.id} className="flex flex-wrap items-center justify-between gap-2">
+                  <span>
+                    {request.type === 'EXPORT' ? 'Data export' : 'Account deletion'} requested{' '}
+                    {formatDate(request.requestedAt)}
+                  </span>
+                  <StatusBadge status={request.status} />
+                </li>
+              ))}
+            </ul>
+          )
+        }
+      </QueryState>
+      <Alert tone="info">
+        Requests are recorded now; preparing the export file and carrying out deletion are handled by our team
+        for the moment.
+      </Alert>
+      <div className="flex flex-wrap gap-3">
+        <Button variant="outline" loading={exportData.isPending} onClick={() => exportData.mutate()}>
+          Request a copy of my data
+        </Button>
+        <Button variant="danger" onClick={() => setDeleting(true)}>
+          Delete my account
+        </Button>
+      </div>
+      {exportData.isError ? (
+        <Alert tone="danger" live>
+          {errorMessage(exportData.error)}
+        </Alert>
+      ) : null}
+      <Modal
+        open={deleting}
+        onClose={() => setDeleting(false)}
+        title="Delete your account?"
+        description="This starts closing your account. Our team confirms what is deleted and which records must be kept, such as payments."
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setDeleting(false)}>
+              Keep my account
+            </Button>
+            <Button
+              variant="danger"
+              disabled={!password}
+              loading={deletion.isPending}
+              onClick={() => deletion.mutate()}
+            >
+              Request deletion
+            </Button>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-3">
+          <TextField
+            label="Your password"
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          />
+          {deletion.isError ? (
+            <Alert tone="danger" live>
+              {errorMessage(deletion.error)}
+            </Alert>
+          ) : null}
+        </div>
+      </Modal>
+    </Card>
+  );
+}
+
+export default function SettingsPage() {
+  const { viewer, signOut } = useSession();
+  const router = useRouter();
+  if (!viewer) return null;
   return (
     <>
       <PageTitle
-        title={`Hello, ${viewer?.firstName ?? ''}`}
-        description="Everything about your baby’s wardrobe in one place."
-      />
-      {viewer && !viewer.emailVerified ? <VerifyEmailBanner /> : null}
-
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card as="section" aria-labelledby="sub-title">
-          <CardHeader title={<span id="sub-title">Subscription</span>} level={2} />
-          <QueryState query={subscriptions} what="your subscription">
-            {(list) => {
-              const current = list.find((s) => !['CANCELLED', 'EXPIRED'].includes(s.status));
-              if (!current) {
-                return (
-                  <div className="flex flex-col gap-3">
-                    <p className="text-foreground-muted">No active subscription yet.</p>
-                    <NextLink
-                      href="/account/subscription/new"
-                      className={buttonClasses({ size: 'sm', className: 'w-fit' })}
-                    >
-                      Start a subscription
-                    </NextLink>
-                  </div>
-                );
-              }
-              return (
-                <div className="flex flex-col gap-2">
-                  <p className="flex flex-wrap items-center gap-2 font-semibold">
-                    {current.plan.name} for {current.babyProfile.nickname}{' '}
-                    <StatusBadge status={current.status} />
-                  </p>
-                  <p className="text-sm text-foreground-muted">
-                    {current.status === 'PENDING'
-                      ? 'Waiting for the first payment.'
-                      : `Current period ends ${formatDate(current.currentPeriodEnd)}.`}
-                  </p>
-                  <NextLink
-                    href="/account/subscription"
-                    className="w-fit text-sm font-semibold text-link underline underline-offset-4 hover:decoration-2"
-                  >
-                    Manage subscription
-                  </NextLink>
-                </div>
-              );
+        title="Settings"
+        action={
+          <Button
+            variant="outline"
+            onClick={async () => {
+              await signOut();
+              router.replace('/');
             }}
-          </QueryState>
-        </Card>
-
-        <Card as="section" aria-labelledby="baby-title">
-          <CardHeader title={<span id="baby-title">Sizes</span>} level={2} />
-          <QueryState query={babies} what="your baby profiles">
-            {(list) =>
-              list.length === 0 ? (
-                <div className="flex flex-col gap-3">
-                  <p className="text-foreground-muted">Add your baby to get a size recommendation.</p>
-                  <NextLink href="/size-finder" className={buttonClasses({ size: 'sm', className: 'w-fit' })}>
-                    Find my baby’s size
-                  </NextLink>
-                </div>
-              ) : (
-                <ul className="flex flex-col gap-2">
-                  {list.map((baby) => (
-                    <li key={baby.id} className="flex flex-wrap items-baseline justify-between gap-2">
-                      <span className="font-semibold">{baby.nickname}</span>
-                      <span className="text-sm text-foreground-muted">
-                        {baby.latestRecommendation
-                          ? `Size ${baby.latestRecommendation.recommendedSize.label}${baby.latestRecommendation.nextSize ? `, next ${baby.latestRecommendation.nextSize.code}` : ''}`
-                          : 'No recommendation yet'}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )
-            }
-          </QueryState>
-        </Card>
-
-        <Card as="section" aria-labelledby="credit-title">
-          <CardHeader title={<span id="credit-title">Exchange credit</span>} level={2} />
-          <QueryState query={credits} what="your credit">
-            {(summary) => (
-              <div className="flex flex-col gap-2">
-                <p className="font-display text-3xl font-extrabold">
-                  <MoneyText value={summary.balance} />
-                </p>
-                <p className="text-sm text-foreground-muted">
-                  Earned when returned pieces pass inspection. Used automatically at checkout if you choose.
-                </p>
-              </div>
-            )}
-          </QueryState>
-        </Card>
-
-        <Card as="section" aria-labelledby="note-title">
-          <CardHeader title={<span id="note-title">Notifications</span>} level={2} />
-          <QueryState query={notifications} what="notifications">
-            {(data) =>
-              data.edges.length === 0 ? (
-                <p className="text-foreground-muted">Nothing new.</p>
-              ) : (
-                <ul className="flex flex-col gap-2 text-sm">
-                  {data.edges.slice(0, 5).map(({ node }) => (
-                    <li key={node.id} className="flex justify-between gap-3">
-                      <span className={node.read ? 'text-foreground-muted' : 'font-semibold'}>
-                        {notificationText(node.type)}
-                      </span>
-                      <span className="shrink-0 text-foreground-muted">{formatDate(node.createdAt)}</span>
-                    </li>
-                  ))}
-                </ul>
-              )
-            }
-          </QueryState>
-        </Card>
-      </div>
-
-      <section aria-labelledby="recent-orders" className="flex flex-col gap-3">
-        <h2 id="recent-orders" className="font-display text-xl font-bold">
-          Recent orders
-        </h2>
-        <QueryState query={orders} what="your orders">
-          {(list) =>
-            list.length === 0 ? (
-              <EmptyState
-                title="No orders yet"
-                description="Orders you place appear here with their delivery status."
-                level={3}
-              />
-            ) : (
-              <ul className="flex flex-col gap-2">
-                {list.slice(0, 3).map((order) => (
-                  <li key={order.id}>
-                    <NextLink
-                      href={`/account/orders/${order.id}`}
-                      className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface p-4 hover:shadow-sm focus-visible:outline-2 focus-visible:outline-focus"
-                    >
-                      <span className="font-mono text-sm">{order.orderNumber}</span>
-                      <StatusBadge status={order.status} />
-                      <span className="text-sm text-foreground-muted">{formatDate(order.placedAt)}</span>
-                      <MoneyText value={order.totals.total} className="font-semibold" />
-                    </NextLink>
-                  </li>
-                ))}
-              </ul>
-            )
-          }
-        </QueryState>
-      </section>
+          >
+            Sign out
+          </Button>
+        }
+      />
+      <ProfileSection viewer={viewer} />
+      <AddressesSection viewer={viewer} />
+      <SecuritySection />
+      <PrivacySection />
     </>
   );
 }

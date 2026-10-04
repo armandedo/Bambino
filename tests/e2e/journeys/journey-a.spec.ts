@@ -23,15 +23,20 @@ test('journey A: a new parent subscribes in the recommended size and pays with m
 
   await test.step('register', async () => {
     await registerThroughUi(page, 'journey-a');
-    await expect(page.getByRole('heading', { name: 'Find my baby’s size' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Tell us about your baby' })).toBeVisible();
     await expectNoHorizontalScroll(page);
   });
 
   await test.step('create a baby profile and get a size recommendation', async () => {
+    // The fit finder asks one thing at a time.
     await page.getByLabel('Baby’s name or nickname').fill('Keza');
     await page.getByLabel('Date of birth').fill(birthDateMonthsAgo(4));
+    await page.getByRole('button', { name: 'Continue' }).click();
     await page.getByLabel('Height (cm)').fill('64');
+    await page.getByRole('button', { name: 'Continue' }).click();
     await page.getByLabel('Weight (kg)').fill('7');
+    await page.getByRole('button', { name: 'Continue' }).click();
+    await expect(page.getByRole('heading', { name: 'How do you like clothes to fit?' })).toBeVisible();
     await page.getByRole('button', { name: 'Get size recommendation' }).click();
     await expect(page.getByText('Recommended size for Keza')).toBeVisible();
     // The UI states how the result was produced and never implies machine learning.
@@ -40,7 +45,7 @@ test('journey A: a new parent subscribes in the recommended size and pays with m
   });
 
   await test.step('start a subscription', async () => {
-    await page.getByRole('link', { name: 'Start a subscription in this size' }).click();
+    await page.getByRole('link', { name: 'Build my Bambino box' }).click();
     await expect(page.getByRole('heading', { name: 'Start a subscription' })).toBeVisible();
     await expectNoHorizontalScroll(page);
     await expect(page.getByRole('radio', { name: /Keza/ })).toBeChecked();
@@ -66,13 +71,13 @@ test('journey A: a new parent subscribes in the recommended size and pays with m
     await expectNoA11yViolations(page);
     await payWithApprovingTestWallet(page);
     // Success is shown only after the API reports the provider's confirmation.
-    await expect(page).toHaveURL(/\/account\/subscription\?started=1/, { timeout: 60_000 });
+    await expect(page).toHaveURL(/\/dashboard\/subscription\?started=1/, { timeout: 60_000 });
     await expect(page.getByText('Your subscription has started')).toBeVisible();
     await expect(page.getByText('Active', { exact: true }).first()).toBeVisible();
   });
 
   await test.step('the paid order appears in the account', async () => {
-    await page.goto('/account/orders');
+    await page.goto('/dashboard/orders');
     const row = page.getByRole('row', { name: /Subscription/ });
     await expect(row).toBeVisible();
     await expect(row.getByText('Paid')).toBeVisible();

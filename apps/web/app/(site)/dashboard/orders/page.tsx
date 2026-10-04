@@ -44,7 +44,7 @@ export default function OrdersPage() {
                   rowHeader: true,
                   cell: (order) => (
                     <NextLink
-                      href={`/account/orders/${order.id}`}
+                      href={`/dashboard/orders/${order.id}`}
                       className="font-mono text-link underline underline-offset-4 hover:decoration-2"
                     >
                       {order.orderNumber}

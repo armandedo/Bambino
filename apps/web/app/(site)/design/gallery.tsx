@@ -145,7 +145,7 @@ export function Gallery() {
       <Section
         id="type"
         title="Type, radius and shadow"
-        intro="Nunito for headings, Inter for text. Body text is 16px."
+        intro="Manrope for headings, Inter for text. Body text is 16px."
       >
         <div className="flex flex-col gap-2">
           {(Object.keys(fontSizes) as (keyof typeof fontSizes)[])

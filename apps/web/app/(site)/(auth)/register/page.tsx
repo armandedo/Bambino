@@ -11,7 +11,7 @@ export default async function RegisterPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const next = safeNext((await searchParams).next, '/size-finder');
+  const next = safeNext((await searchParams).next, '/fit');
   return (
     <AuthCard
       title="Create your account"

@@ -423,7 +423,7 @@ export default function ExchangesPage() {
                       ) : null}
                       {exchange.replacementOrder ? (
                         <NextLink
-                          href={`/account/orders/${exchange.replacementOrder.id}`}
+                          href={`/dashboard/orders/${exchange.replacementOrder.id}`}
                           className={buttonClasses({
                             size: 'sm',
                             variant:

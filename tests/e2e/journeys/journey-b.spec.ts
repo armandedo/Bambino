@@ -16,14 +16,14 @@ test('journey B: a subscriber returns outgrown pieces, earns credit and gets the
 }) => {
   const staff = await staffApi();
   try {
-    await registerThroughUi(page, 'journey-b', '/size-finder');
+    await registerThroughUi(page, 'journey-b', '/fit');
     const gql = customerApi(page);
 
     const { garments } = await test.step('setup: active subscription with two pieces delivered', () =>
       subscriberWithDeliveredGarments(gql, staff));
 
     await test.step('parent requests a return with pickup', async () => {
-      await page.goto('/account/exchanges');
+      await page.goto('/dashboard/exchange');
       const pieces = page.getByRole('group', { name: 'Pieces to return' });
       for (const garment of garments) await expect(pieces.getByText(`Tag ${garment.tagCode}`)).toBeVisible();
       for (const box of await pieces.getByRole('checkbox').all()) await box.check();
@@ -110,7 +110,7 @@ test('journey B: a subscriber returns outgrown pieces, earns credit and gets the
           .click();
       }
       await expect(page.getByText('Paid', { exact: true }).first()).toBeVisible({ timeout: 30_000 });
-      await page.goto('/account/exchanges');
+      await page.goto('/dashboard/exchange');
       const creditTable = page.getByRole('table', { name: 'Credit history' });
       await expect(creditTable.getByRole('row', { name: /Redeemed/ })).toBeVisible();
     });

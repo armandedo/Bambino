@@ -93,11 +93,16 @@ export const ProductQuery = operation<{ product: ProductDetail | null }, { slug:
   }`,
 );
 
-export const CatalogueFiltersQuery = operation<{ categories: CategorySummary[]; sizes: SizeSummary[] }>(
+export interface SizeChartRow extends SizeSummary {
+  minAgeDays: number | null;
+  maxAgeDays: number | null;
+}
+
+export const CatalogueFiltersQuery = operation<{ categories: CategorySummary[]; sizes: SizeChartRow[] }>(
   'CatalogueFilters',
   `query CatalogueFilters {
     categories { id slug name }
-    sizes { code label sortOrder }
+    sizes { code label sortOrder minAgeDays maxAgeDays }
   }`,
 );
 

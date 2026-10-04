@@ -1,4 +1,4 @@
-import { colors, fontSizes, fonts, palette, radii, shadows, spacingUnit } from './tokens';
+import { colors, fontSizes, fonts, motionTokens, palette, radii, shadows, spacingUnit } from './tokens';
 
 /**
  * Renders the tokens as a Tailwind v4 `@theme` block. Tailwind's default colour palette is cleared
@@ -34,6 +34,7 @@ export function generateThemeCss(): string {
   for (const [name, value] of Object.entries(shadows)) {
     lines.push(`  --shadow-${name}: ${value};`);
   }
+  lines.push('', `  --ease-brand: cubic-bezier(${motionTokens.ease.join(', ')});`);
   lines.push('}', '');
   return lines.join('\n');
 }

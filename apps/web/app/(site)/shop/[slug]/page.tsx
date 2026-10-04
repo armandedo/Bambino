@@ -87,6 +87,44 @@ export default async function ProductPage({ params }: { params: Params }) {
 
           <AddToCart variants={product.variants} oneTimeEligible={product.oneTimeEligible} />
 
+          <NextLink
+            href="/fit"
+            className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-brand-50 p-4 hover:border-brand-300 focus-visible:outline-2 focus-visible:outline-focus"
+          >
+            <span>
+              <span className="block font-semibold text-primary">Not sure which size?</span>
+              <span className="text-sm text-foreground-muted">
+                Get a recommendation from your baby’s measurements.
+              </span>
+            </span>
+            <span aria-hidden="true" className="text-xl text-primary">
+              →
+            </span>
+          </NextLink>
+
+          <section aria-labelledby="lifecycle" className="flex flex-col gap-3">
+            <h2 id="lifecycle" className="font-display text-lg font-bold text-primary">
+              This piece’s life
+            </h2>
+            <ol className="flex flex-wrap items-center gap-2 text-sm">
+              {['Produced', 'Worn', 'Returned', 'Refurbished', 'Redistributed or recycled'].map(
+                (stage, index, all) => (
+                  <li key={stage} className="flex items-center gap-2">
+                    <span className="rounded-full bg-surface-muted px-3 py-1 font-medium">{stage}</span>
+                    {index < all.length - 1 ? (
+                      <span aria-hidden="true" className="text-foreground-muted">
+                        →
+                      </span>
+                    ) : null}
+                  </li>
+                ),
+              )}
+            </ol>
+            <p className="text-sm text-foreground-muted">
+              Every piece is tagged, inspected when it comes back, and only reused if it passes.
+            </p>
+          </section>
+
           <Card padding="sm">
             <dl className="flex flex-col gap-3 text-sm">
               <Detail label="Material" value={product.material} />

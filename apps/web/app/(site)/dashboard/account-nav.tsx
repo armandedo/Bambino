@@ -7,12 +7,14 @@ import type { ReactNode } from 'react';
 import { RequireAuth } from '@/components/require-auth';
 
 const LINKS = [
-  { href: '/account', label: 'Overview' },
-  { href: '/account/baby', label: 'Baby & sizes' },
-  { href: '/account/subscription', label: 'Subscription' },
-  { href: '/account/orders', label: 'Orders' },
-  { href: '/account/exchanges', label: 'Returns & exchanges' },
-  { href: '/account/settings', label: 'Settings' },
+  { href: '/dashboard', label: 'Overview' },
+  { href: '/dashboard/baby', label: 'Baby & sizes' },
+  { href: '/dashboard/wardrobe', label: 'Wardrobe' },
+  { href: '/dashboard/subscription', label: 'Subscription' },
+  { href: '/dashboard/exchange', label: 'Returns & exchanges' },
+  { href: '/dashboard/orders', label: 'Orders & delivery' },
+  { href: '/dashboard/payments', label: 'Payments' },
+  { href: '/account', label: 'Settings' },
 ] as const;
 
 export function AccountFrame({ children }: { children: ReactNode }) {
@@ -26,7 +28,7 @@ export function AccountFrame({ children }: { children: ReactNode }) {
             <ul className="flex gap-1 overflow-x-auto pb-2 lg:flex-col lg:pb-0">
               {LINKS.map((link) => {
                 const current =
-                  link.href === '/account' ? pathname === '/account' : pathname.startsWith(link.href);
+                  link.href === '/dashboard' ? pathname === '/dashboard' : pathname.startsWith(link.href);
                 return (
                   <li key={link.href} className="shrink-0">
                     <NextLink
@@ -63,7 +65,9 @@ export function PageTitle({
   return (
     <div className="flex flex-wrap items-end justify-between gap-4">
       <div className="flex flex-col gap-1">
-        <h1 className="font-display text-3xl font-extrabold">{title}</h1>
+        <h1 className="font-display text-3xl font-extrabold tracking-tight text-primary sm:text-4xl">
+          {title}
+        </h1>
         {description ? <p className="text-foreground-muted">{description}</p> : null}
       </div>
       {action}

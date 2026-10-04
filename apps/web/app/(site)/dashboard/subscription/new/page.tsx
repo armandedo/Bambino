@@ -66,7 +66,7 @@ export default function NewSubscriptionPage() {
 
   const onPaid = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: keys.subscriptions });
-    router.push('/account/subscription?started=1');
+    router.push('/dashboard/subscription?started=1');
   }, [queryClient, router]);
 
   const preferredPlan = params.get('plan');
@@ -158,7 +158,7 @@ export default function NewSubscriptionPage() {
                 tone="info"
                 title="Add your baby first"
                 action={
-                  <NextLink href="/size-finder" className={buttonClasses({ size: 'sm' })}>
+                  <NextLink href="/fit" className={buttonClasses({ size: 'sm' })}>
                     Find my baby’s size
                   </NextLink>
                 }

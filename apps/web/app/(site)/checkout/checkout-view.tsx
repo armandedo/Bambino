@@ -85,7 +85,7 @@ function Checkout({ viewer }: { viewer: Viewer }) {
   });
 
   const onPaid = useCallback(() => {
-    if (order) router.push(`/account/orders/${order.id}?placed=1`);
+    if (order) router.push(`/dashboard/orders/${order.id}?placed=1`);
   }, [order, router]);
 
   if (cart.isPending) return <Skeleton className="h-64" />;
@@ -107,7 +107,8 @@ function Checkout({ viewer }: { viewer: Viewer }) {
 
   if (order) {
     return (
-      <div className="mx-auto flex max-w-xl flex-col gap-6">
+      <div className="mx-auto flex w-full max-w-xl flex-col gap-6">
+        <CheckoutSteps current={1} />
         <Card className="flex flex-col gap-4">
           <h2 className="font-display text-2xl font-bold">Pay for order {order.orderNumber}</h2>
           <p className="text-foreground-muted">
@@ -132,102 +133,144 @@ function Checkout({ viewer }: { viewer: Viewer }) {
   const unavailable = cart.data?.items.some((item) => !item.variant.inStock) ?? false;
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[2fr_1fr]">
-      <div className="flex flex-col gap-6">
-        <Step number={1} title="Where should we deliver?">
-          <AddressPicker viewer={viewer} value={addressId} onChange={setAddressId} />
-        </Step>
-        <Step number={2} title="How fast?">
-          <DeliveryPicker value={deliveryCode} onChange={setDeliveryCode} />
-        </Step>
-        <Step number={3} title="Discounts">
-          <form
-            className="flex flex-wrap items-end gap-3"
-            onSubmit={(event) => {
-              event.preventDefault();
-              setPromotionCode(promoInput.trim() === '' ? null : promoInput.trim().toUpperCase());
-            }}
-          >
-            <TextField
-              label="Promotion code"
-              value={promoInput}
-              onChange={(event) => setPromoInput(event.target.value)}
-              className="min-w-48 flex-1"
-              error={preview.data?.promotionError ?? undefined}
-              autoCapitalize="characters"
-            />
-            <Button type="submit" variant="outline">
-              Apply
-            </Button>
-          </form>
-          {preview.data && preview.data.availableCredit.amount > 0 ? (
-            <Checkbox
-              label={
-                <>
-                  Use my exchange credit (<MoneyText value={preview.data.availableCredit} /> available)
-                </>
-              }
-              checked={useCredit}
-              onChange={(event) => setUseCredit(event.target.checked)}
-            />
-          ) : null}
-        </Step>
-      </div>
+    <div className="flex flex-col gap-8">
+      <CheckoutSteps current={0} />
+      <div className="grid gap-8 lg:grid-cols-[2fr_1fr]">
+        <div className="flex flex-col gap-6">
+          <Step number={1} title="Where should we deliver?">
+            <AddressPicker viewer={viewer} value={addressId} onChange={setAddressId} />
+          </Step>
+          <Step number={2} title="How fast?">
+            <DeliveryPicker value={deliveryCode} onChange={setDeliveryCode} />
+          </Step>
+          <Step number={3} title="Discounts">
+            <form
+              className="flex flex-wrap items-end gap-3"
+              onSubmit={(event) => {
+                event.preventDefault();
+                setPromotionCode(promoInput.trim() === '' ? null : promoInput.trim().toUpperCase());
+              }}
+            >
+              <TextField
+                label="Promotion code"
+                value={promoInput}
+                onChange={(event) => setPromoInput(event.target.value)}
+                className="min-w-48 flex-1"
+                error={preview.data?.promotionError ?? undefined}
+                autoCapitalize="characters"
+              />
+              <Button type="submit" variant="outline">
+                Apply
+              </Button>
+            </form>
+            {preview.data && preview.data.availableCredit.amount > 0 ? (
+              <Checkbox
+                label={
+                  <>
+                    Use my exchange credit (<MoneyText value={preview.data.availableCredit} /> available)
+                  </>
+                }
+                checked={useCredit}
+                onChange={(event) => setUseCredit(event.target.checked)}
+              />
+            ) : null}
+          </Step>
+        </div>
 
-      <aside aria-labelledby="summary">
-        <Card className="flex flex-col gap-4 lg:sticky lg:top-24">
-          <h2 id="summary" className="font-display text-xl font-bold">
-            Order summary
-          </h2>
-          <ul className="flex flex-col gap-2 text-sm">
-            {cart.data?.items.map((item) => (
-              <li key={item.id} className="flex justify-between gap-3">
-                <span>
-                  {item.quantity} × {item.product.name}{' '}
-                  <span className="text-foreground-muted">({item.variant.size.code})</span>
-                </span>
-                <MoneyText value={item.lineTotal} />
-              </li>
-            ))}
-          </ul>
-          {checkout === null ? (
-            <p className="text-sm text-foreground-muted">
-              Choose an address and a delivery option to see your total.
+        <aside aria-labelledby="summary">
+          <Card className="flex flex-col gap-4 lg:sticky lg:top-24">
+            <h2 id="summary" className="font-display text-xl font-bold">
+              Order summary
+            </h2>
+            <ul className="flex flex-col gap-2 text-sm">
+              {cart.data?.items.map((item) => (
+                <li key={item.id} className="flex justify-between gap-3">
+                  <span>
+                    {item.quantity} × {item.product.name}{' '}
+                    <span className="text-foreground-muted">({item.variant.size.code})</span>
+                  </span>
+                  <MoneyText value={item.lineTotal} />
+                </li>
+              ))}
+            </ul>
+            {checkout === null ? (
+              <p className="text-sm text-foreground-muted">
+                Choose an address and a delivery option to see your total.
+              </p>
+            ) : preview.isPending ? (
+              <Skeleton className="h-32" />
+            ) : preview.isError ? (
+              <Alert tone="danger" live>
+                {errorMessage(preview.error)}
+              </Alert>
+            ) : (
+              <TotalsTable totals={preview.data.totals} />
+            )}
+            {place.isError ? (
+              <Alert tone="danger" live>
+                {errorMessage(place.error)}
+              </Alert>
+            ) : null}
+            {unavailable ? (
+              <Alert tone="warning">
+                Something in your cart is out of stock. Remove it from the cart to continue.
+              </Alert>
+            ) : null}
+            <Button
+              size="lg"
+              fullWidth
+              disabled={!preview.data || unavailable}
+              loading={place.isPending}
+              onClick={() => place.mutate()}
+            >
+              Place order and pay
+            </Button>
+            <p className="text-xs text-foreground-muted">
+              Totals are calculated by Bambino’s server; the price you pay is the total shown.
             </p>
-          ) : preview.isPending ? (
-            <Skeleton className="h-32" />
-          ) : preview.isError ? (
-            <Alert tone="danger" live>
-              {errorMessage(preview.error)}
-            </Alert>
-          ) : (
-            <TotalsTable totals={preview.data.totals} />
-          )}
-          {place.isError ? (
-            <Alert tone="danger" live>
-              {errorMessage(place.error)}
-            </Alert>
-          ) : null}
-          {unavailable ? (
-            <Alert tone="warning">
-              Something in your cart is out of stock. Remove it from the cart to continue.
-            </Alert>
-          ) : null}
-          <Button
-            size="lg"
-            fullWidth
-            disabled={!preview.data || unavailable}
-            loading={place.isPending}
-            onClick={() => place.mutate()}
-          >
-            Place order and pay
-          </Button>
-          <p className="text-xs text-foreground-muted">
-            Totals are calculated by Bambino’s server; the price you pay is the total shown.
-          </p>
-        </Card>
-      </aside>
+          </Card>
+        </aside>
+      </div>
     </div>
+  );
+}
+
+const STEPS = ['Delivery', 'Payment', 'Confirmation'] as const;
+
+/** Delivery → Payment → Confirmation. Confirmation is the order page the parent lands on after paying. */
+function CheckoutSteps({ current }: { current: number }) {
+  return (
+    <ol aria-label="Checkout steps" className="flex items-center gap-2 text-sm">
+      {STEPS.map((step, index) => (
+        <li
+          key={step}
+          aria-current={index === current ? 'step' : undefined}
+          className="flex items-center gap-2"
+        >
+          <span
+            aria-hidden="true"
+            className={
+              index < current
+                ? 'flex size-7 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground'
+                : index === current
+                  ? 'flex size-7 items-center justify-center rounded-full border-2 border-primary text-xs font-bold text-primary'
+                  : 'flex size-7 items-center justify-center rounded-full border-2 border-sand-300 text-xs font-bold text-foreground-muted'
+            }
+          >
+            {index + 1}
+          </span>
+          <span className={index === current ? 'font-semibold text-primary' : 'text-foreground-muted'}>
+            {step}
+            <span className="sr-only">
+              {index < current ? ' (done)' : index === current ? ' (current step)' : ''}
+            </span>
+          </span>
+          {index < STEPS.length - 1 ? (
+            <span aria-hidden="true" className="mx-1 h-px w-6 bg-sand-300 sm:w-10" />
+          ) : null}
+        </li>
+      ))}
+    </ol>
   );
 }
 

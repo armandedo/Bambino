@@ -116,7 +116,7 @@ function SubscriptionCard({ subscription }: { subscription: Subscription }) {
           tone="warning"
           title={`Order ${awaiting.orderNumber} is waiting for payment`}
           action={
-            <NextLink href={`/account/orders/${awaiting.id}`} className={buttonClasses({ size: 'sm' })}>
+            <NextLink href={`/dashboard/orders/${awaiting.id}`} className={buttonClasses({ size: 'sm' })}>
               Pay <MoneyText value={awaiting.totals.total} />
             </NextLink>
           }
@@ -279,7 +279,7 @@ export default function SubscriptionPage() {
       <PageTitle
         title="Subscription"
         action={
-          <NextLink href="/account/subscription/new" className={buttonClasses({ variant: 'outline' })}>
+          <NextLink href="/dashboard/subscription/new" className={buttonClasses({ variant: 'outline' })}>
             Start another
           </NextLink>
         }
@@ -296,7 +296,7 @@ export default function SubscriptionPage() {
               title="No subscription yet"
               description="Get pieces in your baby’s size every cycle, and swap them as your baby grows."
               action={
-                <NextLink href="/account/subscription/new" className={buttonClasses()}>
+                <NextLink href="/dashboard/subscription/new" className={buttonClasses()}>
                   Start a subscription
                 </NextLink>
               }

@@ -5,52 +5,56 @@
  * and a test fails if the two drift. The mobile app (Phase 7) reads the same values for NativeWind.
  */
 
-/** Raw palette. Components never use these directly; they use the semantic colours below. */
+/**
+ * Raw palette, from Bambino's visual identity: Forest #283618, Olive #606C38, Cream #FEFAE0, Warm Gold #DDA15E and
+ * Terracotta #BC6C25. Target balance: about 70% cream and neutral, 15% forest, 8% olive, 5% gold, 2% terracotta.
+ * Components never use these directly; they use the semantic colours below.
+ */
 export const palette = {
-  /** Eucalyptus green: the brand colour, chosen for calm and the circular-economy story. */
+  /** Forest (800) and olive (500): primary actions, headings, navigation. */
   brand: {
-    50: '#eef7f4',
-    100: '#d5ede5',
-    200: '#abdacb',
-    300: '#7bc1ac',
-    400: '#4fa48c',
-    500: '#2f8770',
-    600: '#226d5a',
-    700: '#1d5849',
-    800: '#1a473c',
-    900: '#163b32',
+    50: '#f4f5ea',
+    100: '#e6e9d2',
+    200: '#cdd3a8',
+    300: '#aab47a',
+    400: '#848f52',
+    500: '#606c38',
+    600: '#4a5629',
+    700: '#36421f',
+    800: '#283618',
+    900: '#1b250f',
   },
-  /** Warm coral: highlights and calls to action that are not the main action. */
+  /** Warm gold (400) and terracotta (600): highlights, premium accents, limited emphasis. */
   accent: {
-    50: '#fef4ef',
-    100: '#fde4d8',
-    200: '#fac7b0',
-    300: '#f5a280',
-    400: '#ee7d55',
-    500: '#e35f35',
-    600: '#c24a28',
-    700: '#a13b22',
-    800: '#802f1f',
-    900: '#67281c',
+    50: '#fdf6ec',
+    100: '#faeacf',
+    200: '#f3d3a3',
+    300: '#eab97a',
+    400: '#dda15e',
+    500: '#c98443',
+    600: '#bc6c25',
+    700: '#94531b',
+    800: '#714014',
+    900: '#57300f',
   },
-  /** Warm neutrals ("sand") rather than blue-greys, to suit a soft babywear brand. */
+  /** Cream neutrals: backgrounds, surfaces, borders and body text. */
   sand: {
-    0: '#ffffff',
-    50: '#fbf9f6',
-    100: '#f4f0ea',
-    200: '#e7e1d7',
-    300: '#d3cabc',
-    400: '#a89e8f',
-    500: '#7d7466',
-    600: '#5f574b',
-    700: '#48413a',
-    800: '#2f2a25',
-    900: '#1e1b18',
+    0: '#fffdf5',
+    50: '#fefae0',
+    100: '#f7f1d4',
+    200: '#ebe3c3',
+    300: '#d6cda9',
+    400: '#aba485',
+    500: '#787258',
+    600: '#5b5745',
+    700: '#434033',
+    800: '#2e2c22',
+    900: '#1f1e16',
   },
-  success: { 50: '#ecf8f0', 200: '#a9dfbd', 700: '#19663a', 800: '#14522f' },
-  warning: { 50: '#fff6db', 200: '#f5d77c', 700: '#7a4f00', 800: '#5f3d00' },
-  danger: { 50: '#fdf0ef', 200: '#f4b8b2', 600: '#b42318', 700: '#982016', 800: '#7a1a12' },
-  info: { 50: '#eef4fd', 200: '#b3cdf3', 700: '#1f4f9a', 800: '#193f7b' },
+  success: { 50: '#eef5e6', 200: '#bcd6a0', 700: '#3f6212', 800: '#33500f' },
+  warning: { 50: '#fdf3df', 200: '#f0cf8a', 700: '#7a4f00', 800: '#5f3d00' },
+  danger: { 50: '#fbefeb', 200: '#efb9a8', 600: '#a8361b', 700: '#8c2c15', 800: '#702410' },
+  info: { 50: '#eef3f6', 200: '#b7cbd6', 700: '#2f5468', 800: '#244353' },
 } as const;
 
 /** Semantic colours: what components use. Every text/background pair is contrast-tested to WCAG AA. */
@@ -59,22 +63,25 @@ export const colors = {
   surface: palette.sand[0],
   'surface-muted': palette.sand[100],
   'surface-sunken': palette.sand[200],
-  foreground: palette.sand[900],
+  foreground: palette.brand[900],
   'foreground-muted': palette.sand[600],
   border: palette.sand[200],
   /** Borders of form controls must reach 3:1 against the surface (WCAG 1.4.11). */
   'border-strong': palette.sand[500],
-  primary: palette.brand[600],
-  'primary-hover': palette.brand[700],
-  'primary-foreground': palette.sand[0],
+  primary: palette.brand[800],
+  'primary-hover': palette.brand[900],
+  'primary-foreground': palette.sand[50],
   'primary-soft': palette.brand[50],
   'primary-soft-foreground': palette.brand[800],
-  accent: palette.accent[600],
-  'accent-hover': palette.accent[700],
-  'accent-foreground': palette.sand[0],
+  /** Gold is a fill colour (buttons, highlights) with forest text on it; it is too light for text on cream. */
+  accent: palette.accent[400],
+  'accent-hover': palette.accent[300],
+  'accent-foreground': palette.brand[900],
   'accent-soft': palette.accent[50],
   'accent-soft-foreground': palette.accent[800],
-  link: palette.brand[700],
+  /** Terracotta dark enough for text, for limited emphasis. */
+  emphasis: palette.accent[700],
+  link: palette.brand[600],
   focus: palette.brand[500],
   'success-soft': palette.success[50],
   'success-border': palette.success[200],
@@ -95,8 +102,8 @@ export const colors = {
 export type ColorToken = keyof typeof colors;
 
 export const fonts = {
-  /** Rounded, friendly headings. Loaded by each app (next/font on web); the stack is the fallback. */
-  display: '"Nunito", ui-rounded, "Segoe UI", system-ui, sans-serif',
+  /** Confident editorial headings. Loaded by each app (next/font on web); the stack is the fallback. */
+  display: '"Manrope", "DM Sans", ui-sans-serif, "Segoe UI", system-ui, sans-serif',
   sans: '"Inter", ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif',
   mono: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
 } as const;
@@ -112,6 +119,8 @@ export const fontSizes = {
   '3xl': ['1.875rem', '2.25rem'],
   '4xl': ['2.25rem', '2.5rem'],
   '5xl': ['3rem', '1.1'],
+  '6xl': ['3.75rem', '1.05'],
+  '7xl': ['4.5rem', '1'],
 } as const;
 
 /** Tailwind's 4px spacing unit is kept; this is the base it multiplies. */
@@ -135,3 +144,12 @@ export const shadows = {
 
 /** Minimum touch target (WCAG 2.5.8 asks for 24px; 44px follows the platform guidelines). */
 export const minTouchTarget = '2.75rem';
+
+/**
+ * Motion tokens. Animation communicates origin, state change, interaction or the next action; it is never decorative
+ * looping. Smooth, non-bouncy easing; transform and opacity only; reduced motion is always respected.
+ */
+export const motionTokens = {
+  duration: { instant: 0.15, fast: 0.25, normal: 0.4, slow: 0.7, cinematic: 1.2 },
+  ease: [0.22, 1, 0.36, 1] as const,
+} as const;

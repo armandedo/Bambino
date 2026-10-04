@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
-import { Inter, Nunito } from 'next/font/google';
+import { Inter, Manrope } from 'next/font/google';
 import type { ReactNode } from 'react';
 import { AdminProviders } from '@/lib/session';
 import './globals.css';
 
-const display = Nunito({ subsets: ['latin'], variable: '--font-nunito', display: 'swap' });
+const display = Manrope({ subsets: ['latin'], variable: '--font-manrope', display: 'swap' });
 const sans = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
 
 export const metadata: Metadata = {

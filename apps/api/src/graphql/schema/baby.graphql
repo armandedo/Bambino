@@ -25,6 +25,9 @@ type Size {
   code: ID!
   label: String!
   sortOrder: Int!
+  "Age range of the size chart row, in days (null when the chart does not set one)."
+  minAgeDays: Int
+  maxAgeDays: Int
 }
 
 type BabyProfile {

@@ -95,6 +95,7 @@ export default async function ShopPage({
       >
         {category ? <input type="hidden" name="category" value={category} /> : null}
         <TextField
+          id="search"
           label="Search"
           name="q"
           type="search"

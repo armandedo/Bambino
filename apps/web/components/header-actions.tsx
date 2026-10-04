@@ -66,7 +66,7 @@ export function HeaderActions() {
           </span>
         ) : null}
       </NextLink>
-      <NextLink href="/account" className={buttonClasses({ size: 'sm', variant: 'outline' })}>
+      <NextLink href="/dashboard" className={buttonClasses({ size: 'sm', variant: 'outline' })}>
         {viewer.firstName}
         <span className="sr-only">: your account</span>
       </NextLink>

@@ -128,7 +128,7 @@ export function AddToCart({ variants, oneTimeEligible }: { variants: Variant[]; 
             Sign in to buy
           </NextLink>
         )}
-        <NextLink href="/subscriptions" className={buttonClasses({ size: 'lg', variant: 'outline' })}>
+        <NextLink href="/plans" className={buttonClasses({ size: 'lg', variant: 'outline' })}>
           See plans
         </NextLink>
       </div>

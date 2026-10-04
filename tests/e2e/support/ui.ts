@@ -2,7 +2,7 @@ import { type Page, expect } from '@playwright/test';
 import { TEST_PASSWORD, testEmail } from './api';
 
 /** Registers through the website's form and returns the email used. */
-export async function registerThroughUi(page: Page, label: string, next = '/size-finder'): Promise<string> {
+export async function registerThroughUi(page: Page, label: string, next = '/fit'): Promise<string> {
   const email = testEmail(label);
   await page.goto(`/register?next=${encodeURIComponent(next)}`);
   await page.waitForLoadState('networkidle');

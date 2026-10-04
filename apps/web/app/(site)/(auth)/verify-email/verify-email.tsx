@@ -29,7 +29,7 @@ export function VerifyEmail({ token }: { token: string }) {
         <Alert tone="success" title="Email verified" live>
           Thank you. Your email address is confirmed.
         </Alert>
-        <NextLink href="/account" className={buttonClasses({ fullWidth: true })}>
+        <NextLink href="/dashboard" className={buttonClasses({ fullWidth: true })}>
           Go to your account
         </NextLink>
       </div>

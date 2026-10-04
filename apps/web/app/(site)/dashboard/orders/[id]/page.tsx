@@ -6,6 +6,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useSearchParams } from 'next/navigation';
 import { useCallback, useState } from 'react';
 import { TotalsTable, formatAddress } from '@/components/checkout-parts';
+import { DeliveryProgress } from '@/components/delivery-progress';
 import { PaymentPanel } from '@/components/payment-panel';
 import { QueryState } from '@/components/query-state';
 import { api } from '@/lib/browser-api';
@@ -103,6 +104,12 @@ export default function OrderPage() {
                 <Button variant="ghost" size="sm" className="w-fit" onClick={() => setConfirmCancel(true)}>
                   Cancel this order
                 </Button>
+              </Card>
+            ) : null}
+
+            {data.status !== 'PENDING_PAYMENT' && data.status !== 'CANCELLED' ? (
+              <Card as="section" aria-label="Delivery progress">
+                <DeliveryProgress status={data.status} />
               </Card>
             ) : null}
 
