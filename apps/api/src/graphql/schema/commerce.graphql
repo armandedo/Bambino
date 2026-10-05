@@ -84,6 +84,7 @@ type Order {
   deliveryOption: DeliveryOption
   delivery: Delivery
   payments: [Payment!]!
+  refunds: [Refund!]!
   statusHistory: [OrderStatusEvent!]!
   placedAt: DateTime!
   paidAt: DateTime

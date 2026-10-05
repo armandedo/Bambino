@@ -1,7 +1,18 @@
 import { operation } from '../client';
 import type { BabyProfile } from './baby';
 import type { BillingInterval, Money, SizeSummary } from './catalogue';
-import type { Delivery, DeliveryStatus, OrderDetail, OrderStatus, Payment, PaymentStatus } from './commerce';
+import {
+  type Delivery,
+  type DeliveryStatus,
+  type OrderDetail,
+  type OrderStatus,
+  type Payment,
+  type PaymentStatus,
+  REFUND_FIELDS,
+  type Refund,
+  type RefundMethod,
+  type RefundStatus,
+} from './commerce';
 import type {
   Exchange,
   ExchangeStatus,
@@ -419,6 +430,7 @@ const ORDER_FIELDS = `
   deliveryOption { code name fee ${MONEY} estimatedDaysMin estimatedDaysMax }
   delivery { id direction status provider trackingNumber estimatedDeliveryDate deliveredAt events { status note occurredAt } }
   payments { id orderId provider status amount ${MONEY} failureMessage initiatedAt expiresAt completedAt }
+  refunds { ${REFUND_FIELDS} }
   statusHistory { status occurredAt }
 `;
 const CUSTOMER_REF = 'customer { id firstName lastName email phone }';
@@ -488,10 +500,30 @@ export const AdminUpdateDeliveryMutation = operation<
   'mutation AdminUpdateDelivery($input: DeliveryUpdateInput!) { adminUpdateDelivery(input: $input) { id status } }',
 );
 
+export interface AdminRefund {
+  refund: Refund;
+  paymentId: string;
+  orderId: string | null;
+  orderNumber: string | null;
+  customer: CustomerRef;
+  reason: string;
+  failureCode: string | null;
+  providerReference: string | null;
+  decidedAt: string | null;
+}
+const ADMIN_REFUND_FIELDS = `refund { ${REFUND_FIELDS} } paymentId orderId orderNumber ${CUSTOMER_REF} reason failureCode providerReference decidedAt`;
+
+/** Payment fields for refunds. `refunds` needs refund:read, so it is only asked for with `$withRefunds`. */
+const PAYMENT_REFUND_FIELDS = `refundableAmount ${MONEY} refundMethods refunds @include(if: $withRefunds) { ${ADMIN_REFUND_FIELDS} }`;
+
 export interface AdminPayment {
   payment: Payment;
   customer: CustomerRef;
   providerReference: string | null;
+  refundableAmount: Money;
+  refundMethods: RefundMethod[];
+  /** Present only when asked for with `withRefunds` (needs refund:read). */
+  refunds?: AdminRefund[];
   transactions: {
     id: string;
     type: string;
@@ -503,13 +535,13 @@ export interface AdminPayment {
 
 export const AdminPaymentsQuery = operation<
   { adminPayments: AdminPage<AdminPayment> },
-  { status?: PaymentStatus | null; page?: PageInput }
+  { status?: PaymentStatus | null; page?: PageInput; withRefunds: boolean }
 >(
   'AdminPayments',
-  `query AdminPayments($status: PaymentStatus, $page: PageInput) {
+  `query AdminPayments($status: PaymentStatus, $page: PageInput, $withRefunds: Boolean!) {
     adminPayments(status: $status, page: $page) {
       totalCount ${PAGE_INFO}
-      items { providerReference ${CUSTOMER_REF}
+      items { providerReference ${CUSTOMER_REF} ${PAYMENT_REFUND_FIELDS}
         payment { id orderId provider status amount ${MONEY} failureMessage initiatedAt expiresAt completedAt }
         transactions { id type resultingStatus amount ${MONEY} createdAt } }
     }
@@ -522,6 +554,45 @@ export const AdminReconcilePaymentMutation = operation<
 >(
   'AdminReconcilePayment',
   'mutation AdminReconcilePayment($id: ID!) { adminReconcilePayment(id: $id) { id status } }',
+);
+
+export const AdminRefundsQuery = operation<
+  { adminRefunds: AdminPage<AdminRefund> },
+  { status?: RefundStatus | null; page?: PageInput }
+>(
+  'AdminRefunds',
+  `query AdminRefunds($status: RefundStatus, $page: PageInput) {
+    adminRefunds(status: $status, page: $page) { totalCount ${PAGE_INFO} items { ${ADMIN_REFUND_FIELDS} } }
+  }`,
+);
+
+export const AdminRequestRefundMutation = operation<
+  { adminRequestRefund: AdminRefund },
+  {
+    input: {
+      idempotencyKey: string;
+      paymentId: string;
+      amount: number;
+      method: RefundMethod;
+      reason: string;
+    };
+  }
+>(
+  'AdminRequestRefund',
+  `mutation AdminRequestRefund($input: RefundInput!) { adminRequestRefund(input: $input) { ${ADMIN_REFUND_FIELDS} } }`,
+);
+
+export const AdminApproveRefundMutation = operation<{ adminApproveRefund: AdminRefund }, { id: string }>(
+  'AdminApproveRefund',
+  `mutation AdminApproveRefund($id: ID!) { adminApproveRefund(id: $id) { ${ADMIN_REFUND_FIELDS} } }`,
+);
+
+export const AdminRejectRefundMutation = operation<
+  { adminRejectRefund: AdminRefund },
+  { id: string; note?: string | null }
+>(
+  'AdminRejectRefund',
+  `mutation AdminRejectRefund($id: ID!, $note: String) { adminRejectRefund(id: $id, note: $note) { ${ADMIN_REFUND_FIELDS} } }`,
 );
 
 // --- Subscriptions and plans --------------------------------------------------------------------
@@ -811,9 +882,16 @@ export const AdminReturnQuery = operation<
 );
 
 export const AdminOrderQuery = operation<
-  { adminOrder: { order: OrderDetail; customer: CustomerRef } | null },
-  { id: string }
+  {
+    adminOrder: {
+      order: OrderDetail;
+      customer: CustomerRef;
+      payments: Pick<AdminPayment, 'payment' | 'refundableAmount' | 'refundMethods' | 'refunds'>[];
+    } | null;
+  },
+  { id: string; withRefunds: boolean }
 >(
   'AdminOrder',
-  `query AdminOrder($id: ID!) { adminOrder(id: $id) { order { ${ORDER_FIELDS} } ${CUSTOMER_REF} } }`,
+  `query AdminOrder($id: ID!, $withRefunds: Boolean!) { adminOrder(id: $id) { order { ${ORDER_FIELDS} } ${CUSTOMER_REF}
+    payments { payment { id orderId provider status amount ${MONEY} failureMessage initiatedAt expiresAt completedAt } ${PAYMENT_REFUND_FIELDS} } } }`,
 );

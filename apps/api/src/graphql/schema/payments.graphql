@@ -30,6 +30,32 @@ type Payment {
   completedAt: DateTime
 }
 
+enum RefundStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  PROCESSING
+  SUCCEEDED
+  FAILED
+}
+
+enum RefundMethod {
+  "Back to the wallet that paid."
+  PROVIDER
+  "As exchange credit, when the refund policy allows it."
+  CREDIT
+}
+
+"Money given back for a payment, as the customer sees it."
+type Refund {
+  id: ID!
+  status: RefundStatus!
+  method: RefundMethod!
+  amount: Money!
+  requestedAt: DateTime!
+  completedAt: DateTime
+}
+
 type PaymentMethod {
   id: ID!
   provider: PaymentProvider!

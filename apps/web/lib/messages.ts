@@ -97,6 +97,8 @@ const NOTIFICATIONS: Record<NotificationType, string> = {
   RETURN_RECEIVED: 'We received your return.',
   EXCHANGE_APPROVED: 'Your exchange was approved.',
   EXCHANGE_COMPLETED: 'Your exchange is complete.',
+  REFUND_SUCCEEDED: 'Your refund has been paid.',
+  REFUND_REJECTED: 'We could not approve a refund. Please contact us.',
 };
 
 export function notificationText(type: string): string {

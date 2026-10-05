@@ -22,6 +22,10 @@ import {
   type PaymentTransactionRow,
   customerFailureMessage,
 } from '../services/payment-service';
+import type { RefundRow } from '../services/refund-service';
+import { REFUND_POLICY } from '@bambino/config';
+import type { RefundStatus } from '@bambino/types';
+import { requirePermission } from '../services/context';
 import type { PromotionRow } from '../services/promotion-service';
 import type { GraphQLContext } from './context';
 
@@ -173,6 +177,18 @@ export const commerceResolvers = {
         totalCount: page.totalCount,
       };
     },
+    adminRefunds: async (
+      _: unknown,
+      args: { status?: RefundStatus | null; page?: PageRequest | null },
+      context: Ctx,
+    ) => {
+      const page = await context.services.refunds.listForStaff(context, args.status, args.page ?? {});
+      return {
+        items: page.items,
+        pageInfo: { endCursor: page.endCursor, hasNextPage: page.hasNextPage },
+        totalCount: page.totalCount,
+      };
+    },
     adminOrder: async (_: unknown, args: { id: string }, context: Ctx) => {
       const order = await context.services.orders.getForStaff(context, args.id);
       return order ? { order } : null;
@@ -256,6 +272,12 @@ export const commerceResolvers = {
       context.services.delivery.updateAsStaff(context, args.input),
     adminReconcilePayment: (_: unknown, args: { id: string }, context: Ctx) =>
       context.services.payments.reconcileOne(context, args.id),
+    adminRequestRefund: (_: unknown, args: { input: unknown }, context: Ctx) =>
+      context.services.refunds.request(context, args.input),
+    adminApproveRefund: (_: unknown, args: { id: string }, context: Ctx) =>
+      context.services.refunds.approve(context, args.id),
+    adminRejectRefund: (_: unknown, args: { id: string; note?: string | null }, context: Ctx) =>
+      context.services.refunds.reject(context, args.id, args.note),
     adminUpsertPromotion: (_: unknown, args: { input: unknown }, context: Ctx) =>
       context.services.promotions.upsert(context, args.input),
   },
@@ -329,6 +351,8 @@ export const commerceResolvers = {
     delivery: (parent: OrderRow, _: unknown, context: Ctx) => context.loaders.orderDelivery.load(parent.id),
     payments: async (parent: OrderRow, _: unknown, context: Ctx) =>
       (await context.loaders.orderPayments.load(parent.id)) ?? [],
+    refunds: async (parent: OrderRow, _: unknown, context: Ctx) =>
+      (await context.loaders.orderRefunds.load(parent.id)) ?? [],
     statusHistory: async (parent: OrderRow, _: unknown, context: Ctx) =>
       ((await context.loaders.orderEvents.load(parent.id)) ?? []).map((event) => ({
         status: event.newStatus,
@@ -358,6 +382,18 @@ export const commerceResolvers = {
     failureMessage: (parent: PaymentRow) => customerFailureMessage(parent.failureCode),
   },
 
+  Refund: {
+    amount: (parent: RefundRow) => asMoney(parent.amount, parent.currency),
+    requestedAt: (parent: RefundRow) => parent.createdAt,
+  },
+
+  AdminRefund: {
+    refund: (parent: RefundRow) => parent,
+    customer: (parent: RefundRow, _: unknown, context: Ctx) => customer(context, parent.userId),
+    orderNumber: async (parent: RefundRow, _: unknown, context: Ctx) =>
+      parent.orderId ? ((await context.loaders.order.load(parent.orderId))?.orderNumber ?? null) : null,
+  },
+
   PaymentMethod: {
     maskedMsisdn: (parent: PaymentMethodRow) => maskMsisdn(parent.msisdn),
   },
@@ -383,6 +419,8 @@ export const commerceResolvers = {
   AdminOrder: {
     customer: (parent: { order: OrderRow }, _: unknown, context: Ctx) =>
       customer(context, parent.order.userId),
+    payments: async (parent: { order: OrderRow }, _: unknown, context: Ctx) =>
+      ((await context.loaders.orderPayments.load(parent.order.id)) ?? []).map((payment) => ({ payment })),
   },
 
   AdminPayment: {
@@ -391,6 +429,13 @@ export const commerceResolvers = {
     providerReference: (parent: { payment: PaymentRow }) => parent.payment.providerReference,
     transactions: async (parent: { payment: PaymentRow }, _: unknown, context: Ctx) =>
       (await context.loaders.paymentTransactions.load(parent.payment.id)) ?? [],
+    refunds: async (parent: { payment: PaymentRow }, _: unknown, context: Ctx) => {
+      requirePermission(context, 'refund:read');
+      return (await context.loaders.paymentRefunds.load(parent.payment.id)) ?? [];
+    },
+    refundableAmount: async (parent: { payment: PaymentRow }, _: unknown, context: Ctx) =>
+      asMoney(await context.services.refunds.refundable(parent.payment), parent.payment.currency),
+    refundMethods: () => (REFUND_POLICY.allowRefundAsCredit ? ['PROVIDER', 'CREDIT'] : ['PROVIDER']),
   },
 
   PaymentTransaction: {

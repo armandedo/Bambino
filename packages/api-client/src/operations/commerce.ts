@@ -120,6 +120,20 @@ export interface Payment {
 }
 const PAYMENT_FIELDS = `id orderId provider status amount ${MONEY} failureMessage initiatedAt expiresAt completedAt`;
 
+export type RefundStatus = 'REQUESTED' | 'APPROVED' | 'REJECTED' | 'PROCESSING' | 'SUCCEEDED' | 'FAILED';
+export type RefundMethod = 'PROVIDER' | 'CREDIT';
+
+/** Money given back for a payment, as the customer sees it. */
+export interface Refund {
+  id: string;
+  status: RefundStatus;
+  method: RefundMethod;
+  amount: Money;
+  requestedAt: string;
+  completedAt: string | null;
+}
+export const REFUND_FIELDS = `id status method amount ${MONEY} requestedAt completedAt`;
+
 export interface OrderSummary {
   id: string;
   orderNumber: string;
@@ -170,6 +184,7 @@ export interface OrderDetail extends Omit<OrderSummary, 'totals' | 'items'> {
   deliveryOption: DeliveryOption | null;
   delivery: Delivery | null;
   payments: Payment[];
+  refunds: Refund[];
   statusHistory: { status: OrderStatus; occurredAt: string }[];
 }
 
@@ -181,6 +196,7 @@ const ORDER_DETAIL_FIELDS = `
   deliveryOption { ${DELIVERY_OPTION_FIELDS} }
   delivery { ${DELIVERY_FIELDS} }
   payments { ${PAYMENT_FIELDS} }
+  refunds { ${REFUND_FIELDS} }
   statusHistory { status occurredAt }
 `;
 

@@ -112,6 +112,12 @@ export function createLoaders(services: Services) {
     paymentTransactions: new Loader(async (ids: readonly string[]) =>
       groupBy(await payments.transactionsFor(ids), (row) => row.paymentId),
     ),
+    paymentRefunds: new Loader(async (ids: readonly string[]) =>
+      groupBy(await services.refunds.forPayments(ids), (row) => row.paymentId),
+    ),
+    orderRefunds: new Loader(async (ids: readonly string[]) =>
+      groupBy(await services.refunds.forOrders(ids), (row) => row.orderId ?? ''),
+    ),
     customer: new Loader(async (ids: readonly string[]) =>
       byKey(await account.customerSummaries(ids), (row) => row.user.id),
     ),

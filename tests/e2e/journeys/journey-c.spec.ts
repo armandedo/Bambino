@@ -10,7 +10,7 @@ const ADMIN_URL = process.env.E2E_ADMIN_URL ?? 'http://localhost:3001/admin';
  * available for reuse, with its full history. Every staff step is done in the admin dashboard.
  * Setup (a family holding two delivered garments who asked for a pickup) goes through the API.
  */
-test('journey C: staff receive and inspect a return, and the garment goes back into circulation', async ({
+test('journey C: staff receive and inspect a return, the garment goes back into circulation, and staff refund an order', async ({
   page,
 }) => {
   const staff = await staffApi();
@@ -115,6 +115,87 @@ test('journey C: staff receive and inspect a return, and the garment goes back i
         status: 'AVAILABLE_FOR_REUSE',
         lifecycleCount: cyclesBefore + 1,
       });
+    });
+
+    const paidOrder = await test.step('setup: the family also bought something and paid for it', async () => {
+      const product = await customer.gql<{ product: { variants: { id: string; inStock: boolean }[] } }>(
+        '{ product(slug: "seed-footed-romper") { variants { id inStock } } }',
+      );
+      const variant = product.product.variants.find((v) => v.inStock);
+      const options = await customer.gql<{ deliveryOptions: { code: string }[] }>(
+        '{ deliveryOptions { code } }',
+      );
+      if (!variant) throw new Error('no variant in stock');
+      await customer.gql('mutation ($id: ID!) { addToCart(variantId: $id, quantity: 1) { id } }', {
+        id: variant.id,
+      });
+      const created = await customer.gql<{ createOrder: { id: string; orderNumber: string } }>(
+        'mutation ($input: CreateOrderInput!) { createOrder(input: $input) { id orderNumber } }',
+        {
+          input: {
+            idempotencyKey: crypto.randomUUID(),
+            checkout: { shippingAddressId: addressId, deliveryOptionCode: options.deliveryOptions[0]?.code },
+          },
+        },
+      );
+      const payment = await customer.gql<{ initiatePayment: { id: string } }>(
+        'mutation ($input: InitiatePaymentInput!) { initiatePayment(input: $input) { id } }',
+        {
+          input: {
+            idempotencyKey: crypto.randomUUID(),
+            orderId: created.createOrder.id,
+            provider: 'MOCK',
+            msisdn: '+250780000001',
+          },
+        },
+      );
+      await expect
+        .poll(
+          async () =>
+            (
+              await customer.gql<{ payment: { status: string } }>(
+                'query ($id: ID!) { payment(id: $id) { status } }',
+                {
+                  id: payment.initiatePayment.id,
+                },
+              )
+            ).payment.status,
+        )
+        .toBe('SUCCEEDED');
+      return created.createOrder;
+    });
+
+    await test.step('staff refund part of the order from the admin order page', async () => {
+      await page.goto(`${ADMIN_URL}/orders/${paidOrder.id}`);
+      await expect(page.getByRole('heading', { name: paidOrder.orderNumber })).toBeVisible({
+        timeout: 60_000,
+      });
+      await page.getByRole('button', { name: 'Refund…' }).click();
+      const dialog = page.getByRole('dialog', { name: 'Request a refund' });
+      await dialog.getByLabel(/Amount/).fill('1000');
+      await dialog.getByLabel(/Reason/).fill('One piece arrived damaged');
+      await dialog.getByRole('button', { name: 'Request refund' }).click();
+      const refunds = page.getByRole('list', { name: 'Refunds' });
+      await expect(refunds.getByText('Requested')).toBeVisible();
+      await page.getByRole('button', { name: 'Approve refund' }).click();
+      await expect(refunds.getByText(/Processing|Succeeded/)).toBeVisible();
+      // The provider confirms on the next reconciliation run (RECONCILE_INTERVAL_SECONDS, 60 by default).
+      await expect(async () => {
+        await page.reload();
+        await expect(page.getByRole('list', { name: 'Refunds' }).getByText('Succeeded')).toBeVisible({
+          timeout: 2_000,
+        });
+      }).toPass({ timeout: 120_000, intervals: [5_000] });
+      await expectNoA11yViolations(page);
+    });
+
+    await test.step('the customer sees the refund on the order', async () => {
+      const order = await customer.gql<{
+        order: { refunds: { status: string; amount: { amount: number } }[] };
+      }>('query ($id: ID!) { order(id: $id) { refunds { status amount { amount } } } }', {
+        id: paidOrder.id,
+      });
+      expect(order.order.refunds).toEqual([{ status: 'SUCCEEDED', amount: { amount: 1000 } }]);
     });
   } finally {
     await customer.dispose();

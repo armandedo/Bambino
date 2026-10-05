@@ -24,6 +24,7 @@ type AdminCustomerPage {
 type AdminOrder {
   order: Order!
   customer: AdminCustomer!
+  payments: [AdminPayment!]!
 }
 
 type AdminOrderPage {
@@ -49,6 +50,39 @@ type AdminPayment {
   customer: AdminCustomer!
   providerReference: String
   transactions: [PaymentTransaction!]!
+  "Needs refund:read."
+  refunds: [AdminRefund!]!
+  "Amount less open and succeeded refunds. Zero unless the payment succeeded."
+  refundableAmount: Money!
+  "Refund methods staff may choose (exchange credit only if the refund policy allows it)."
+  refundMethods: [RefundMethod!]!
+}
+
+type AdminRefund {
+  refund: Refund!
+  paymentId: ID!
+  orderId: ID
+  orderNumber: String
+  customer: AdminCustomer!
+  reason: String!
+  failureCode: String
+  providerReference: String
+  decidedAt: DateTime
+}
+
+type AdminRefundPage {
+  items: [AdminRefund!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+input RefundInput {
+  "Client-generated UUID. Re-sending the same key returns the original refund; it never pays out twice."
+  idempotencyKey: String!
+  paymentId: ID!
+  amount: MinorUnits!
+  method: RefundMethod!
+  reason: String!
 }
 
 type PaymentTransaction {
@@ -396,6 +430,7 @@ extend type Query {
   adminSubscriptionPlans: [SubscriptionPlan!]! @requires(permission: "subscription:read")
   adminPayments(status: PaymentStatus, page: PageInput): AdminPaymentPage!
     @requires(permission: "payment:read")
+  adminRefunds(status: RefundStatus, page: PageInput): AdminRefundPage! @requires(permission: "refund:read")
   adminReturns(status: ReturnStatus, page: PageInput): AdminReturnPage! @requires(permission: "return:read")
   adminReturn(id: ID!): AdminReturn @requires(permission: "return:read")
   adminExchanges(status: ExchangeStatus, page: PageInput): AdminExchangePage!
@@ -442,6 +477,11 @@ extend type Mutation {
 
   "Asks the provider for the payment's true status and applies it. Never sets a status by hand."
   adminReconcilePayment(id: ID!): Payment! @requires(permission: "payment:write")
+  "Starts REQUESTED; nothing is paid out until a refund is approved."
+  adminRequestRefund(input: RefundInput!): AdminRefund! @requires(permission: "refund:write")
+  "Approves and sends the refund to the provider (or adds the credit). It succeeds when the provider confirms."
+  adminApproveRefund(id: ID!): AdminRefund! @requires(permission: "refund:write")
+  adminRejectRefund(id: ID!, note: String): AdminRefund! @requires(permission: "refund:write")
 
   adminApproveReturn(id: ID!): ReturnRequest! @requires(permission: "return:write")
   adminRejectReturn(id: ID!, reason: String!): ReturnRequest! @requires(permission: "return:write")

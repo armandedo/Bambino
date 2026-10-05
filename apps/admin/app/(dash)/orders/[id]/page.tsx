@@ -7,6 +7,7 @@ import NextLink from 'next/link';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
 import { DeliverySteps } from '@/components/delivery-steps';
+import { RefundPanel } from '@/components/refund-panel';
 import { QueryState, RequirePermission, useAction } from '@/components/kit';
 import { formatDate, fullName } from '@/lib/format';
 import { api, useStaff } from '@/lib/session';
@@ -29,7 +30,8 @@ function OrderDetail({ id }: { id: string }) {
   const invalidate = [key, ['admin-orders']];
   const query = useQuery({
     queryKey: key,
-    queryFn: async () => (await api.request(AdminOrderQuery, { id })).adminOrder,
+    queryFn: async () =>
+      (await api.request(AdminOrderQuery, { id, withRefunds: can('refund:read') })).adminOrder,
   });
   const [cancelling, setCancelling] = useState(false);
   const setStatus = useAction(
@@ -44,8 +46,11 @@ function OrderDetail({ id }: { id: string }) {
     <QueryState query={query} what="this order">
       {(data) => {
         if (!data) return <Alert tone="warning">Order not found.</Alert>;
-        const { order, customer } = data;
+        const { order, customer, payments } = data;
         const next = NEXT_WAREHOUSE_STEP[order.status];
+        const paidCancellable =
+          order.type === 'ONE_TIME' &&
+          ['PAID', 'PROCESSING', 'PACKED', 'READY_FOR_DISPATCH'].includes(order.status);
         return (
           <div className="flex flex-col gap-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -76,17 +81,12 @@ function OrderDetail({ id }: { id: string }) {
                     {STEP_LABEL[next]}
                   </Button>
                 ) : null}
-                {order.status === 'PENDING_PAYMENT' ? (
+                {order.status === 'PENDING_PAYMENT' || paidCancellable ? (
                   <Button variant="ghost" onClick={() => setCancelling(true)}>
                     Cancel order
                   </Button>
                 ) : null}
               </div>
-            ) : null}
-            {['PAID', 'PROCESSING', 'PACKED', 'READY_FOR_DISPATCH'].includes(order.status) ? (
-              <p className="text-sm text-foreground-muted">
-                Paid orders cannot be cancelled until refunds are built.
-              </p>
             ) : null}
 
             <div className="grid gap-6 lg:grid-cols-2">
@@ -158,21 +158,30 @@ function OrderDetail({ id }: { id: string }) {
               </Card>
               <Card>
                 <CardHeader title="Payments" level={3} />
-                {order.payments.length === 0 ? (
+                {payments.length === 0 ? (
                   <p className="text-sm text-foreground-muted">No payment attempts.</p>
                 ) : (
-                  <ul className="flex flex-col gap-2 text-sm">
-                    {order.payments.map((p) => (
-                      <li key={p.id} className="flex flex-wrap items-center justify-between gap-2">
-                        <span>
-                          {humanizeStatus(p.provider)} · {formatDate(p.initiatedAt, true)}
-                          {p.failureMessage ? (
-                            <span className="block text-foreground-muted">{p.failureMessage}</span>
+                  <ul className="flex flex-col gap-3 text-sm">
+                    {payments.map((entry) => {
+                      const p = entry.payment;
+                      return (
+                        <li key={p.id} className="flex flex-col gap-2">
+                          <span className="flex flex-wrap items-center justify-between gap-2">
+                            <span>
+                              <MoneyText value={p.amount} /> · {humanizeStatus(p.provider)} ·{' '}
+                              {formatDate(p.initiatedAt, true)}
+                              {p.failureMessage ? (
+                                <span className="block text-foreground-muted">{p.failureMessage}</span>
+                              ) : null}
+                            </span>
+                            <StatusBadge status={p.status} />
+                          </span>
+                          {can('refund:read') && (p.status === 'SUCCEEDED' || p.status === 'REFUNDED') ? (
+                            <RefundPanel payment={entry} invalidate={invalidate} />
                           ) : null}
-                        </span>
-                        <StatusBadge status={p.status} />
-                      </li>
-                    ))}
+                        </li>
+                      );
+                    })}
                   </ul>
                 )}
               </Card>
@@ -192,8 +201,14 @@ function OrderDetail({ id }: { id: string }) {
             <Modal
               open={cancelling}
               onClose={() => setCancelling(false)}
-              title="Cancel this unpaid order?"
-              description="Reserved stock and garments are released."
+              title={
+                order.status === 'PENDING_PAYMENT' ? 'Cancel this unpaid order?' : 'Cancel this paid order?'
+              }
+              description={
+                order.status === 'PENDING_PAYMENT'
+                  ? 'Reserved stock and garments are released.'
+                  : 'Stock goes back on hand, and a full refund is requested. The refund needs approval before anything is paid out.'
+              }
               footer={
                 <>
                   <Button variant="outline" onClick={() => setCancelling(false)}>
