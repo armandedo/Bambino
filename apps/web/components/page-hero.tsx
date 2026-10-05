@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Reveal } from './motion/primitives';
+import { Entrance } from './motion/entrance';
 
 /** Opening band for inner pages: eyebrow, editorial headline, intro and optional actions. */
 export function PageHero({
@@ -16,24 +16,22 @@ export function PageHero({
   return (
     <section className="border-b border-border bg-background">
       <div className="mx-auto flex max-w-7xl flex-col gap-5 px-4 pt-12 pb-14 sm:px-6 lg:pt-20 lg:pb-20">
-        <Reveal immediate from="up" duration="normal">
-          <p className="text-sm font-bold tracking-[0.14em] text-emphasis uppercase">{eyebrow}</p>
-        </Reveal>
-        <Reveal immediate delay={0.08}>
-          <h1 className="max-w-4xl font-display text-4xl leading-[1.05] font-extrabold tracking-tight text-primary sm:text-6xl">
-            {title}
-          </h1>
-        </Reveal>
+        <Entrance as="p" className="text-sm font-bold tracking-[0.14em] text-emphasis uppercase">
+          {eyebrow}
+        </Entrance>
+        <Entrance
+          as="h1"
+          delay={0.08}
+          className="max-w-4xl font-display text-4xl leading-[1.05] font-extrabold tracking-tight text-primary sm:text-6xl"
+        >
+          {title}
+        </Entrance>
         {intro ? (
-          <Reveal immediate delay={0.18}>
-            <p className="max-w-2xl text-lg text-foreground-muted sm:text-xl">{intro}</p>
-          </Reveal>
+          <Entrance as="p" delay={0.18} className="max-w-2xl text-lg text-foreground-muted sm:text-xl">
+            {intro}
+          </Entrance>
         ) : null}
-        {children ? (
-          <Reveal immediate delay={0.28}>
-            {children}
-          </Reveal>
-        ) : null}
+        {children ? <Entrance delay={0.28}>{children}</Entrance> : null}
       </div>
     </section>
   );

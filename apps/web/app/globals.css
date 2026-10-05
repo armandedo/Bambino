@@ -10,3 +10,21 @@
   --font-display: var(--font-manrope), ui-sans-serif, 'Segoe UI', system-ui, sans-serif;
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, 'Segoe UI', Roboto, sans-serif;
 }
+
+/*
+ * Above-the-fold entrance (components/motion/entrance.tsx): transform only, so the content is visible in the server
+ * HTML, without JavaScript and at the first paint. Off for visitors who ask their system for reduced motion.
+ */
+@keyframes entrance-rise {
+  from {
+    transform: translateY(1rem);
+  }
+}
+.entrance {
+  animation: entrance-rise 700ms var(--ease-brand) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .entrance {
+    animation: none;
+  }
+}

@@ -4,6 +4,7 @@ import { buttonClasses } from '@bambino/ui';
 import { ArrowRight } from 'lucide-react';
 import { motion } from 'motion/react';
 import NextLink from 'next/link';
+import { Entrance } from '../motion/entrance';
 import { DURATION, EASE } from '../motion/primitives';
 import { PHOTOS, photoSrcSet, photoUrl } from '@/lib/stock-photos';
 
@@ -15,7 +16,8 @@ const SIZES = [
 
 /**
  * A warm lifestyle photo with the growth story layered on top: three sizes stepping up, and the exchange promise.
- * Decorative (the headline carries the message), so it is hidden from screen readers.
+ * Decorative (the headline carries the message), so it is hidden from screen readers. The main photo is the
+ * page's largest paint, so it uses the CSS entrance (visible from the first paint); only the layers around it fade.
  */
 function HeroVisual() {
   return (
@@ -26,11 +28,9 @@ function HeroVisual() {
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: DURATION.cinematic, ease: EASE, delay: 0.1 }}
       />
-      <motion.div
+      <Entrance
+        delay={0.1}
         className="relative aspect-[4/5] overflow-hidden rounded-[2rem] bg-sand-100 shadow-xl"
-        initial={{ opacity: 0, y: 32 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: DURATION.slow, ease: EASE, delay: 0.25 }}
       >
         <img
           src={photoUrl(PHOTOS.heroMother, 1080, 4 / 5)}
@@ -54,7 +54,7 @@ function HeroVisual() {
             </motion.span>
           ))}
         </div>
-      </motion.div>
+      </Entrance>
       <motion.div
         className="absolute -bottom-2 -left-3 hidden aspect-square w-[34%] overflow-hidden rounded-3xl border-4 border-surface shadow-lg sm:-left-8 sm:block"
         initial={{ opacity: 0, scale: 0.85, rotate: -6 }}
@@ -73,50 +73,72 @@ function HeroVisual() {
           <ArrowRight className="size-4" strokeWidth={2.25} />
         </span>
         <span className="text-sm leading-tight">
-          <span className="block font-bold text-primary">Next size, not a new wardrobe</span>
-          <span className="text-foreground-muted">Swap as your baby grows</span>
+          <span className="block font-bold text-primary">Too small? We swap it.</span>
+          <span className="text-foreground-muted">Next size up, at your door</span>
         </span>
       </motion.div>
     </div>
   );
 }
 
+/** A hand-drawn underline under one word of the headline. Decorative. */
+function Scribble() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 220 18"
+      preserveAspectRatio="none"
+      className="absolute -bottom-2 left-0 h-3 w-full text-accent sm:-bottom-3 sm:h-4"
+    >
+      <path
+        d="M3 12c38-7 84-10 128-8 30 1 56 4 86 1"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="5"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 export function Hero() {
-  const rise = (delay: number) => ({
-    initial: { opacity: 0, y: 28 },
-    animate: { opacity: 1, y: 0 },
-    transition: { duration: DURATION.slow, ease: EASE, delay },
-  });
+  // The words render on the server and are visible before any JavaScript runs; only the photo animates in.
   return (
     <section aria-labelledby="hero-title" className="relative overflow-hidden">
-      <div className="mx-auto grid max-w-7xl items-center gap-10 px-4 pt-10 pb-16 sm:px-6 md:pt-16 lg:grid-cols-[1.05fr_1fr] lg:gap-16 lg:pb-24">
-        <div className="flex flex-col gap-7">
-          <motion.p
-            {...rise(0.05)}
-            className="w-fit rounded-full border border-brand-200 bg-surface px-3 py-1 text-sm font-semibold text-brand-600"
-          >
-            Babywear subscription · Designed in Kigali
-          </motion.p>
-          <motion.h1
+      <div className="mx-auto grid max-w-7xl items-center gap-12 px-4 pt-8 pb-16 sm:px-6 md:pt-14 lg:grid-cols-[1.1fr_1fr] lg:gap-16 lg:pb-24">
+        <div className="flex flex-col gap-6">
+          <p className="text-base font-medium text-brand-600">
+            <span lang="rw" className="font-bold text-accent-700">
+              Muraho!
+            </span>{' '}
+            We&rsquo;re Bambino, a babywear subscription from Kigali.
+          </p>
+          <h1
             id="hero-title"
-            {...rise(0.15)}
-            className="font-display text-[2.6rem] leading-[1.02] font-extrabold tracking-tight text-primary sm:text-6xl lg:text-7xl"
+            className="font-display text-[2.5rem] leading-[1.05] font-extrabold tracking-tight text-primary sm:text-6xl"
           >
-            Clothes that grow
-            <br className="hidden sm:block" /> with your baby.
-          </motion.h1>
-          <motion.p {...rise(0.3)} className="max-w-xl text-lg text-foreground-muted sm:text-xl">
-            Smart, sustainable babywear — hassle-free, every month. We find the right size, deliver it, and
-            swap it for the next one when your baby grows.
-          </motion.p>
-          <motion.div {...rise(0.45)} className="flex flex-col gap-3 sm:flex-row">
+            Your baby is going to outgrow{' '}
+            <span className="relative inline-block whitespace-nowrap">
+              everything.
+              <Scribble />
+            </span>
+          </h1>
+          <p className="max-w-xl text-lg leading-relaxed text-foreground-muted">
+            Every few months a whole drawer stops fitting. We bring clothes in the size your baby is now, pick
+            them up when they get small, and bring the next size. One monthly fee, and nothing left forgotten
+            at the back of a cupboard.
+          </p>
+          <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:items-center">
             <NextLink href="/fit" className={buttonClasses({ size: 'lg', className: 'gap-2' })}>
-              Find the right fit <ArrowRight aria-hidden="true" className="size-5" />
+              Find my baby&rsquo;s size <ArrowRight aria-hidden="true" className="size-5" />
             </NextLink>
-            <NextLink href="/plans" className={buttonClasses({ size: 'lg', variant: 'outline' })}>
-              Explore plans
+            <NextLink
+              href="/plans"
+              className="px-2 py-3 font-semibold text-primary underline decoration-accent decoration-2 underline-offset-4 hover:decoration-primary"
+            >
+              or see what it costs
             </NextLink>
-          </motion.div>
+          </div>
         </div>
         <HeroVisual />
       </div>
