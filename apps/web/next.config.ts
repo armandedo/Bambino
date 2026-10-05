@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next';
+import { staticSecurityHeaders } from './lib/security-headers';
 
 const config: NextConfig = {
   // Internal packages ship TypeScript source; Next compiles them.
@@ -11,6 +12,10 @@ const config: NextConfig = {
     '@bambino/types',
   ],
   poweredByHeader: false,
+  // The Content-Security-Policy carries a per-request nonce, so proxy.ts sets it.
+  async headers() {
+    return [{ source: '/:path*', headers: staticSecurityHeaders(process.env.NODE_ENV === 'production') }];
+  },
   // Earlier addresses keep working (emails, bookmarks, the tests) after the move to the spec's route names.
   async redirects() {
     return [

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter, Manrope } from 'next/font/google';
+import { connection } from 'next/server';
 import type { ReactNode } from 'react';
 import './globals.css';
 
@@ -19,7 +20,10 @@ export const viewport: Viewport = {
   themeColor: '#283618',
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  // Render every page per request: the CSP nonce set by proxy.ts must be in the HTML, and a page built ahead of
+  // time has none. API data is still cached by each fetch's own `revalidate`.
+  await connection();
   return (
     <html lang="en" className={`${display.variable} ${sans.variable}`}>
       <body>{children}</body>
