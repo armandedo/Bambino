@@ -30,6 +30,8 @@ export class AccountService {
   constructor(
     private readonly db: Database,
     private readonly auth: AuthService,
+    /** The deletion grace period is counted from requestedAt, so it uses the service clock. */
+    private readonly now: () => Date = () => new Date(),
   ) {}
 
   /** Only ever called with the actor's own id; there is no way to ask for someone else's account. */
@@ -257,7 +259,10 @@ export class AccountService {
           ),
         );
       if (open) return open;
-      const [created] = await tx.insert(schema.dataRequests).values({ userId, type }).returning();
+      const [created] = await tx
+        .insert(schema.dataRequests)
+        .values({ userId, type, requestedAt: this.now() })
+        .returning();
       if (!created) throw new Error('Data request insert returned no row');
       return created;
     });

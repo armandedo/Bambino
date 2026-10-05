@@ -64,12 +64,21 @@ type AuthPayload {
   refreshToken: String
 }
 
+type SignedDownload {
+  url: String!
+  expiresAt: DateTime!
+}
+
 type DataRequest {
   id: ID!
   type: DataRequestType!
   status: DataRequestStatus!
   requestedAt: DateTime!
   completedAt: DateTime
+  "Exports only: true while the file can be downloaded (see dataExportDownload)."
+  downloadAvailable: Boolean!
+  "Exports only: when the file is deleted."
+  expiresAt: DateTime
 }
 
 input ConsentInput {
@@ -117,6 +126,8 @@ extend type Query {
   "Null when not signed in."
   me: User
   myDataRequests: [DataRequest!]! @authenticated
+  "A short-lived signed link to download one of your completed data exports."
+  dataExportDownload(id: ID!): SignedDownload! @authenticated
 }
 
 type Mutation {

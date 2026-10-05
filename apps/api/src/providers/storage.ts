@@ -25,6 +25,11 @@ export interface StorageProvider {
   createUpload(objectKey: string, contentType: string): Promise<UploadTarget>;
   /** Null when the object does not exist. */
   stat(objectKey: string): Promise<StoredObject | null>;
+  /** Stores a private object (outside the public-read prefixes), e.g. a data export. */
+  putPrivate(objectKey: string, body: string, contentType: string): Promise<void>;
+  /** A short-lived signed link to download a private object. */
+  signedDownloadUrl(objectKey: string, expiresSeconds: number): Promise<{ url: string; expiresAt: Date }>;
+  deleteObject(objectKey: string): Promise<void>;
 }
 
 /**
@@ -50,6 +55,26 @@ export class LocalStorageProvider implements StorageProvider {
 
   async stat(): Promise<StoredObject | null> {
     return null;
+  }
+
+  async putPrivate(): Promise<void> {
+    throw this.unavailable();
+  }
+
+  async signedDownloadUrl(): Promise<{ url: string; expiresAt: Date }> {
+    throw this.unavailable();
+  }
+
+  async deleteObject(): Promise<void> {
+    throw this.unavailable();
+  }
+
+  private unavailable() {
+    return new AppError(
+      'NOT_IMPLEMENTED',
+      'Private files need object storage to be configured.',
+      'STORAGE_UNAVAILABLE',
+    );
   }
 }
 
@@ -111,6 +136,31 @@ export class S3StorageProvider implements StorageProvider {
       contentType: response.headers.get('content-type'),
       byteSize: Number(response.headers.get('content-length') ?? 0),
     };
+  }
+
+  async putPrivate(objectKey: string, body: string, contentType: string): Promise<void> {
+    const response = await this.send('PUT', this.objectUrl(objectKey), body, { 'content-type': contentType });
+    if (!response.ok) throw new Error(`Storage PUT failed with status ${response.status}`);
+  }
+
+  async signedDownloadUrl(objectKey: string, expiresSeconds: number) {
+    const now = this.now();
+    return {
+      url: presignUrl({
+        method: 'GET',
+        url: this.objectUrl(objectKey),
+        credentials: this.credentials,
+        expiresSeconds,
+        now,
+      }),
+      expiresAt: new Date(now.getTime() + expiresSeconds * 1000),
+    };
+  }
+
+  async deleteObject(objectKey: string): Promise<void> {
+    const response = await this.send('DELETE', this.objectUrl(objectKey));
+    if (!response.ok && response.status !== 404)
+      throw new Error(`Storage DELETE failed with status ${response.status}`);
   }
 
   /** Creates the bucket if missing and makes the given key prefixes publicly readable (e.g. product images). */

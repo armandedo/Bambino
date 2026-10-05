@@ -1,8 +1,10 @@
 'use client';
 
+import { PRIVACY_POLICY } from '@bambino/config';
 import {
   ChangePasswordMutation,
   DeleteAddressMutation,
+  DataExportDownloadQuery,
   MyDataRequestsQuery,
   RequestAccountDeletionMutation,
   RequestDataExportMutation,
@@ -235,6 +237,11 @@ function PrivacySection() {
     mutationFn: () => api.request(RequestDataExportMutation),
     onSuccess: refresh,
   });
+  // The link is signed for a few minutes, so it is fetched only when the parent asks for the file.
+  const download = useMutation({
+    mutationFn: async (id: string) => (await api.request(DataExportDownloadQuery, { id })).dataExportDownload,
+    onSuccess: ({ url }) => window.location.assign(url),
+  });
   const [deleting, setDeleting] = useState(false);
   const [password, setPassword] = useState('');
   const deletion = useMutation({
@@ -262,7 +269,19 @@ function PrivacySection() {
                     {request.type === 'EXPORT' ? 'Data export' : 'Account deletion'} requested{' '}
                     {formatDate(request.requestedAt)}
                   </span>
-                  <StatusBadge status={request.status} />
+                  <span className="flex items-center gap-2">
+                    {request.downloadAvailable ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        loading={download.isPending && download.variables === request.id}
+                        onClick={() => download.mutate(request.id)}
+                      >
+                        Download
+                      </Button>
+                    ) : null}
+                    <StatusBadge status={request.status} />
+                  </span>
                 </li>
               ))}
             </ul>
@@ -270,9 +289,15 @@ function PrivacySection() {
         }
       </QueryState>
       <Alert tone="info">
-        Requests are recorded now; preparing the export file and carrying out deletion are handled by our team
-        for the moment.
+        A copy of your data is usually ready within a few minutes; we email you when it is, and you download
+        it here for {PRIVACY_POLICY.exportRetentionDays} days. Deletion happens{' '}
+        {PRIVACY_POLICY.deletionGraceDays} days after you ask.
       </Alert>
+      {download.isError ? (
+        <Alert tone="danger" live>
+          {errorMessage(download.error)}
+        </Alert>
+      ) : null}
       <div className="flex flex-wrap gap-3">
         <Button variant="outline" loading={exportData.isPending} onClick={() => exportData.mutate()}>
           Request a copy of my data
@@ -290,7 +315,7 @@ function PrivacySection() {
         open={deleting}
         onClose={() => setDeleting(false)}
         title="Delete your account?"
-        description="This starts closing your account. Our team confirms what is deleted and which records must be kept, such as payments."
+        description={`Your account is closed and your details, including your baby's, are deleted ${PRIVACY_POLICY.deletionGraceDays} days from now. Records the law requires, such as orders and payments, are kept without your name.`}
         footer={
           <>
             <Button variant="outline" onClick={() => setDeleting(false)}>

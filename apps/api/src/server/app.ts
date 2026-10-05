@@ -209,9 +209,10 @@ export function createApp(deps: AppDependencies) {
   const runJobs = async () => {
     const payments = await services.payments.reconcile();
     const refunds = await services.refunds.reconcile();
+    const privacy = await services.privacy.processRequests();
     const cancelledOrders = await services.orders.cancelStaleOrders();
     const subscriptions = await services.subscriptions.runRenewals();
-    return { ...payments, refundsChecked: refunds.checked, cancelledOrders, ...subscriptions };
+    return { ...payments, refundsChecked: refunds.checked, cancelledOrders, ...subscriptions, ...privacy };
   };
 
   /** Node request handler: health check, webhooks, and the GraphQL endpoint. */

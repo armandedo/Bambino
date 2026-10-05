@@ -1,6 +1,11 @@
 import type { Logger } from '../infra/logger';
 
-export type EmailTemplate = 'auth.verify_email' | 'auth.password_reset' | 'auth.password_changed';
+export type EmailTemplate =
+  | 'auth.verify_email'
+  | 'auth.password_reset'
+  | 'auth.password_changed'
+  | 'privacy.export_ready'
+  | 'privacy.account_deleted';
 
 /** Templates are rendered by the provider in the recipient's locale; services never build email text. */
 export interface EmailMessage {

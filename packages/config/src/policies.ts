@@ -59,3 +59,16 @@ export const REFUND_POLICY = {
   /** Whether staff may refund as exchange credit instead of money back to the wallet. */
   allowRefundAsCredit: false,
 };
+
+/**
+ * Open question 14. Data protection timings (Rwanda Law 058/2021). PLACEHOLDER until the business and its counsel
+ * decide. See docs/03-auth-and-security.md for what is kept after deletion and why.
+ */
+export const PRIVACY_POLICY = {
+  /** Days between a deletion request and carrying it out, so a mistaken request can be noticed. */
+  deletionGraceDays: 14,
+  /** Days a generated export stays downloadable before the file is deleted. */
+  exportRetentionDays: 7,
+  /** Minutes a signed export download link stays valid. */
+  exportLinkMinutes: 15,
+};

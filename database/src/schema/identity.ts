@@ -235,6 +235,8 @@ export const dataRequests = pgTable(
     status: dataRequestStatus('status').notNull().default('REQUESTED'),
     /** Object-storage key of the generated export, when type = EXPORT. */
     resultObjectKey: text('result_object_key'),
+    /** When the export file is deleted (EXPORT only). */
+    expiresAt: tstz('expires_at'),
     requestedAt: tstz('requested_at').notNull().defaultNow(),
     completedAt: tstz('completed_at'),
   },

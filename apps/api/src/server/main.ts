@@ -59,7 +59,13 @@ async function main() {
     app
       .runJobs()
       .then((result) => {
-        if (result.checked || result.refundsChecked || result.cancelledOrders)
+        if (
+          result.checked ||
+          result.refundsChecked ||
+          result.cancelledOrders ||
+          result.exported ||
+          result.deleted
+        )
           logger.info('background jobs ran', result);
       })
       .catch((error: unknown) => logger.error('background jobs failed', { error }));

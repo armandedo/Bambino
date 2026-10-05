@@ -93,3 +93,49 @@ roles.
 
 Also applied: security headers (HSTS, `X-Content-Type-Options`, `Referrer-Policy`, frame denial), a CORS
 allow-list of the web and admin origins, and `noindex` on all account and admin pages.
+
+## 3.4 Personal data: export and deletion
+
+Rwanda's data protection law (Law 058/2021) gives parents the right to a copy of their data and to have it erased.
+Children's data is treated with extra care. Both requests start from the account page and are carried out by the
+API's background job (`PrivacyService`, run with payment reconciliation). The timings below are placeholders until
+the business decides (open question 14, `PRIVACY_POLICY` in `packages/config/src/policies.ts`).
+
+### Export
+
+- Builds one JSON file with everything held about the account: account and profile, addresses, consents, babies,
+  measurements and size recommendations, subscriptions, orders and items, payments, refunds, saved wallets,
+  returns, exchanges, exchange credit, notifications, data requests, and audit entries about or by the account.
+  Password hashes, token hashes and staff-only refund reasons are left out.
+- Stored privately (`private/exports/…`, outside the public-read prefixes) and kept for
+  `exportRetentionDays` (7), then deleted.
+- The email says the file is ready and links to the account page. It contains no data and no download link. After
+  signing in, the parent gets a signed link valid for `exportLinkMinutes` (15).
+
+### Deletion
+
+Carried out `deletionGraceDays` (14) after the request. The account is anonymised in place: its row and id stay,
+so records that must be kept still point somewhere, but nothing in them identifies the person. Running it twice
+is harmless.
+
+| Data                                                                      | What happens                                                     | Why                                                                                                                     |
+| ------------------------------------------------------------------------- | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Email, phone, password, verification, sign-in state                       | Removed; status `DELETED`. Sessions, tokens and roles deleted    | The person can no longer sign in or be contacted                                                                        |
+| Name (customer profile)                                                   | Replaced with "Deleted customer"                                 | Personal data                                                                                                           |
+| Addresses                                                                 | Name, phone, street, sector and directions removed; soft-deleted | Personal data                                                                                                           |
+| Address copies on orders and deliveries                                   | Same fields removed; country, province and district kept         | Orders are accounting records; district-level location is not identifying and supports delivery and tax reporting       |
+| Baby profiles                                                             | Name, birth date, sex, preferences and current size removed      | Children's data                                                                                                         |
+| Baby measurements, size recommendations and their inputs and fit feedback | Deleted                                                          | Children's data; the recommendation inputs are measurements                                                             |
+| Saved wallets; the wallet number on payments                              | Removed                                                          | Personal data                                                                                                           |
+| Orders, order items, payments, payment and refund records                 | Kept, linked to the anonymised account                           | Accounting and tax records must be kept (retention period: open question 14)                                            |
+| Exchange credit ledger, subscription and order history                    | Kept, linked to the anonymised account                           | Financial history; append-only by design                                                                                |
+| Garment lifecycle history                                                 | Kept unchanged                                                   | It records the garment's life, not the person; it now points at an anonymised account                                   |
+| Consent records                                                           | Kept; IP address removed                                         | Evidence that past processing had consent                                                                               |
+| Audit log                                                                 | Kept unchanged                                                   | Security record, append-only. It holds IP addresses and user agents; their retention period is part of open question 14 |
+| Notifications, cart items                                                 | Deleted                                                          | No reason to keep                                                                                                       |
+| Analytics events                                                          | Kept, with the link to the account removed                       | Aggregate reporting only                                                                                                |
+| Export files                                                              | Deleted                                                          | Personal data                                                                                                           |
+
+Before anonymising, unpaid orders and live subscriptions are cancelled. Known limitation: an order still on its
+way loses the recipient's name, phone and street when deletion runs, so staff should deliver or cancel open orders
+during the grace period. Postponing deletion until open deliveries finish is a possible follow-up.

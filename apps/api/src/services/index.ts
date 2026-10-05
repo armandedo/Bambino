@@ -32,6 +32,7 @@ import { NotificationService } from './notification-service';
 import { OrderService } from './order-service';
 import { PaymentService } from './payment-service';
 import { RefundService } from './refund-service';
+import { PrivacyService } from './privacy-service';
 import { PromotionService } from './promotion-service';
 
 export interface ServiceDependencies {
@@ -67,6 +68,7 @@ export interface Services {
   orders: OrderService;
   payments: PaymentService;
   refunds: RefundService;
+  privacy: PrivacyService;
   delivery: DeliveryService;
   notifications: NotificationService;
   credit: CreditLedger;
@@ -204,7 +206,7 @@ export function createServices(deps: ServiceDependencies): Services {
 
   return {
     auth,
-    account: new AccountService(db, auth),
+    account: new AccountService(db, auth, now),
     access: new AccessService(db),
     admin: new AdminService(db, currency),
     catalogue: new CatalogueService(db, currency, marketCode),
@@ -214,6 +216,15 @@ export function createServices(deps: ServiceDependencies): Services {
     orders,
     payments,
     refunds,
+    privacy: new PrivacyService({
+      db,
+      storage,
+      email: deps.email,
+      orders,
+      logger,
+      webOrigin: deps.config.webOrigin,
+      now,
+    }),
     delivery,
     notifications,
     credit,

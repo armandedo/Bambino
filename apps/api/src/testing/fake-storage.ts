@@ -24,6 +24,25 @@ export class FakeStorageProvider implements StorageProvider {
     return this.objects.get(objectKey) ?? null;
   }
 
+  readonly bodies = new Map<string, string>();
+
+  async putPrivate(objectKey: string, body: string, contentType: string): Promise<void> {
+    this.bodies.set(objectKey, body);
+    this.objects.set(objectKey, { contentType, byteSize: body.length });
+  }
+
+  async signedDownloadUrl(objectKey: string, expiresSeconds: number) {
+    return {
+      url: `http://storage.test/${objectKey}?signed=1&ttl=${expiresSeconds}`,
+      expiresAt: new Date(Date.now() + expiresSeconds * 1000),
+    };
+  }
+
+  async deleteObject(objectKey: string): Promise<void> {
+    this.bodies.delete(objectKey);
+    this.objects.delete(objectKey);
+  }
+
   put(objectKey: string, object: StoredObject): void {
     this.objects.set(objectKey, object);
   }

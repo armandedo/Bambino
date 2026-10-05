@@ -67,6 +67,8 @@ export const resolvers = {
       context.actor.kind === 'user' ? { id: context.actor.userId } : null,
     myDataRequests: (_: unknown, __: unknown, context: GraphQLContext) =>
       context.services.account.listDataRequests(context),
+    dataExportDownload: (_: unknown, args: { id: string }, context: GraphQLContext) =>
+      context.services.privacy.exportDownloadUrl(context, args.id),
 
     adminRoles: (_: unknown, __: unknown, context: GraphQLContext) =>
       context.services.access.listRoles(context),
@@ -190,6 +192,8 @@ export const resolvers = {
 
   DataRequest: {
     completedAt: (parent: DataRequestRow) => parent.completedAt,
+    downloadAvailable: (parent: DataRequestRow) =>
+      parent.type === 'EXPORT' && parent.status === 'COMPLETED' && parent.resultObjectKey !== null,
   },
 
   Role: {

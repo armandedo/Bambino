@@ -156,8 +156,20 @@ export interface DataRequest {
   status: 'REQUESTED' | 'PROCESSING' | 'COMPLETED' | 'REJECTED';
   requestedAt: string;
   completedAt: string | null;
+  /** Exports only: the file can be downloaded (see DataExportDownloadQuery). */
+  downloadAvailable: boolean;
+  expiresAt: string | null;
 }
-const DATA_REQUEST_FIELDS = 'id type status requestedAt completedAt';
+const DATA_REQUEST_FIELDS = 'id type status requestedAt completedAt downloadAvailable expiresAt';
+
+/** A short-lived signed link to one of the customer's completed exports. */
+export const DataExportDownloadQuery = operation<
+  { dataExportDownload: { url: string; expiresAt: string } },
+  { id: string }
+>(
+  'DataExportDownload',
+  'query DataExportDownload($id: ID!) { dataExportDownload(id: $id) { url expiresAt } }',
+);
 
 export const MyDataRequestsQuery = operation<{ myDataRequests: DataRequest[] }>(
   'MyDataRequests',
