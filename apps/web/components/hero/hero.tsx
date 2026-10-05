@@ -5,60 +5,69 @@ import { ArrowRight } from 'lucide-react';
 import { motion } from 'motion/react';
 import NextLink from 'next/link';
 import { DURATION, EASE } from '../motion/primitives';
-import { Garment } from './garment';
+import { PHOTOS, photoSrcSet, photoUrl } from '@/lib/stock-photos';
 
 const SIZES = [
-  { label: '0–3M', scale: 0.7, tone: 'fill-brand-100 text-brand-500', rotate: -8, x: '4%', y: '42%' },
-  { label: '3–6M', scale: 0.85, tone: 'fill-accent-100 text-accent-600', rotate: 4, x: '34%', y: '14%' },
-  { label: '6–9M', scale: 1, tone: 'fill-brand-200 text-brand-800', rotate: -3, x: '58%', y: '40%' },
+  { label: '0–3M', tone: 'bg-brand-100 text-brand-700' },
+  { label: '3–6M', tone: 'bg-accent-100 text-accent-800' },
+  { label: '6–9M', tone: 'bg-brand-200 text-brand-900' },
 ] as const;
 
 /**
- * The growth story in one image: the same garment in three sizes, settling into place in order, each tagged with
- * its size. Decorative (the headline carries the message), so it is hidden from screen readers.
+ * A warm lifestyle photo with the growth story layered on top: three sizes stepping up, and the exchange promise.
+ * Decorative (the headline carries the message), so it is hidden from screen readers.
  */
 function HeroVisual() {
   return (
-    <div aria-hidden="true" className="relative mx-auto aspect-square w-full max-w-[34rem]">
+    <div aria-hidden="true" className="relative mx-auto w-full max-w-[34rem] pb-6 sm:pb-0">
       <motion.div
-        className="absolute inset-[6%] rounded-full bg-accent-50"
-        initial={{ scale: 0.85, opacity: 0 }}
+        className="absolute -inset-4 -z-10 rounded-[2.5rem] bg-accent-50 sm:-inset-6"
+        initial={{ scale: 0.92, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: DURATION.cinematic, ease: EASE, delay: 0.2 }}
+        transition={{ duration: DURATION.cinematic, ease: EASE, delay: 0.1 }}
       />
       <motion.div
-        className="absolute inset-[18%] rounded-full border border-dashed border-brand-200"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: DURATION.slow, delay: 0.6 }}
-      />
-      {SIZES.map((size, index) => (
-        <motion.div
-          key={size.label}
-          className="absolute w-[38%]"
-          style={{ left: size.x, top: size.y }}
-          initial={{ opacity: 0, y: 40, rotate: 0 }}
-          animate={{ opacity: 1, y: 0, rotate: size.rotate }}
-          transition={{ duration: DURATION.slow, ease: EASE, delay: 0.7 + index * 0.18 }}
-        >
-          <div style={{ transform: `scale(${size.scale})` }} className="origin-bottom">
-            <Garment className={size.tone} />
-          </div>
-          <motion.span
-            className="absolute -bottom-2 left-1/2 -translate-x-1/2 rounded-full border border-border bg-surface px-3 py-1 text-xs font-bold whitespace-nowrap text-primary shadow-sm"
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: DURATION.fast, ease: EASE, delay: 1.2 + index * 0.18 }}
-          >
-            {size.label}
-          </motion.span>
-        </motion.div>
-      ))}
+        className="relative aspect-[4/5] overflow-hidden rounded-[2rem] bg-sand-100 shadow-xl"
+        initial={{ opacity: 0, y: 32 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: DURATION.slow, ease: EASE, delay: 0.25 }}
+      >
+        <img
+          src={photoUrl(PHOTOS.heroMother, 1080, 4 / 5)}
+          srcSet={photoSrcSet(PHOTOS.heroMother, 4 / 5)}
+          sizes="(min-width: 1024px) 34rem, 100vw"
+          alt=""
+          fetchPriority="high"
+          className="absolute inset-0 size-full object-cover"
+        />
+        <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/35 to-transparent" />
+        <div className="absolute top-4 left-4 flex gap-2">
+          {SIZES.map((size, index) => (
+            <motion.span
+              key={size.label}
+              className={`rounded-full px-3 py-1 text-xs font-bold shadow-sm ${size.tone}`}
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: DURATION.fast, ease: EASE, delay: 1 + index * 0.15 }}
+            >
+              {size.label}
+            </motion.span>
+          ))}
+        </div>
+      </motion.div>
       <motion.div
-        className="absolute right-[4%] bottom-[8%] flex items-center gap-2 rounded-2xl border border-border bg-surface px-4 py-3 shadow-md"
+        className="absolute -bottom-2 -left-3 hidden aspect-square w-[34%] overflow-hidden rounded-3xl border-4 border-surface shadow-lg sm:-left-8 sm:block"
+        initial={{ opacity: 0, scale: 0.85, rotate: -6 }}
+        animate={{ opacity: 1, scale: 1, rotate: -4 }}
+        transition={{ duration: DURATION.slow, ease: EASE, delay: 0.75 }}
+      >
+        <img src={photoUrl(PHOTOS.heroBaby, 480, 1)} alt="" className="size-full object-cover" />
+      </motion.div>
+      <motion.div
+        className="absolute right-3 -bottom-4 flex items-center gap-2 rounded-2xl border border-border bg-surface px-4 py-3 shadow-md sm:-right-6 sm:bottom-10"
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: DURATION.normal, ease: EASE, delay: 1.9 }}
+        transition={{ duration: DURATION.normal, ease: EASE, delay: 1.5 }}
       >
         <span className="flex size-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
           <ArrowRight className="size-4" strokeWidth={2.25} />

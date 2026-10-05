@@ -13,6 +13,7 @@ import { SectionHeading } from '@/components/sections';
 import { HowItWorksStory } from '@/components/story/how-it-works';
 import { LifecycleLoop } from '@/components/story/lifecycle-loop';
 import { load } from '@/lib/api';
+import { PHOTOS, type StockPhoto, photoSrcSet, photoUrl } from '@/lib/stock-photos';
 
 export const revalidate = 60;
 
@@ -46,6 +47,32 @@ const TRUST = [
     body: 'Each garment is tagged, so its whole life is on record.',
   },
 ];
+
+function Photo({
+  photo,
+  aspect,
+  className,
+  sizes = '(min-width: 1024px) 50vw, 100vw',
+}: {
+  photo: StockPhoto;
+  aspect: number;
+  className?: string;
+  sizes?: string;
+}) {
+  return (
+    <div className={`relative overflow-hidden rounded-[2rem] bg-sand-100 ${className ?? ''}`}>
+      <img
+        src={photoUrl(photo, 1080, aspect)}
+        srcSet={photoSrcSet(photo, aspect)}
+        sizes={sizes}
+        alt={photo.alt}
+        loading="lazy"
+        decoding="async"
+        className="absolute inset-0 size-full object-cover"
+      />
+    </div>
+  );
+}
 
 export default async function HomePage() {
   const [plans, products, filters] = await Promise.all([
@@ -165,12 +192,17 @@ export default async function HomePage() {
       {/* 06 Circular lifecycle */}
       <section aria-labelledby="circular" className="bg-surface-muted">
         <div className="mx-auto flex max-w-7xl flex-col gap-10 px-4 py-16 sm:px-6 lg:py-24">
-          <SectionHeading
-            id="circular"
-            eyebrow="Circular by design"
-            title="Every piece has a next chapter."
-            intro="Nothing is reused without passing inspection, and every step of a garment’s life is recorded."
-          />
+          <div className="grid items-center gap-8 lg:grid-cols-2 lg:gap-16">
+            <SectionHeading
+              id="circular"
+              eyebrow="Circular by design"
+              title="Every piece has a next chapter."
+              intro="Nothing is reused without passing inspection, and every step of a garment’s life is recorded."
+            />
+            <Reveal>
+              <Photo photo={PHOTOS.circular} aspect={16 / 10} className="aspect-[16/10]" />
+            </Reveal>
+          </div>
           <LifecycleLoop />
         </div>
       </section>
@@ -231,6 +263,28 @@ export default async function HomePage() {
             eyebrow="Made for here"
             title="Built for families in Rwanda and East Africa."
           />
+          <Reveal className="grid gap-4 sm:grid-cols-3">
+            <Photo
+              photo={PHOTOS.kigaliSkyline}
+              aspect={16 / 10}
+              className="aspect-[16/10] sm:col-span-2 sm:aspect-auto sm:h-full"
+              sizes="(min-width: 640px) 66vw, 100vw"
+            />
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-1">
+              <Photo
+                photo={PHOTOS.motherCarrying}
+                aspect={4 / 3}
+                className="aspect-[4/3]"
+                sizes="(min-width: 640px) 33vw, 50vw"
+              />
+              <Photo
+                photo={PHOTOS.kigaliHills}
+                aspect={4 / 3}
+                className="aspect-[4/3]"
+                sizes="(min-width: 640px) 33vw, 50vw"
+              />
+            </div>
+          </Reveal>
           <Stagger as="ul" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {TRUST.map((item) => {
               const Icon = item.icon;

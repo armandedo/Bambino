@@ -1,4 +1,5 @@
 import { cn } from '@bambino/ui';
+import { photoSrcSet, photoUrl, productPhotoFor } from '@/lib/stock-photos';
 
 const BACKGROUNDS = ['bg-brand-100', 'bg-accent-100', 'bg-sand-200', 'bg-brand-50', 'bg-accent-50'] as const;
 const INKS = [
@@ -16,10 +17,26 @@ function hash(text: string): number {
 }
 
 /**
- * Drawn placeholder shown while a product has no photos (the seed catalogue has none).
- * Decorative only: the product name next to it carries the meaning.
+ * Shown while a product has no photos of its own (the seed catalogue has none): a stock photo of the garment type
+ * when the slug names one, otherwise a drawn placeholder. Decorative only: the product name next to it carries the meaning.
  */
 export function ProductArt({ seed, className }: { seed: string; className?: string }) {
+  const photo = productPhotoFor(seed);
+  if (photo) {
+    return (
+      <div aria-hidden="true" className={cn('relative w-full overflow-hidden bg-sand-100', className)}>
+        <img
+          src={photoUrl(photo, 768, 4 / 5)}
+          srcSet={photoSrcSet(photo, 4 / 5, [400, 768, 1080])}
+          sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
+          alt=""
+          loading="lazy"
+          decoding="async"
+          className="absolute inset-0 size-full object-cover transition-transform duration-500 ease-brand group-hover:scale-[1.04]"
+        />
+      </div>
+    );
+  }
   const index = hash(seed) % BACKGROUNDS.length;
   return (
     <div

@@ -4,6 +4,7 @@ import { cn } from '@bambino/ui';
 import { Baby, Box, ClipboardList, type LucideIcon, RefreshCw, Ruler, Undo2 } from 'lucide-react';
 import { AnimatePresence, motion, useInView } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
+import { PHOTOS, type StockPhoto, photoUrl } from '@/lib/stock-photos';
 import { DURATION, EASE } from '../motion/primitives';
 
 interface Step {
@@ -11,6 +12,7 @@ interface Step {
   body: string;
   icon: LucideIcon;
   tint: string;
+  photo: StockPhoto;
 }
 
 export const STEPS: Step[] = [
@@ -19,36 +21,42 @@ export const STEPS: Step[] = [
     body: 'Your baby’s name, age and, if you have them, height and weight. Children’s details stay private to your account.',
     icon: Baby,
     tint: 'bg-brand-50 text-brand-700',
+    photo: PHOTOS.stepProfile,
   },
   {
     title: 'Choose a plan',
     body: 'Monthly, quarterly or annual. Pause or cancel from your account.',
     icon: ClipboardList,
     tint: 'bg-accent-50 text-accent-700',
+    photo: PHOTOS.stepPlan,
   },
   {
     title: 'Get fitted',
     body: 'We recommend a size from your measurements and show the reasons, so you can check it.',
     icon: Ruler,
     tint: 'bg-brand-100 text-brand-800',
+    photo: PHOTOS.stepFit,
   },
   {
     title: 'Receive your box',
     body: 'Pieces in your baby’s size, delivered to your door in Kigali.',
     icon: Box,
     tint: 'bg-accent-100 text-accent-800',
+    photo: PHOTOS.stepBox,
   },
   {
     title: 'Return what’s outgrown',
     body: 'Book a pickup when pieces get small. Every piece is inspected and returned pieces earn exchange credit.',
     icon: Undo2,
     tint: 'bg-brand-50 text-brand-700',
+    photo: PHOTOS.stepReturn,
   },
   {
     title: 'Exchange for the next size',
     body: 'Choose the next size with your credit applied. Good pieces go on to another family.',
     icon: RefreshCw,
     tint: 'bg-accent-50 text-accent-700',
+    photo: PHOTOS.stepExchange,
   },
 ];
 
@@ -72,6 +80,12 @@ function StepItem({
         {String(index + 1).padStart(2, '0')}
       </span>
       <div className="flex flex-col gap-2">
+        <img
+          src={photoUrl(step.photo, 720, 16 / 9)}
+          alt=""
+          loading="lazy"
+          className="mb-2 aspect-video w-full rounded-2xl object-cover lg:hidden"
+        />
         <h3 className="font-display text-2xl font-bold text-primary sm:text-3xl">{step.title}</h3>
         <p className="max-w-md text-lg text-foreground-muted">{step.body}</p>
       </div>
@@ -88,29 +102,40 @@ export function HowItWorksStory() {
   return (
     <div className="grid gap-6 lg:grid-cols-2 lg:gap-16">
       <div className="hidden lg:block">
-        <div className="sticky top-28 flex aspect-square items-center justify-center rounded-[2rem] border border-border bg-surface">
+        <div className="sticky top-28 aspect-square overflow-hidden rounded-[2rem] border border-border bg-sand-100">
           <AnimatePresence mode="wait">
             <motion.div
               key={active}
-              className="flex flex-col items-center gap-6 px-10 text-center"
-              initial={{ opacity: 0, scale: 0.94 }}
+              className="absolute inset-0"
+              initial={{ opacity: 0, scale: 1.04 }}
               animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.98 }}
+              exit={{ opacity: 0 }}
               transition={{ duration: DURATION.normal, ease: EASE }}
             >
-              <span className={cn('flex size-32 items-center justify-center rounded-[2rem]', step.tint)}>
-                <Icon aria-hidden="true" className="size-14" strokeWidth={1.5} />
-              </span>
-              <p className="font-display text-2xl font-bold text-primary">{step.title}</p>
+              <img src={photoUrl(step.photo, 1080, 1)} alt="" className="size-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
+              <div className="absolute inset-x-0 bottom-14 flex items-center gap-4 px-8">
+                <span
+                  className={cn('flex size-14 shrink-0 items-center justify-center rounded-2xl', step.tint)}
+                >
+                  <Icon aria-hidden="true" className="size-7" strokeWidth={1.75} />
+                </span>
+                <p className="font-display text-2xl font-bold text-white drop-shadow">{step.title}</p>
+              </div>
             </motion.div>
           </AnimatePresence>
-          <ol className="absolute bottom-6 flex gap-2" aria-hidden="true">
+          <div className="hidden" aria-hidden="true">
+            {STEPS.map((s) => (
+              <img key={s.title} src={photoUrl(s.photo, 1080, 1)} alt="" />
+            ))}
+          </div>
+          <ol className="absolute bottom-6 left-1/2 flex -translate-x-1/2 gap-2" aria-hidden="true">
             {STEPS.map((s, index) => (
               <li
                 key={s.title}
                 className={cn(
                   'h-1.5 rounded-full transition-all duration-300 ease-brand',
-                  index === active ? 'w-8 bg-primary' : 'w-1.5 bg-sand-300',
+                  index === active ? 'w-8 bg-white' : 'w-1.5 bg-white/50',
                 )}
               />
             ))}
