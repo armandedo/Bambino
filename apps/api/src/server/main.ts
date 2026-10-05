@@ -3,7 +3,7 @@ import { connectDatabase } from '@bambino/database/client';
 import { createArgon2Hasher } from '../auth/passwords';
 import { loadEnv } from '../config/env';
 import { createLogger } from '../infra/logger';
-import { MemoryRateLimiter } from '../infra/rate-limiter';
+import { MemoryRateLimiter, PostgresRateLimiter } from '../infra/rate-limiter';
 import { ConsoleEmailProvider } from '../providers/email';
 import { MockPaymentProvider, type PaymentProvider } from '../providers/payments';
 import { createStorageProvider } from '../providers/storage-factory';
@@ -35,7 +35,8 @@ async function main() {
     logger,
     email: new ConsoleEmailProvider(logger),
     hasher: createArgon2Hasher(),
-    rateLimiter: new MemoryRateLimiter(),
+    rateLimiter:
+      env.RATE_LIMITER === 'postgres' ? new PostgresRateLimiter(connection.db) : new MemoryRateLimiter(),
     paymentProviders: new Map<PaymentProvider['code'], PaymentProvider>(
       env.PAYMENT_PROVIDERS_ENABLED.includes('mock')
         ? [

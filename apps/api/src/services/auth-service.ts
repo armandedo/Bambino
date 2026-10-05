@@ -62,7 +62,7 @@ export class AuthService {
   constructor(private readonly deps: AuthServiceDependencies) {}
 
   async register(context: ServiceContext, rawInput: unknown): Promise<AuthResult> {
-    this.limit(`register:${context.meta.ipAddress}`, RATE_LIMITS.register);
+    await this.limit(`register:${context.meta.ipAddress}`, RATE_LIMITS.register);
     const input = parseInput(registerSchema, rawInput);
     const passwordHash = await this.deps.hasher.hash(input.password);
     const { db, now } = this.deps;
@@ -132,7 +132,7 @@ export class AuthService {
   }
 
   async login(context: ServiceContext, rawInput: unknown): Promise<AuthResult> {
-    this.limit(`login:${context.meta.ipAddress}`, RATE_LIMITS.login);
+    await this.limit(`login:${context.meta.ipAddress}`, RATE_LIMITS.login);
     const input = parseInput(loginSchema, rawInput);
     const { db, now, hasher } = this.deps;
 
@@ -191,7 +191,7 @@ export class AuthService {
    * it has been copied, so every session descended from the same login is revoked.
    */
   async refresh(context: ServiceContext, refreshToken: string | null | undefined): Promise<AuthResult> {
-    this.limit(`refresh:${context.meta.ipAddress}`, RATE_LIMITS.refresh);
+    await this.limit(`refresh:${context.meta.ipAddress}`, RATE_LIMITS.refresh);
     if (!refreshToken) throw SESSION_INVALID();
     const { db, now } = this.deps;
     const tokenHash = hashToken(refreshToken);
@@ -301,10 +301,10 @@ export class AuthService {
 
   /** Always succeeds from the caller's point of view, so it cannot be used to discover accounts. */
   async requestPasswordReset(context: ServiceContext, rawEmail: unknown): Promise<void> {
-    this.limit(`password-reset:${context.meta.ipAddress}`, RATE_LIMITS.passwordReset);
+    await this.limit(`password-reset:${context.meta.ipAddress}`, RATE_LIMITS.passwordReset);
     const parsed = emailSchema.safeParse(rawEmail);
     if (!parsed.success) return;
-    this.limit(`password-reset:${parsed.data}`, RATE_LIMITS.passwordReset);
+    await this.limit(`password-reset:${parsed.data}`, RATE_LIMITS.passwordReset);
     const { db, now } = this.deps;
 
     const [user] = await db
@@ -400,7 +400,7 @@ export class AuthService {
 
   async requestEmailVerification(context: ServiceContext): Promise<void> {
     const actor = requireUser(context);
-    this.limit(`email-verification:${actor.userId}`, RATE_LIMITS.emailVerification);
+    await this.limit(`email-verification:${actor.userId}`, RATE_LIMITS.emailVerification);
     const { db } = this.deps;
     const [user] = await db.select().from(schema.users).where(eq(schema.users.id, actor.userId));
     if (!user?.email || user.emailVerifiedAt) return;
@@ -519,8 +519,8 @@ export class AuthService {
     }
   }
 
-  private limit(key: string, policy: RateLimitPolicy): void {
-    if (!this.deps.rateLimiter.consume(key, policy)) {
+  private async limit(key: string, policy: RateLimitPolicy): Promise<void> {
+    if (!(await this.deps.rateLimiter.consume(key, policy))) {
       throw new AppError('RATE_LIMITED', 'Too many attempts. Please wait a few minutes and try again.');
     }
   }

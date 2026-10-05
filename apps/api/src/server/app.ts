@@ -117,14 +117,14 @@ export function createApp(deps: AppDependencies) {
     },
     plugins: [
       {
-        onRequest({ request, serverContext, endResponse, fetchAPI }) {
+        async onRequest({ request, serverContext, endResponse, fetchAPI }) {
           const length = Number(request.headers.get('content-length') ?? 0);
           if (length > MAX_BODY_BYTES) {
             endResponse(new fetchAPI.Response('Payload too large', { status: 413 }));
             return;
           }
           const ip = clientIp(request, serverContext as ServerContext) ?? 'unknown';
-          if (!deps.rateLimiter.consume(`request:${ip}`, RATE_LIMITS.request)) {
+          if (!(await deps.rateLimiter.consume(`request:${ip}`, RATE_LIMITS.request))) {
             endResponse(
               new fetchAPI.Response('Too many requests', { status: 429, headers: { 'retry-after': '60' } }),
             );
@@ -210,9 +210,17 @@ export function createApp(deps: AppDependencies) {
     const payments = await services.payments.reconcile();
     const refunds = await services.refunds.reconcile();
     const privacy = await services.privacy.processRequests();
+    const rateLimitWindowsPruned = (await deps.rateLimiter.prune?.()) ?? 0;
     const cancelledOrders = await services.orders.cancelStaleOrders();
     const subscriptions = await services.subscriptions.runRenewals();
-    return { ...payments, refundsChecked: refunds.checked, cancelledOrders, ...subscriptions, ...privacy };
+    return {
+      ...payments,
+      refundsChecked: refunds.checked,
+      cancelledOrders,
+      ...subscriptions,
+      ...privacy,
+      rateLimitWindowsPruned,
+    };
   };
 
   /** Node request handler: health check, webhooks, and the GraphQL endpoint. */

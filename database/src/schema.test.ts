@@ -141,7 +141,7 @@ describe('migrations', () => {
       sql`SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name`,
     );
     expect(result.map((row) => row.table_name)).toEqual(defined);
-    expect(defined).toHaveLength(56);
+    expect(defined).toHaveLength(57);
   });
 
   it('cover every entity named in the specification', async () => {

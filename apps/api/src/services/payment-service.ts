@@ -234,7 +234,7 @@ export class PaymentService {
     if (!payment) return null;
     if (
       payment.status === 'PENDING' &&
-      this.deps.rateLimiter.consume(`payment-poll:${payment.id}`, POLL_POLICY)
+      (await this.deps.rateLimiter.consume(`payment-poll:${payment.id}`, POLL_POLICY))
     ) {
       return this.refreshFromProvider(payment.id, 'STATUS_CHECK');
     }

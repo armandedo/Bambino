@@ -1,4 +1,4 @@
-import { index, jsonb, pgTable, text, uuid } from 'drizzle-orm/pg-core';
+import { index, integer, jsonb, pgTable, text, uuid } from 'drizzle-orm/pg-core';
 import { createdAt, id, tstz } from './columns';
 import { notificationChannel, notificationStatus } from './enums';
 import { users } from './identity';
@@ -68,4 +68,15 @@ export const analyticsEvents = pgTable(
     index('analytics_events_name_time_idx').on(t.eventName, t.occurredAt),
     index('analytics_events_user_idx').on(t.userId),
   ],
+);
+
+/** Shared fixed-window rate limit counters (RATE_LIMITER=postgres). Expired rows are pruned by the API job. */
+export const rateLimitWindows = pgTable(
+  'rate_limit_windows',
+  {
+    key: text('key').primaryKey(),
+    count: integer('count').notNull(),
+    resetAt: tstz('reset_at').notNull(),
+  },
+  (t) => [index('rate_limit_windows_reset_idx').on(t.resetAt)],
 );

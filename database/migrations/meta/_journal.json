@@ -43,6 +43,13 @@
       "when": 1791209024972,
       "tag": "0005_data_export_expiry",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791231519943,
+      "tag": "0006_rate_limit_windows",
+      "breakpoints": true
     }
   ]
 }
