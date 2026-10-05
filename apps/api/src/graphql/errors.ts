@@ -39,6 +39,12 @@ export function formatError(error: GraphQLError, context: GraphQLContext): Graph
   }
 
   context.logger.error('unhandled error during execution', { requestId, path: error.path, error: original });
+  // Only the error itself and the request id are reported: no arguments, variables or user details.
+  void context.errorReporter.report(original, {
+    requestId,
+    source: 'graphql',
+    tags: { path: error.path?.join('.') },
+  });
   return new GraphQLError('Something went wrong. Please try again.', {
     ...base,
     extensions: { code: 'INTERNAL', requestId },

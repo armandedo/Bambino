@@ -1,3 +1,5 @@
+import { type ErrorReporter, noopErrorReporter } from '@bambino/utils';
+import { sql } from '@bambino/database/orm';
 import { randomUUID } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Database } from '@bambino/database';
@@ -46,6 +48,8 @@ export interface AppDependencies {
   /** True only outside production: lets checkout use the MOCK provider. */
   allowMockPayments?: boolean;
   storage?: StorageProvider;
+  /** Unexpected errors go here as well as to the log (Sentry when SENTRY_DSN is set). */
+  errorReporter?: ErrorReporter;
 }
 
 export const GRAPHQL_PATH = '/graphql';
@@ -65,6 +69,7 @@ interface ServerContext {
  */
 export function createApp(deps: AppDependencies) {
   const { config, logger } = deps;
+  const errorReporter = deps.errorReporter ?? noopErrorReporter;
   const now = deps.now ?? (() => new Date());
   const production = config.nodeEnv === 'production';
 
@@ -184,6 +189,7 @@ export function createApp(deps: AppDependencies) {
         client,
         cookies,
         logger: logger.child({ requestId }),
+        errorReporter,
         marketCode: config.marketCode,
         loaders: createLoaders(services),
       };
@@ -201,6 +207,7 @@ export function createApp(deps: AppDependencies) {
       return new Response(null, { status: result.status });
     } catch (error) {
       logger.error('webhook handling failed', { provider: match[1], error });
+      void errorReporter.report(error, { source: 'webhook', tags: { provider: match[1] } });
       return new Response(null, { status: 500 });
     }
   };
@@ -223,11 +230,29 @@ export function createApp(deps: AppDependencies) {
     };
   };
 
-  /** Node request handler: health check, webhooks, and the GraphQL endpoint. */
+  /** Readiness: the process is up and the database answers. Load balancers send traffic only when this is 200. */
+  const checkReady = async (): Promise<{ status: number; body: Record<string, unknown> }> => {
+    try {
+      await deps.db.execute(sql`SELECT 1`);
+      return { status: 200, body: { status: 'ready', database: 'ok' } };
+    } catch (error) {
+      logger.error('readiness check failed', { error });
+      return { status: 503, body: { status: 'unavailable', database: 'unreachable' } };
+    }
+  };
+
+  /** Node request handler: health and readiness checks, webhooks, and the GraphQL endpoint. */
   const handler = (req: IncomingMessage, res: ServerResponse) => {
     if (req.url === '/health' && req.method === 'GET') {
       res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
       res.end(JSON.stringify({ status: 'ok' }));
+      return;
+    }
+    if (req.url === '/ready' && req.method === 'GET') {
+      void checkReady().then(({ status, body }) => {
+        res.writeHead(status, { 'content-type': 'application/json', 'cache-control': 'no-store' });
+        res.end(JSON.stringify(body));
+      });
       return;
     }
     if (req.url?.startsWith('/webhooks/')) {
@@ -237,7 +262,7 @@ export function createApp(deps: AppDependencies) {
     void yoga(req, res, { req, res });
   };
 
-  return { yoga, handler, handleWebhook, runJobs, services, coverage };
+  return { yoga, handler, handleWebhook, runJobs, checkReady, services, coverage, errorReporter };
 }
 
 export type App = ReturnType<typeof createApp>;

@@ -1,4 +1,6 @@
 {
   "extends": "../../tsconfig.base.json",
+  // The error reporter uses fetch, which both Node and browsers provide.
+  "compilerOptions": { "lib": ["ES2023", "DOM"] },
   "include": ["src"]
 }

@@ -1,3 +1,4 @@
+import type { ErrorReporter } from '@bambino/utils';
 import { LEGAL_DOCUMENT_VERSIONS } from '@bambino/config';
 import {
   grantRole,
@@ -56,7 +57,12 @@ let sequence = 0;
 
 /** A fresh database, seeded roles, and the real app with fast hashing and an adjustable clock. */
 export async function createTestApp(
-  options: { rateLimiter?: RateLimiter; queryLimits?: QueryLimits; catalogue?: boolean } = {},
+  options: {
+    rateLimiter?: RateLimiter;
+    queryLimits?: QueryLimits;
+    catalogue?: boolean;
+    errorReporter?: ErrorReporter;
+  } = {},
 ) {
   const { db, close } = await createTestDatabase();
   await seedSystem(db);
@@ -81,6 +87,7 @@ export async function createTestApp(
     paymentProviders: new Map([['MOCK', mockPayments]]),
     allowMockPayments: true,
     storage,
+    ...(options.errorReporter ? { errorReporter: options.errorReporter } : {}),
   });
 
   async function gql(

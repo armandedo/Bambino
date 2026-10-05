@@ -1,3 +1,4 @@
+import type { ErrorReporter } from '@bambino/utils';
 import type { Logger } from '../infra/logger';
 import type { Loaders } from './loaders';
 import type { ServiceContext } from '../services/context';
@@ -15,6 +16,7 @@ export interface GraphQLContext extends ServiceContext {
   readonly client: ClientKind;
   readonly cookies: CookieJar;
   readonly logger: Logger;
+  readonly errorReporter: ErrorReporter;
   readonly marketCode: string;
   readonly loaders: Loaders;
 }

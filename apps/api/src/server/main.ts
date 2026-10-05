@@ -1,3 +1,4 @@
+import { createErrorReporter } from '@bambino/utils';
 import { createServer } from 'node:http';
 import { connectDatabase } from '@bambino/database/client';
 import { createArgon2Hasher } from '../auth/passwords';
@@ -53,6 +54,11 @@ async function main() {
     ),
     allowMockPayments: env.NODE_ENV !== 'production' && env.PAYMENT_PROVIDERS_ENABLED.includes('mock'),
     storage: createStorageProvider(env),
+    errorReporter: createErrorReporter({
+      dsn: env.SENTRY_DSN,
+      app: 'api',
+      environment: env.SENTRY_ENVIRONMENT ?? env.NODE_ENV,
+    }),
   });
 
   // Single-instance scheduler for the MVP; moves to a PostgreSQL-backed queue (pg-boss) in Phase 5.
@@ -69,7 +75,10 @@ async function main() {
         )
           logger.info('background jobs ran', result);
       })
-      .catch((error: unknown) => logger.error('background jobs failed', { error }));
+      .catch((error: unknown) => {
+        logger.error('background jobs failed', { error });
+        void app.errorReporter.report(error, { source: 'job' });
+      });
   }, env.RECONCILE_INTERVAL_SECONDS * 1000);
 
   const server = createServer(app.handler);

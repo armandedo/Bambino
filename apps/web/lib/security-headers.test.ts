@@ -73,6 +73,20 @@ describe('contentSecurityPolicy', () => {
   });
 });
 
+describe('error reporting host', () => {
+  it('is allowed for connections only when a DSN is configured', () => {
+    const csp = parse(
+      contentSecurityPolicy({
+        ...base,
+        isDev: false,
+        errorReportingDsn: 'https://key@o1.ingest.sentry.io/4501',
+      }),
+    );
+    expect(csp.get('connect-src')).toContain('https://o1.ingest.sentry.io');
+    expect(contentSecurityPolicy({ ...base, isDev: false })).not.toContain('sentry');
+  });
+});
+
 describe('createNonce', () => {
   it('is different every time', () => {
     expect(createNonce()).not.toBe(createNonce());

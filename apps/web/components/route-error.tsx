@@ -3,6 +3,7 @@
 import { ApiError } from '@bambino/api-client';
 import { Button, ErrorState } from '@bambino/ui';
 import { useEffect } from 'react';
+import { browserErrorReporter } from '@/lib/error-reporting';
 
 export type RouteErrorValue = Error & { digest?: string };
 
@@ -28,8 +29,8 @@ export function RouteError({
   what: string;
 }) {
   useEffect(() => {
-    // Until error reporting is wired (Phase 4), the browser console is where this goes.
     console.error(error);
+    void browserErrorReporter.report(error, { requestId: errorReference(error), source: 'boundary' });
   }, [error]);
   const unreachable = error instanceof ApiError && error.code === 'NETWORK';
   return (

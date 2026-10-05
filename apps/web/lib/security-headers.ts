@@ -23,11 +23,20 @@ export interface CspOptions {
   apiUrl: string | undefined;
   /** Where product photos are served from (STORAGE_PUBLIC_BASE_URL). */
   storageUrl: string | undefined;
+  /** Browser error tracking (NEXT_PUBLIC_SENTRY_DSN); its host may receive reports. */
+  errorReportingDsn?: string | undefined;
 }
 
 /** The Content-Security-Policy header value for one response. */
-export function contentSecurityPolicy({ nonce, isDev, apiUrl, storageUrl }: CspOptions): string {
+export function contentSecurityPolicy({
+  nonce,
+  isDev,
+  apiUrl,
+  storageUrl,
+  errorReportingDsn,
+}: CspOptions): string {
   const api = originOf(apiUrl);
+  const reporting = originOf(errorReportingDsn);
   const storage = originOf(storageUrl);
   const directives: [string, ...string[]][] = [
     ['default-src', "'self'"],
@@ -39,7 +48,7 @@ export function contentSecurityPolicy({ nonce, isDev, apiUrl, storageUrl }: CspO
     ['img-src', "'self'", 'blob:', 'data:', ...(storage ? [storage] : [])],
     // next/font serves the fonts from this origin.
     ['font-src', "'self'"],
-    ['connect-src', "'self'", ...(api ? [api] : [])],
+    ['connect-src', "'self'", ...(api ? [api] : []), ...(reporting ? [reporting] : [])],
     ['object-src', "'none'"],
     ['base-uri', "'self'"],
     ['form-action', "'self'"],

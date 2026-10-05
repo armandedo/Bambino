@@ -12,6 +12,7 @@ export function proxy(request: NextRequest) {
     isDev: process.env.NODE_ENV === 'development',
     apiUrl: process.env.NEXT_PUBLIC_API_URL,
     storageUrl: process.env.STORAGE_PUBLIC_BASE_URL,
+    errorReportingDsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
   });
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('Content-Security-Policy', csp);

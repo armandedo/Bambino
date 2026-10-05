@@ -19,6 +19,10 @@ const envSchema = z
     TRUST_PROXY: booleanString.default(false),
     /** `memory` for one API instance (development, tests); `postgres` when several instances share limits. */
     RATE_LIMITER: z.enum(['memory', 'postgres']).default('memory'),
+    /** Error tracking. Reports are sent only when set (see @bambino/utils error-reporter). */
+    SENTRY_DSN: z.url().optional(),
+    /** Shown on Sentry reports, e.g. production or staging. Defaults to NODE_ENV. */
+    SENTRY_ENVIRONMENT: z.string().min(1).optional(),
     LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error', 'silent']).default('info'),
     /** Comma-separated. Only `mock` exists today; MTN MoMo and Airtel Money are not yet integrated. */
     PAYMENT_PROVIDERS_ENABLED: z
