@@ -4,7 +4,7 @@ The executable definition is `database/src/schema/`. The SQL that creates it is
 `database/migrations/0000_initial_schema.sql` (generated) and `0001_integrity_triggers.sql` (hand-written).
 This page explains the shape and the decisions; it does not repeat every column.
 
-55 tables. The specification names 34 entities; the other 21 are what those entities need in order to be
+56 tables. The specification names 34 entities; the other 22 are what those entities need in order to be
 correct (sessions, ledgers, event histories, idempotency, consent).
 
 ## 2.1 Conventions

@@ -4,6 +4,7 @@ import type {
   GarmentStatus,
   OrderStatus,
   PaymentStatus,
+  RefundStatus,
   ReturnStatus,
   SubscriptionStatus,
 } from '@bambino/types';
@@ -49,6 +50,19 @@ export const paymentLifecycle = defineStateMachine<PaymentStatus>('Payment', 'IN
   CANCELLED: [],
   EXPIRED: [],
   REFUNDED: [],
+});
+
+/**
+ * A refund waits for staff approval, then the provider (or the credit ledger) pays it out. FAILED is final:
+ * staff request a new refund for what is still refundable.
+ */
+export const refundLifecycle = defineStateMachine<RefundStatus>('Refund', 'REQUESTED', {
+  REQUESTED: ['APPROVED', 'REJECTED'],
+  APPROVED: ['PROCESSING'],
+  PROCESSING: ['SUCCEEDED', 'FAILED'],
+  REJECTED: [],
+  SUCCEEDED: [],
+  FAILED: [],
 });
 
 export const returnLifecycle = defineStateMachine<ReturnStatus>('Return', 'REQUESTED', {

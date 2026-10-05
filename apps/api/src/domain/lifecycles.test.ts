@@ -4,6 +4,7 @@ import {
   GARMENT_STATUSES,
   ORDER_STATUSES,
   PAYMENT_STATUSES,
+  REFUND_STATUSES,
   RETURN_STATUSES,
   SUBSCRIPTION_STATUSES,
 } from '@bambino/types';
@@ -15,6 +16,7 @@ import {
   garmentLifecycle,
   orderLifecycle,
   paymentLifecycle,
+  refundLifecycle,
   returnLifecycle,
   subscriptionLifecycle,
 } from './lifecycles';
@@ -51,6 +53,7 @@ const machines = [
   },
   { machine: orderLifecycle as StateMachine<string>, statuses: ORDER_STATUSES as readonly string[] },
   { machine: paymentLifecycle as StateMachine<string>, statuses: PAYMENT_STATUSES as readonly string[] },
+  { machine: refundLifecycle as StateMachine<string>, statuses: REFUND_STATUSES as readonly string[] },
   { machine: returnLifecycle as StateMachine<string>, statuses: RETURN_STATUSES as readonly string[] },
   { machine: garmentLifecycle as StateMachine<string>, statuses: GARMENT_STATUSES as readonly string[] },
   { machine: deliveryLifecycle as StateMachine<string>, statuses: DELIVERY_STATUSES as readonly string[] },
@@ -137,6 +140,22 @@ describe('payment lifecycle', () => {
     expect(paymentLifecycle.canTransition('SUCCEEDED', 'FAILED')).toBe(false);
     expect(paymentLifecycle.canTransition('EXPIRED', 'SUCCEEDED')).toBe(false);
     expect(paymentLifecycle.canTransition('SUCCEEDED', 'PENDING')).toBe(false);
+  });
+});
+
+describe('refund lifecycle', () => {
+  it('pays out only after approval, and through processing', () => {
+    expect(walk(refundLifecycle, ['APPROVED', 'PROCESSING', 'SUCCEEDED'])).toBe('SUCCEEDED');
+    expect(walk(refundLifecycle, ['APPROVED', 'PROCESSING', 'FAILED'])).toBe('FAILED');
+    expect(walk(refundLifecycle, ['REJECTED'])).toBe('REJECTED');
+    expect(refundLifecycle.canTransition('REQUESTED', 'PROCESSING')).toBe(false);
+    expect(refundLifecycle.canTransition('REQUESTED', 'SUCCEEDED')).toBe(false);
+    expect(refundLifecycle.canTransition('APPROVED', 'SUCCEEDED')).toBe(false);
+  });
+
+  it('never reopens a finished refund', () => {
+    expect(refundLifecycle.terminal).toEqual(['REJECTED', 'SUCCEEDED', 'FAILED']);
+    expect(refundLifecycle.canTransition('FAILED', 'PROCESSING')).toBe(false);
   });
 });
 

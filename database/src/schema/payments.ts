@@ -1,7 +1,14 @@
 import { sql } from 'drizzle-orm';
 import { boolean, check, index, jsonb, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { amount, createdAt, currency, id, tstz, updatedAt } from './columns';
-import { idempotencyStatus, paymentProvider, paymentStatus, paymentTransactionType } from './enums';
+import {
+  idempotencyStatus,
+  paymentProvider,
+  paymentStatus,
+  paymentTransactionType,
+  refundMethod,
+  refundStatus,
+} from './enums';
 import { orders } from './commerce';
 import { users } from './identity';
 import { subscriptions } from './subscriptions';
@@ -74,6 +81,51 @@ export const paymentTransactions = pgTable(
     createdAt: createdAt(),
   },
   (t) => [index('payment_transactions_payment_idx').on(t.paymentId, t.createdAt)],
+);
+
+/**
+ * Money given back for a successful payment, in full or in part. Starts REQUESTED and needs staff approval
+ * (REFUND_POLICY). The refund service keeps the total of open and succeeded refunds within the payment amount.
+ */
+export const refunds = pgTable(
+  'refunds',
+  {
+    id: id(),
+    paymentId: uuid('payment_id')
+      .notNull()
+      .references(() => payments.id, { onDelete: 'restrict' }),
+    orderId: uuid('order_id').references(() => orders.id, { onDelete: 'restrict' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    method: refundMethod('method').notNull(),
+    status: refundStatus('status').notNull().default('REQUESTED'),
+    amount: amount('amount').notNull(),
+    currency: currency(),
+    /** Staff-facing reason. Not shown to the customer. */
+    reason: text('reason').notNull(),
+    /** Sent to the provider as its request reference, so a retried refund cannot pay out twice. */
+    idempotencyKey: text('idempotency_key').notNull(),
+    providerReference: text('provider_reference'),
+    failureCode: text('failure_code'),
+    requestedBy: uuid('requested_by').references(() => users.id, { onDelete: 'restrict' }),
+    decidedBy: uuid('decided_by').references(() => users.id, { onDelete: 'restrict' }),
+    decidedAt: tstz('decided_at'),
+    completedAt: tstz('completed_at'),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex('refunds_idempotency_key_uq').on(t.idempotencyKey),
+    uniqueIndex('refunds_provider_reference_uq').on(t.providerReference),
+    index('refunds_payment_idx').on(t.paymentId),
+    index('refunds_order_idx').on(t.orderId),
+    // Drives reconciliation: "which refunds is the provider still working on?"
+    index('refunds_processing_idx')
+      .on(t.updatedAt)
+      .where(sql`${t.status} = 'PROCESSING'`),
+    check('refunds_amount_positive', sql`${t.amount} > 0`),
+  ],
 );
 
 /** Every webhook delivery, stored before processing. The unique key makes replays a no-op. */

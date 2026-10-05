@@ -34,6 +34,8 @@ export const promotionScope = pgEnum('promotion_scope', t.PROMOTION_SCOPES);
 export const paymentProvider = pgEnum('payment_provider', t.PAYMENT_PROVIDERS);
 export const paymentStatus = pgEnum('payment_status', t.PAYMENT_STATUSES);
 export const paymentTransactionType = pgEnum('payment_transaction_type', t.PAYMENT_TRANSACTION_TYPES);
+export const refundStatus = pgEnum('refund_status', t.REFUND_STATUSES);
+export const refundMethod = pgEnum('refund_method', t.REFUND_METHODS);
 export const idempotencyStatus = pgEnum('idempotency_status', t.IDEMPOTENCY_STATUSES);
 
 export const deliveryStatus = pgEnum('delivery_status', t.DELIVERY_STATUSES);

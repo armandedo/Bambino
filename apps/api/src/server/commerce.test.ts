@@ -658,9 +658,6 @@ describe('staff fulfilment', () => {
           ?.adminUpdateOrderStatus,
       ).toEqual({ status });
     }
-    expect(
-      errorReason(await t.gql(STATUS, { id: order.id, status: 'CANCELLED' }, { token: ops.accessToken })),
-    ).toBe('REFUND_NOT_SUPPORTED');
 
     const [delivery] = await t.db
       .select()

@@ -27,7 +27,7 @@ export class CreditLedger {
     });
   }
 
-  /** Gives back credit spent on an order that was cancelled before payment. */
+  /** Gives back credit spent on an order that was cancelled. */
   async returnForCancelledOrder(
     db: Executor,
     userId: string,
@@ -42,7 +42,7 @@ export class CreditLedger {
       currency: amount.currency,
       orderId,
       actorId,
-      note: 'Credit returned: order cancelled before payment',
+      note: 'Credit returned: order cancelled',
     });
   }
 }

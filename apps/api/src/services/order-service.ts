@@ -1,4 +1,4 @@
-import { getMarket } from '@bambino/config';
+import { getMarket, REFUND_POLICY } from '@bambino/config';
 import { type AddressSnapshot, type Database, type Executor, schema } from '@bambino/database';
 import { and, asc, desc, eq, ilike, inArray, isNull, lt, or, sql } from '@bambino/database/orm';
 import type { OrderStatus } from '@bambino/types';
@@ -102,7 +102,21 @@ export class OrderService {
     cancelled: [],
   };
 
+  /** Requests the refund when a paid order is cancelled (RefundService; attached after construction). */
+  private refunds: {
+    requestForCancelledOrder(
+      tx: Executor,
+      order: OrderRow,
+      requestedBy: string,
+      reason: string,
+    ): Promise<unknown>;
+  } | null = null;
+
   constructor(private readonly deps: OrderServiceDependencies) {}
+
+  attachRefunds(refunds: NonNullable<OrderService['refunds']>): void {
+    this.refunds = refunds;
+  }
 
   /** Lets subscriptions, exchanges and garments react to orders without the order service knowing them. */
   on(event: 'paid' | 'delivered' | 'cancelled', hook: OrderHook): void {
@@ -242,13 +256,25 @@ export class OrderService {
     }
   }
 
-  /** Customers can cancel only before paying, and not while a payment prompt is open. */
+  /**
+   * Customers can cancel before paying (not while a payment prompt is open), or after paying while REFUND_POLICY
+   * allows it, in which case a full refund is requested for staff to approve.
+   */
   async cancelOrder(context: ServiceContext, rawOrderId: unknown): Promise<OrderRow> {
     const actor = requireUser(context);
     const orderId = parseInput(z.uuid(), rawOrderId);
     return this.deps.db.transaction(async (tx) => {
       const order = await this.lockOwnOrder(tx, actor.userId, orderId);
-      return this.cancelUnpaid(tx, order, actor.userId, 'Cancelled by customer');
+      if (order.status === 'PENDING_PAYMENT') {
+        return this.cancelUnpaid(tx, order, actor.userId, 'Cancelled by customer');
+      }
+      return this.cancelPaid(
+        tx,
+        order,
+        actor.userId,
+        'Cancelled by customer',
+        REFUND_POLICY.customerCancellableStatuses,
+      );
     });
   }
 
@@ -493,15 +519,16 @@ export class OrderService {
       const order = await this.lockOrder(tx, orderId);
       if (!order) throw new AppError('NOT_FOUND', 'Order not found.');
       if (status === 'CANCELLED') {
-        if (order.status !== 'PENDING_PAYMENT') {
-          // Cancelling a paid order needs a refund, which no provider supports yet.
-          throw new AppError(
-            'CONFLICT',
-            'Paid orders cannot be cancelled until refunds are supported.',
-            'REFUND_NOT_SUPPORTED',
-          );
-        }
-        const cancelled = await this.cancelUnpaid(tx, order, actor.userId, note ?? 'Cancelled by staff');
+        const cancelled =
+          order.status === 'PENDING_PAYMENT'
+            ? await this.cancelUnpaid(tx, order, actor.userId, note ?? 'Cancelled by staff')
+            : await this.cancelPaid(
+                tx,
+                order,
+                actor.userId,
+                note ?? 'Cancelled by staff',
+                REFUND_POLICY.staffCancellableStatuses,
+              );
         await recordAudit(tx, context, {
           action: 'order.cancelled',
           entityType: 'order',
@@ -549,6 +576,55 @@ export class OrderService {
     }
     // The coupon was not really used, so it can be used again.
     await tx.delete(schema.discounts).where(eq(schema.discounts.orderId, order.id));
+    for (const hook of this.hooks.cancelled) await hook(tx, updated);
+    return updated;
+  }
+
+  /**
+   * Cancels a paid order (REFUND_POLICY, open question 13): stock and garments released, credit and coupon given
+   * back, and a full refund of the payment requested for staff approval.
+   */
+  private async cancelPaid(
+    tx: Executor,
+    order: OrderRow,
+    actorId: string,
+    note: string,
+    allowedStatuses: readonly OrderStatus[],
+  ): Promise<OrderRow> {
+    if (
+      !REFUND_POLICY.cancellableOrderTypes.includes(order.type) ||
+      !allowedStatuses.includes(order.status)
+    ) {
+      throw new AppError('CONFLICT', 'This order can no longer be cancelled.', 'ORDER_NOT_CANCELLABLE');
+    }
+    if (!this.refunds) throw new Error('Refunds are not attached to the order service');
+    const updated = await this.transition(tx, order, 'CANCELLED', actorId, note, {
+      cancelledAt: this.deps.now(),
+    });
+    const items = await tx.select().from(schema.orderItems).where(eq(schema.orderItems.orderId, order.id));
+    // Payment took the stock off hand (InventoryService.commitSale); put it back.
+    for (const item of items.filter((line) => line.garmentId === null)) {
+      await this.deps.inventory.restockCancelledSale(tx, item.variantId, item.quantity, {
+        type: 'order',
+        id: order.id,
+      });
+    }
+    if (order.creditAppliedAmount > 0) {
+      await this.deps.credit.returnForCancelledOrder(
+        tx,
+        order.userId,
+        order.id,
+        money(order.creditAppliedAmount, this.deps.currency),
+        actorId,
+      );
+    }
+    await tx.delete(schema.discounts).where(eq(schema.discounts.orderId, order.id));
+    await this.refunds.requestForCancelledOrder(
+      tx,
+      order,
+      actorId,
+      `Order ${order.orderNumber} cancelled: ${note}`,
+    );
     for (const hook of this.hooks.cancelled) await hook(tx, updated);
     return updated;
   }

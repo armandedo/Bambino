@@ -76,6 +76,53 @@ export class InventoryService {
     await this.settle(tx, variantId, quantity, reference, 'SOLD', -quantity);
   }
 
+  /**
+   * Puts stock from a paid order that was cancelled back on hand, at the locations it was sold from (the order's
+   * own SOLD movements). Recorded as an adjustment, with the order as reference.
+   */
+  async restockCancelledSale(
+    tx: Executor,
+    variantId: string,
+    quantity: number,
+    reference: Reference,
+  ): Promise<void> {
+    const sold = await tx
+      .select({
+        inventoryItemId: schema.inventoryMovements.inventoryItemId,
+        delta: schema.inventoryMovements.onHandDelta,
+      })
+      .from(schema.inventoryMovements)
+      .innerJoin(
+        schema.inventoryItems,
+        eq(schema.inventoryItems.id, schema.inventoryMovements.inventoryItemId),
+      )
+      .where(
+        and(
+          eq(schema.inventoryItems.variantId, variantId),
+          eq(schema.inventoryMovements.reason, 'SOLD'),
+          eq(schema.inventoryMovements.referenceType, reference.type),
+          eq(schema.inventoryMovements.referenceId, reference.id),
+        ),
+      );
+    let remaining = quantity;
+    for (const movement of sold) {
+      if (remaining === 0) break;
+      const back = Math.min(remaining, -movement.delta);
+      await this.move(
+        tx,
+        movement.inventoryItemId,
+        'ADJUSTMENT',
+        back,
+        0,
+        reference,
+        null,
+        'Paid order cancelled: restocked',
+      );
+      remaining -= back;
+    }
+    if (remaining > 0) throw new Error(`No sale of variant ${variantId} to restock for ${reference.id}`);
+  }
+
   async adjust(context: ServiceContext, rawInput: unknown): Promise<InventoryItemRow> {
     const actor = requirePermission(context, 'inventory:write');
     const input = parseInput(adjustmentSchema, rawInput);

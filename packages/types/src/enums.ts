@@ -163,6 +163,21 @@ export const PAYMENT_TRANSACTION_TYPES = [
 ] as const;
 export type PaymentTransactionType = (typeof PAYMENT_TRANSACTION_TYPES)[number];
 
+/** See the refund lifecycle in apps/api/src/domain/lifecycles.ts. */
+export const REFUND_STATUSES = [
+  'REQUESTED',
+  'APPROVED',
+  'REJECTED',
+  'PROCESSING',
+  'SUCCEEDED',
+  'FAILED',
+] as const;
+export type RefundStatus = (typeof REFUND_STATUSES)[number];
+
+/** PROVIDER = back to the wallet that paid. CREDIT = exchange credit instead (only if REFUND_POLICY allows it). */
+export const REFUND_METHODS = ['PROVIDER', 'CREDIT'] as const;
+export type RefundMethod = (typeof REFUND_METHODS)[number];
+
 export const IDEMPOTENCY_STATUSES = ['IN_PROGRESS', 'COMPLETED'] as const;
 export type IdempotencyStatus = (typeof IDEMPOTENCY_STATUSES)[number];
 
@@ -237,6 +252,8 @@ export const NOTIFICATION_TYPES = [
   'RETURN_RECEIVED',
   'EXCHANGE_APPROVED',
   'EXCHANGE_COMPLETED',
+  'REFUND_SUCCEEDED',
+  'REFUND_REJECTED',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 

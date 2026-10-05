@@ -31,6 +31,7 @@ import { MediaService } from './media-service';
 import { NotificationService } from './notification-service';
 import { OrderService } from './order-service';
 import { PaymentService } from './payment-service';
+import { RefundService } from './refund-service';
 import { PromotionService } from './promotion-service';
 
 export interface ServiceDependencies {
@@ -65,6 +66,7 @@ export interface Services {
   promotions: PromotionService;
   orders: OrderService;
   payments: PaymentService;
+  refunds: RefundService;
   delivery: DeliveryService;
   notifications: NotificationService;
   credit: CreditLedger;
@@ -134,6 +136,17 @@ export function createServices(deps: ServiceDependencies): Services {
     now,
   });
 
+  const refunds = new RefundService({
+    db,
+    providers: deps.payments?.providers ?? new Map(),
+    notifications,
+    logger,
+    currency,
+    now,
+  });
+  payments.attachRefunds(refunds);
+  orders.attachRefunds(refunds);
+
   const storage = deps.storage ?? new LocalStorageProvider('http://localhost:4000/media');
   const garments = new GarmentService(db, now);
   const babies = new BabyService(db, now);
@@ -200,6 +213,7 @@ export function createServices(deps: ServiceDependencies): Services {
     promotions,
     orders,
     payments,
+    refunds,
     delivery,
     notifications,
     credit,

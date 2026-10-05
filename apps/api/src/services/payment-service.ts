@@ -14,6 +14,7 @@ import { type ServiceContext, requirePermission, requireUser } from './context';
 import { AppError, isUniqueViolation, parseInput } from './errors';
 import type { NotificationService } from './notification-service';
 import type { OrderService } from './order-service';
+import type { RefundService } from './refund-service';
 import { type Page, type PageRequest, decodeOffset, encodeOffset, pageSize } from './pagination';
 
 export type PaymentRow = typeof schema.payments.$inferSelect;
@@ -75,7 +76,14 @@ export interface PaymentServiceDependencies {
  * also marks the order paid. Applying the same answer twice changes nothing.
  */
 export class PaymentService {
+  private refunds: RefundService | null = null;
+
   constructor(private readonly deps: PaymentServiceDependencies) {}
+
+  /** Refund webhooks arrive on the same endpoint as payment webhooks. */
+  attachRefunds(refunds: RefundService): void {
+    this.refunds = refunds;
+  }
 
   async initiate(context: ServiceContext, rawInput: unknown): Promise<PaymentRow> {
     const actor = requireUser(context);
@@ -295,7 +303,13 @@ export class PaymentService {
         this.deps.logger.error('webhook processing failed', { paymentId: payment.id, error });
       }
     } else {
-      processingError = 'No payment with this provider reference';
+      try {
+        const isRefund = (await this.refunds?.refreshByProviderReference(parsed.providerReference)) ?? false;
+        if (!isRefund) processingError = 'No payment or refund with this provider reference';
+      } catch (error) {
+        processingError = error instanceof Error ? error.message : String(error);
+        this.deps.logger.error('refund webhook processing failed', { error });
+      }
     }
     await this.deps.db
       .update(schema.webhookEvents)

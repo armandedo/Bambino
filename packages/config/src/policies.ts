@@ -1,4 +1,4 @@
-import type { GarmentCondition } from '@bambino/types';
+import type { GarmentCondition, OrderStatus, OrderType } from '@bambino/types';
 
 /**
  * Business policies the code depends on but the business has not decided yet
@@ -43,4 +43,19 @@ export const SIZING_POLICY = {
   fitReportsToShiftSize: 2,
   /** With ROOMY fit, a baby in the top share of a size range is moved up one size (basis points of the range). */
   roomyUpperShareBasisPoints: 2_500,
+};
+
+/**
+ * Open question 13. Cancellations and refunds. PLACEHOLDER: the most cautious reading until the business decides.
+ * Every refund starts REQUESTED and waits for staff with refund:write to approve it.
+ */
+export const REFUND_POLICY = {
+  /** Order types a paid order can be cancelled (with a refund) for. Subscription and exchange orders: not yet. */
+  cancellableOrderTypes: ['ONE_TIME'] as readonly OrderType[],
+  /** A customer can cancel a paid order only before it is being prepared. */
+  customerCancellableStatuses: ['PAID'] as readonly OrderStatus[],
+  /** Staff can cancel a paid order until it leaves the warehouse. */
+  staffCancellableStatuses: ['PAID', 'PROCESSING', 'PACKED', 'READY_FOR_DISPATCH'] as readonly OrderStatus[],
+  /** Whether staff may refund as exchange credit instead of money back to the wallet. */
+  allowRefundAsCredit: false,
 };
