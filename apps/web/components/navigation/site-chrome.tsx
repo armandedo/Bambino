@@ -230,7 +230,7 @@ function Footer() {
         <div className="flex flex-col gap-4">
           <span className="font-display text-2xl font-extrabold tracking-tight">bambino</span>
           <p className="max-w-xs text-sm text-brand-100">
-            Smart, sustainable babywear that grows with your baby. Designed in Kigali, built for East Africa.
+            Baby clothes that keep up with your baby. Designed in Kigali, and worn by more than one family.
           </p>
         </div>
         {FOOTER_LINKS.map((group) => (

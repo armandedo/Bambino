@@ -1,50 +1,49 @@
 import { CatalogueFiltersQuery, ProductsQuery, SubscriptionPlansQuery } from '@bambino/api-client';
 import { EmptyState, buttonClasses } from '@bambino/ui';
-import { ArrowRight, MapPin, PackageCheck, Ruler, ShieldCheck, Smartphone, Tag } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import NextLink from 'next/link';
+import type { ReactNode } from 'react';
 import { ApiErrorState } from '@/components/api-error';
-import { ExchangeSequence } from '@/components/exchange/exchange-sequence';
 import { GrowthSlider } from '@/components/hero/growth-slider';
 import { Hero } from '@/components/hero/hero';
 import { Reveal, Stagger, StaggerItem } from '@/components/motion/primitives';
 import { PlanCard } from '@/components/plan-card';
 import { ProductCard } from '@/components/product-card';
-import { SectionHeading } from '@/components/sections';
 import { HowItWorksStory } from '@/components/story/how-it-works';
-import { LifecycleLoop } from '@/components/story/lifecycle-loop';
 import { load } from '@/lib/api';
 import { PHOTOS, type StockPhoto, photoSrcSet, photoUrl } from '@/lib/stock-photos';
 
 export const revalidate = 60;
 
-const FIT_STEPS = [
-  'Name and date of birth',
-  'Height',
-  'Weight',
-  'How you like clothes to fit',
-  'Your size, with reasons',
+/** The questions the fit finder asks, in the order it asks them. */
+const FIT_QUESTIONS = [
+  'What’s your baby’s name, and when were they born?',
+  'How tall are they? (A guess is fine.)',
+  'Roughly how much do they weigh?',
+  'Do you like clothes snug, or with room to grow?',
 ];
 
-const TRUST = [
+/** What a returned piece goes through. Matches the garment states recorded for every tagged piece. */
+const AFTER_RETURN = ['Comes back to us', 'Checked by hand', 'Washed', 'Off to the next family'];
+
+const SWAP = ['Book a pickup', 'We check each piece', 'You get credit', 'Pick the next size'];
+
+const LOCAL_NOTES = [
   {
-    icon: MapPin,
-    title: 'Designed in Kigali',
-    body: 'Made for East African families, climates and budgets.',
+    title: 'Pay with MoMo or Airtel Money',
+    body: 'You approve the payment on your phone. No card needed.',
   },
   {
-    icon: Smartphone,
-    title: 'Mobile money first',
-    body: 'Built around MTN MoMo and Airtel Money, approved on your phone.',
+    title: 'Delivered across Kigali',
+    body: 'Standard delivery, or same-day if you need it sooner.',
   },
   {
-    icon: PackageCheck,
-    title: 'Delivered in Kigali',
-    body: 'Standard and same-day delivery options at checkout.',
+    title: 'Every piece has a tag',
+    body: 'So we always know where a garment has been and what condition it’s in.',
   },
   {
-    icon: Tag,
-    title: 'Every piece tracked',
-    body: 'Each garment is tagged, so its whole life is on record.',
+    title: 'Designed here',
+    body: 'By people in Kigali, with our weather and our prices in mind.',
   },
 ];
 
@@ -60,7 +59,7 @@ function Photo({
   sizes?: string;
 }) {
   return (
-    <div className={`relative overflow-hidden rounded-[2rem] bg-sand-100 ${className ?? ''}`}>
+    <div className={`relative overflow-hidden rounded-3xl bg-sand-100 ${className ?? ''}`}>
       <img
         src={photoUrl(photo, 1080, aspect)}
         srcSet={photoSrcSet(photo, aspect)}
@@ -74,6 +73,56 @@ function Photo({
   );
 }
 
+/** A plain section heading: no label above it, no animation. Words first. */
+function Heading({
+  id,
+  children,
+  intro,
+  inverse = false,
+}: {
+  id: string;
+  children: ReactNode;
+  intro?: ReactNode;
+  inverse?: boolean;
+}) {
+  return (
+    <div className="flex max-w-2xl flex-col gap-3">
+      <h2
+        id={id}
+        className={`font-display text-3xl leading-tight font-extrabold tracking-tight sm:text-[2.6rem] ${
+          inverse ? 'text-primary-foreground' : 'text-primary'
+        }`}
+      >
+        {children}
+      </h2>
+      {intro ? (
+        <p className={`text-lg leading-relaxed ${inverse ? 'text-brand-100' : 'text-foreground-muted'}`}>
+          {intro}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/** Steps written as one line of text with arrows between them, instead of a row of cards. */
+function Flow({ steps, inverse = false }: { steps: string[]; inverse?: boolean }) {
+  return (
+    <ol className="flex flex-wrap items-center gap-x-3 gap-y-2 text-lg font-semibold">
+      {steps.map((step, index) => (
+        <li key={step} className="flex items-center gap-3">
+          <span className={inverse ? 'text-primary-foreground' : 'text-primary'}>{step}</span>
+          {index < steps.length - 1 ? (
+            <ArrowRight
+              aria-hidden="true"
+              className={`size-4 ${inverse ? 'text-accent-200' : 'text-accent-600'}`}
+            />
+          ) : null}
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 export default async function HomePage() {
   const [plans, products, filters] = await Promise.all([
     load(SubscriptionPlansQuery),
@@ -84,90 +133,81 @@ export default async function HomePage() {
 
   return (
     <>
-      {/* 01 Hero */}
       <Hero />
 
-      {/* 02 Growth interaction */}
-      <section aria-labelledby="grow" className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:py-24">
+      {/* How long a size lasts */}
+      <section aria-labelledby="grow" className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:py-20">
         <div className="flex flex-col gap-10">
-          <SectionHeading
+          <Heading
             id="grow"
-            eyebrow="Grow with them"
-            title="Move the slider. Watch the wardrobe keep up."
-            intro="Babies change size every few months. See which size fits at each age, and when the next exchange comes."
-          />
+            intro="Drag the slider to your baby’s age. It’s a rough guide from our size chart. Every baby grows at their own speed, which is why the fit finder asks for height and weight too."
+          >
+            How long does a size actually last?
+          </Heading>
           {filters.ok && filters.data.sizes.length > 0 ? (
-            <Reveal>
-              <GrowthSlider chart={filters.data.sizes} products={productList} />
-            </Reveal>
+            <GrowthSlider chart={filters.data.sizes} products={productList} />
           ) : filters.ok ? null : (
             <ApiErrorState error={filters.error} what="the size chart" />
           )}
         </div>
       </section>
 
-      {/* 03 How it works */}
+      {/* How it works */}
       <section aria-labelledby="how" className="bg-surface-muted">
-        <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-16 sm:px-6 lg:py-24">
-          <SectionHeading
-            id="how"
-            eyebrow="How Bambino works"
-            title="Subscribe once. Size up as they grow."
-          />
+        <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-16 sm:px-6 lg:py-20">
+          <Heading id="how" intro="Six steps, and you only really have to do the first two.">
+            Here&rsquo;s how it works
+          </Heading>
           <HowItWorksStory />
         </div>
       </section>
 
-      {/* 04 Sizing */}
-      <section aria-labelledby="fit" className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:py-24">
-        <div className="grid items-center gap-10 rounded-[2rem] bg-primary p-8 text-primary-foreground sm:p-12 lg:grid-cols-2">
+      {/* Fit finder */}
+      <section aria-labelledby="fit" className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:py-20">
+        <div className="grid items-start gap-10 rounded-3xl bg-primary p-8 text-primary-foreground sm:p-12 lg:grid-cols-[1fr_1.1fr]">
           <div className="flex flex-col gap-6">
-            <SectionHeading
+            <Heading
               id="fit"
-              tone="inverse"
-              eyebrow="Find the right fit"
-              title="The right size, with the reasons behind it."
-              intro="Answer a few questions and we compare your baby’s measurements with our size chart. You see exactly why we chose the size."
-            />
-            <Reveal delay={0.2}>
-              <NextLink
-                href="/fit"
-                className={buttonClasses({ variant: 'accent', size: 'lg', className: 'w-fit gap-2' })}
-              >
-                Start the fit finder <ArrowRight aria-hidden="true" className="size-5" />
-              </NextLink>
-            </Reveal>
+              inverse
+              intro="Answer four quick questions. We’ll suggest a size and show you how we got there, so you can check our working."
+            >
+              Not sure which size to pick?
+            </Heading>
+            <NextLink
+              href="/fit"
+              className={buttonClasses({ variant: 'accent', size: 'lg', className: 'w-fit gap-2' })}
+            >
+              Start the fit finder <ArrowRight aria-hidden="true" className="size-5" />
+            </NextLink>
           </div>
-          <Stagger as="ol" className="flex flex-col gap-3">
-            {FIT_STEPS.map((step, index) => (
-              <StaggerItem
-                as="li"
-                key={step}
-                className="flex items-center gap-4 rounded-2xl bg-brand-700 px-5 py-4"
-              >
-                <span
-                  aria-hidden="true"
-                  className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent font-bold text-accent-foreground"
-                >
-                  {index === FIT_STEPS.length - 1 ? <Ruler className="size-4" /> : index + 1}
-                </span>
-                <span className="font-medium">{step}</span>
-              </StaggerItem>
-            ))}
-          </Stagger>
+          <div className="rounded-2xl bg-surface p-6 text-foreground shadow-lg sm:p-8 lg:rotate-1">
+            <p className="text-sm font-semibold text-foreground-muted">What we&rsquo;ll ask you</p>
+            <ol className="mt-4 flex list-decimal flex-col gap-3 pl-5 text-lg marker:font-bold marker:text-accent-700">
+              {FIT_QUESTIONS.map((question) => (
+                <li key={question} className="pl-1">
+                  {question}
+                </li>
+              ))}
+            </ol>
+            <p className="mt-5 border-t border-border pt-4 text-foreground-muted">
+              Then you get a size, plus the reasons behind it. Takes about two minutes.
+            </p>
+          </div>
         </div>
       </section>
 
-      {/* 05 Product showcase */}
-      <section aria-labelledby="new" className="mx-auto max-w-7xl px-4 pb-16 sm:px-6 lg:pb-24">
+      {/* Products */}
+      <section aria-labelledby="new" className="mx-auto max-w-7xl px-4 pb-16 sm:px-6 lg:pb-20">
         <div className="flex flex-col gap-10">
           <div className="flex flex-wrap items-end justify-between gap-4">
-            <SectionHeading id="new" eyebrow="The collection" title="Soft everyday pieces." />
+            <Heading id="new" intro="Everyday basics, made to be washed a lot and worn by more than one baby.">
+              What comes in the box
+            </Heading>
             <NextLink
               href="/shop"
               className="font-semibold text-link underline underline-offset-4 hover:decoration-2"
             >
-              Shop everything
+              See everything in the shop
             </NextLink>
           </div>
           {!products.ok ? (
@@ -189,148 +229,136 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* 06 Circular lifecycle */}
+      {/* What happens to returned clothes */}
       <section aria-labelledby="circular" className="bg-surface-muted">
-        <div className="mx-auto flex max-w-7xl flex-col gap-10 px-4 py-16 sm:px-6 lg:py-24">
-          <div className="grid items-center gap-8 lg:grid-cols-2 lg:gap-16">
-            <SectionHeading
-              id="circular"
-              eyebrow="Circular by design"
-              title="Every piece has a next chapter."
-              intro="Nothing is reused without passing inspection, and every step of a garment’s life is recorded."
-            />
-            <Reveal>
-              <Photo photo={PHOTOS.circular} aspect={16 / 10} className="aspect-[16/10]" />
-            </Reveal>
+        <div className="mx-auto grid max-w-7xl items-center gap-10 px-4 py-16 sm:px-6 lg:grid-cols-2 lg:gap-16 lg:py-20">
+          <Reveal>
+            <Photo photo={PHOTOS.circular} aspect={4 / 3} className="aspect-[4/3]" />
+          </Reveal>
+          <div className="flex flex-col gap-6">
+            <Heading id="circular">One romper, several babies</Heading>
+            <p className="text-lg leading-relaxed text-foreground-muted">
+              Babies wear most things for a few weeks before they&rsquo;re too small. That&rsquo;s a waste of good
+              cotton, and of your money. So when clothes come back to us, we check every piece by hand. The good
+              ones are washed and go to the next family. The worn-out ones are recycled, never quietly sent back
+              out.
+            </p>
+            <Flow steps={AFTER_RETURN} />
+            <NextLink
+              href="/sustainability"
+              className="w-fit font-semibold text-link underline underline-offset-4 hover:decoration-2"
+            >
+              More on how we reuse clothes
+            </NextLink>
           </div>
-          <LifecycleLoop />
         </div>
       </section>
 
-      {/* 07 Subscription plans */}
-      <section aria-labelledby="plans" className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:py-24">
+      {/* Plans */}
+      <section aria-labelledby="plans" className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:py-20">
         <div className="flex flex-col gap-10">
-          <SectionHeading
+          <Heading
             id="plans"
-            eyebrow="Subscriptions"
-            title="One plan per baby. Change it any time."
-            intro="Prices come straight from our system and are placeholders until launch."
-            align="center"
-          />
+            intro="One plan per baby, and you can switch whenever you need to. These prices are placeholders until we launch."
+          >
+            Plans and prices
+          </Heading>
           {!plans.ok ? (
             <ApiErrorState error={plans.error} what="plans" />
           ) : plans.data.subscriptionPlans.length === 0 ? (
             <EmptyState title="No plans yet" description="Plans appear here once they are published." />
           ) : (
-            <Stagger className="grid gap-6 pt-3 md:grid-cols-3" gap={0.12}>
+            <div className="grid gap-6 pt-3 md:grid-cols-3">
               {plans.data.subscriptionPlans.map((plan, index) => (
-                <StaggerItem key={plan.id}>
-                  <PlanCard plan={plan} featured={index === 0} />
-                </StaggerItem>
+                <PlanCard key={plan.id} plan={plan} featured={index === 0} />
               ))}
-            </Stagger>
+            </div>
           )}
         </div>
       </section>
 
-      {/* 08 Exchange */}
+      {/* Exchange */}
       <section aria-labelledby="exchange" className="bg-primary">
-        <div className="mx-auto flex max-w-7xl flex-col gap-10 px-4 py-16 sm:px-6 lg:py-24">
-          <SectionHeading
+        <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-16 sm:px-6 lg:py-20">
+          <Heading
             id="exchange"
-            tone="inverse"
-            eyebrow="Exchange"
-            title="Outgrown? Swap it for the next size."
-            intro="No starting over. Send back what’s small, earn credit for what passes inspection, and choose the next size."
-          />
-          <ExchangeSequence tone="inverse" />
-          <Reveal>
-            <NextLink
-              href="/exchange"
-              className={buttonClasses({ variant: 'accent', className: 'w-fit gap-2' })}
-            >
-              How exchanges work <ArrowRight aria-hidden="true" className="size-4" />
-            </NextLink>
-          </Reveal>
+            inverse
+            intro="You don’t start over. Send back what’s small, and the pieces that pass our check turn into credit for the next size."
+          >
+            Outgrown already? Swap it.
+          </Heading>
+          <Flow steps={SWAP} inverse />
+          <NextLink
+            href="/exchange"
+            className={buttonClasses({ variant: 'accent', className: 'w-fit gap-2' })}
+          >
+            How swapping works <ArrowRight aria-hidden="true" className="size-4" />
+          </NextLink>
         </div>
       </section>
 
-      {/* 09 Rwanda / East Africa trust */}
-      <section aria-labelledby="trust" className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:py-24">
-        <div className="flex flex-col gap-10">
-          <SectionHeading
-            id="trust"
-            eyebrow="Made for here"
-            title="Built for families in Rwanda and East Africa."
-          />
-          <Reveal className="grid gap-4 sm:grid-cols-3">
+      {/* Made for here */}
+      <section aria-labelledby="trust" className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:py-20">
+        <div className="grid gap-12 lg:grid-cols-[1.15fr_1fr] lg:gap-16">
+          <div className="grid grid-cols-2 gap-4">
             <Photo
               photo={PHOTOS.kigaliSkyline}
               aspect={16 / 10}
-              className="aspect-[16/10] sm:col-span-2 sm:aspect-auto sm:h-full"
-              sizes="(min-width: 640px) 66vw, 100vw"
+              className="col-span-2 aspect-[16/10]"
+              sizes="(min-width: 1024px) 55vw, 100vw"
             />
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-1">
-              <Photo
-                photo={PHOTOS.motherCarrying}
-                aspect={4 / 3}
-                className="aspect-[4/3]"
-                sizes="(min-width: 640px) 33vw, 50vw"
-              />
-              <Photo
-                photo={PHOTOS.kigaliHills}
-                aspect={4 / 3}
-                className="aspect-[4/3]"
-                sizes="(min-width: 640px) 33vw, 50vw"
-              />
-            </div>
-          </Reveal>
-          <Stagger as="ul" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {TRUST.map((item) => {
-              const Icon = item.icon;
-              return (
-                <StaggerItem
-                  as="li"
-                  key={item.title}
-                  className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-6"
-                >
-                  <span className="flex size-11 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
-                    <Icon aria-hidden="true" className="size-5" strokeWidth={1.75} />
-                  </span>
-                  <h3 className="font-display text-lg font-bold text-primary">{item.title}</h3>
-                  <p className="text-sm text-foreground-muted">{item.body}</p>
-                </StaggerItem>
-              );
-            })}
-          </Stagger>
-          <p className="flex items-center gap-2 text-sm text-foreground-muted">
-            <ShieldCheck aria-hidden="true" className="size-4 text-brand-500" />
-            Preview: mobile money is being connected; this build uses test wallets.
-          </p>
+            <Photo
+              photo={PHOTOS.motherCarrying}
+              aspect={1}
+              className="aspect-square"
+              sizes="(min-width: 1024px) 27vw, 50vw"
+            />
+            <Photo
+              photo={PHOTOS.kigaliHills}
+              aspect={1}
+              className="aspect-square"
+              sizes="(min-width: 1024px) 27vw, 50vw"
+            />
+          </div>
+          <div className="flex flex-col gap-8">
+            <Heading id="trust">Made in Kigali, for families here</Heading>
+            <dl className="flex flex-col gap-6">
+              {LOCAL_NOTES.map((note) => (
+                <div key={note.title} className="border-l-2 border-accent pl-4">
+                  <dt className="font-display text-lg font-bold text-primary">{note.title}</dt>
+                  <dd className="mt-1 text-foreground-muted">{note.body}</dd>
+                </div>
+              ))}
+            </dl>
+            <p className="text-sm text-foreground-muted">
+              Heads up: this is a preview. Mobile money isn&rsquo;t connected yet, so checkout uses test wallets.
+            </p>
+          </div>
         </div>
       </section>
 
-      {/* 10 Call to action */}
+      {/* Closing */}
       <section aria-labelledby="start" className="px-4 pb-16 sm:px-6 lg:pb-24">
-        <Reveal className="mx-auto flex max-w-5xl flex-col items-center gap-6 rounded-[2rem] bg-accent-50 px-6 py-14 text-center sm:px-12">
-          <h2
-            id="start"
-            className="font-display text-3xl font-extrabold tracking-tight text-primary sm:text-5xl"
-          >
-            Start with the right fit.
+        <div className="mx-auto flex max-w-4xl flex-col items-start gap-5 rounded-3xl bg-accent-50 px-6 py-12 sm:px-12">
+          <h2 id="start" className="font-display text-3xl font-extrabold tracking-tight text-primary sm:text-4xl">
+            <span lang="rw">Murakoze</span> for reading this far.
           </h2>
           <p className="max-w-xl text-lg text-foreground-muted">
-            It takes about two minutes, and you see the reasons for every recommendation.
+            The easiest place to start is your baby&rsquo;s size. It takes about two minutes, and you can
+            change your mind about everything later.
           </p>
-          <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <NextLink href="/fit" className={buttonClasses({ size: 'lg', className: 'gap-2' })}>
-              Find the right fit <ArrowRight aria-hidden="true" className="size-5" />
+              Find my baby&rsquo;s size <ArrowRight aria-hidden="true" className="size-5" />
             </NextLink>
-            <NextLink href="/plans" className={buttonClasses({ size: 'lg', variant: 'outline' })}>
-              Explore plans
+            <NextLink
+              href="/plans"
+              className="px-2 py-3 font-semibold text-primary underline decoration-accent decoration-2 underline-offset-4 hover:decoration-primary"
+            >
+              or compare plans
             </NextLink>
           </div>
-        </Reveal>
+        </div>
       </section>
     </>
   );
