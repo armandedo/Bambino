@@ -28,7 +28,7 @@ for (const path of PAGES) {
     // Photos come from this site (stock photos) or the API's storage, never another image host.
     const thirdPartyImages: string[] = [];
     page.on('request', (r) => {
-      if (r.resourceType() === 'image' && /unsplash.com/.test(r.url())) thirdPartyImages.push(r.url());
+      if (r.resourceType() === 'image' && /unsplash\.com/.test(r.url())) thirdPartyImages.push(r.url());
     });
     const response = await page.goto(path);
     const headers = response?.headers() ?? {};

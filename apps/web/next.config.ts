@@ -1,4 +1,6 @@
 import type { NextConfig } from 'next';
+import { PHASE_PRODUCTION_BUILD } from 'next/constants';
+import { assertLaunchReady } from './lib/launch-env';
 import { staticSecurityHeaders } from './lib/security-headers';
 
 const config: NextConfig = {
@@ -36,4 +38,15 @@ const config: NextConfig = {
   reactStrictMode: true,
 };
 
-export default config;
+/** Production builds must be launch-ready, or marked as a preview (lib/launch-env.ts). */
+export default function nextConfig(phase: string): NextConfig {
+  if (phase === PHASE_PRODUCTION_BUILD) {
+    const problems = assertLaunchReady(process.env);
+    // Build workers load this file again and inherit the environment: warn once.
+    if (problems.length > 0 && !process.env.BAMBINO_PREVIEW_WARNED) {
+      process.env.BAMBINO_PREVIEW_WARNED = '1';
+      for (const problem of problems) console.warn(`Preview build: ${problem}`);
+    }
+  }
+  return config;
+}

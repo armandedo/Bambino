@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import nextConfig from '../next.config';
+import nextConfigFor from '../next.config';
 import { proxy } from '../proxy';
 import { contentSecurityPolicy, createNonce, originOf, staticSecurityHeaders } from './security-headers';
 
@@ -103,7 +103,7 @@ describe('staticSecurityHeaders', () => {
 
 describe('next.config headers', () => {
   it('applies the security headers to every path', async () => {
-    const rules = (await nextConfig.headers?.()) ?? [];
+    const rules = (await nextConfigFor('phase-development-server').headers?.()) ?? [];
     const all = rules.find((r) => r.source === '/:path*');
     expect(all?.headers.map((h) => h.key)).toEqual(
       expect.arrayContaining(['X-Content-Type-Options', 'Referrer-Policy', 'Permissions-Policy']),

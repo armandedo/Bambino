@@ -187,11 +187,17 @@ function MobileNav() {
   );
 }
 
-function PreviewBanner() {
+// Read directly so Next inlines them into the browser bundle (lib/launch-env.ts checks them at build time).
+const PREVIEW = process.env.NEXT_PUBLIC_PREVIEW_BANNER === 'true';
+const MOCK_PAYMENTS = process.env.NEXT_PUBLIC_MOCK_PAYMENTS === 'true';
+
+/** Shown on every page of a preview build: the one switch is NEXT_PUBLIC_PREVIEW_BANNER. */
+export function PreviewBanner({ preview = PREVIEW, mockPayments = MOCK_PAYMENTS }) {
+  if (!preview) return null;
   return (
     <div className="bg-primary px-4 py-2 text-center text-xs text-primary-foreground sm:text-sm">
-      <strong className="font-semibold">Preview build.</strong> Payments use test wallets only, and copy and
-      prices are placeholders.
+      <strong className="font-semibold">Preview build.</strong>{' '}
+      {mockPayments ? 'Payments use test wallets only, and copy' : 'Copy'} and prices are placeholders.
     </div>
   );
 }

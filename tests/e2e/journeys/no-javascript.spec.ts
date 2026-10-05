@@ -14,7 +14,10 @@ for (const path of ['/', '/how-it-works', '/fit']) {
 
 test('the home page calls to action work without JavaScript', async ({ page }) => {
   await page.goto('/');
-  const cta = page.getByRole('main').getByRole('link', { name: /Find my baby/ }).first();
+  const cta = page
+    .getByRole('main')
+    .getByRole('link', { name: /Find my baby/ })
+    .first();
   await expect(cta).toBeVisible();
   await expect(cta).toHaveCSS('opacity', '1');
   await expect(page.getByRole('main').getByRole('link', { name: /see what it costs/ })).toBeVisible();
