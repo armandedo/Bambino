@@ -4,6 +4,8 @@
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",
     "allowJs": false,
+    // Node runs scripts/*.ts directly, which needs the .ts extension in their imports.
+    "rewriteRelativeImportExtensions": true,
     "incremental": true,
     "plugins": [{ "name": "next" }],
     "paths": { "@/*": ["./*"] }

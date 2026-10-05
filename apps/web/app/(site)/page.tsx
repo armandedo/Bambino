@@ -1,6 +1,7 @@
 import { CatalogueFiltersQuery, ProductsQuery, SubscriptionPlansQuery } from '@bambino/api-client';
 import { EmptyState, buttonClasses } from '@bambino/ui';
 import { ArrowRight } from 'lucide-react';
+import Image from 'next/image';
 import NextLink from 'next/link';
 import type { ReactNode } from 'react';
 import { ApiErrorState } from '@/components/api-error';
@@ -11,7 +12,7 @@ import { PlanCard } from '@/components/plan-card';
 import { ProductCard } from '@/components/product-card';
 import { HowItWorksStory } from '@/components/story/how-it-works';
 import { load } from '@/lib/api';
-import { PHOTOS, type StockPhoto, photoSrcSet, photoUrl } from '@/lib/stock-photos';
+import { PHOTOS, type StockPhoto, stockSrc } from '@/lib/stock-photos';
 
 export const revalidate = 60;
 
@@ -49,26 +50,16 @@ const LOCAL_NOTES = [
 
 function Photo({
   photo,
-  aspect,
   className,
   sizes = '(min-width: 1024px) 50vw, 100vw',
 }: {
   photo: StockPhoto;
-  aspect: number;
   className?: string;
   sizes?: string;
 }) {
   return (
     <div className={`relative overflow-hidden rounded-3xl bg-sand-100 ${className ?? ''}`}>
-      <img
-        src={photoUrl(photo, 1080, aspect)}
-        srcSet={photoSrcSet(photo, aspect)}
-        sizes={sizes}
-        alt={photo.alt}
-        loading="lazy"
-        decoding="async"
-        className="absolute inset-0 size-full object-cover"
-      />
+      <Image src={stockSrc(photo)} alt={photo.alt} fill sizes={sizes} className="object-cover" />
     </div>
   );
 }
@@ -200,7 +191,10 @@ export default async function HomePage() {
       <section aria-labelledby="new" className="mx-auto max-w-7xl px-4 pb-16 sm:px-6 lg:pb-20">
         <div className="flex flex-col gap-10">
           <div className="flex flex-wrap items-end justify-between gap-4">
-            <Heading id="new" intro="Everyday basics, made to be washed a lot and worn by more than one baby.">
+            <Heading
+              id="new"
+              intro="Everyday basics, made to be washed a lot and worn by more than one baby."
+            >
               What comes in the box
             </Heading>
             <NextLink
@@ -233,15 +227,15 @@ export default async function HomePage() {
       <section aria-labelledby="circular" className="bg-surface-muted">
         <div className="mx-auto grid max-w-7xl items-center gap-10 px-4 py-16 sm:px-6 lg:grid-cols-2 lg:gap-16 lg:py-20">
           <Reveal>
-            <Photo photo={PHOTOS.circular} aspect={4 / 3} className="aspect-[4/3]" />
+            <Photo photo={PHOTOS.circular} className="aspect-[4/3]" />
           </Reveal>
           <div className="flex flex-col gap-6">
             <Heading id="circular">One romper, several babies</Heading>
             <p className="text-lg leading-relaxed text-foreground-muted">
-              Babies wear most things for a few weeks before they&rsquo;re too small. That&rsquo;s a waste of good
-              cotton, and of your money. So when clothes come back to us, we check every piece by hand. The good
-              ones are washed and go to the next family. The worn-out ones are recycled, never quietly sent back
-              out.
+              Babies wear most things for a few weeks before they&rsquo;re too small. That&rsquo;s a waste of
+              good cotton, and of your money. So when clothes come back to us, we check every piece by hand.
+              The good ones are washed and go to the next family. The worn-out ones are recycled, never
+              quietly sent back out.
             </p>
             <Flow steps={AFTER_RETURN} />
             <NextLink
@@ -303,19 +297,16 @@ export default async function HomePage() {
           <div className="grid grid-cols-2 gap-4">
             <Photo
               photo={PHOTOS.kigaliSkyline}
-              aspect={16 / 10}
               className="col-span-2 aspect-[16/10]"
               sizes="(min-width: 1024px) 55vw, 100vw"
             />
             <Photo
               photo={PHOTOS.motherCarrying}
-              aspect={1}
               className="aspect-square"
               sizes="(min-width: 1024px) 27vw, 50vw"
             />
             <Photo
               photo={PHOTOS.kigaliHills}
-              aspect={1}
               className="aspect-square"
               sizes="(min-width: 1024px) 27vw, 50vw"
             />
@@ -331,7 +322,8 @@ export default async function HomePage() {
               ))}
             </dl>
             <p className="text-sm text-foreground-muted">
-              Heads up: this is a preview. Mobile money isn&rsquo;t connected yet, so checkout uses test wallets.
+              Heads up: this is a preview. Mobile money isn&rsquo;t connected yet, so checkout uses test
+              wallets.
             </p>
           </div>
         </div>
@@ -340,7 +332,10 @@ export default async function HomePage() {
       {/* Closing */}
       <section aria-labelledby="start" className="px-4 pb-16 sm:px-6 lg:pb-24">
         <div className="mx-auto flex max-w-4xl flex-col items-start gap-5 rounded-3xl bg-accent-50 px-6 py-12 sm:px-12">
-          <h2 id="start" className="font-display text-3xl font-extrabold tracking-tight text-primary sm:text-4xl">
+          <h2
+            id="start"
+            className="font-display text-3xl font-extrabold tracking-tight text-primary sm:text-4xl"
+          >
             <span lang="rw">Murakoze</span> for reading this far.
           </h2>
           <p className="max-w-xl text-lg text-foreground-muted">

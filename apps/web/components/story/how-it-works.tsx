@@ -3,8 +3,9 @@
 import { cn } from '@bambino/ui';
 import { Baby, Box, ClipboardList, type LucideIcon, RefreshCw, Ruler, Undo2 } from 'lucide-react';
 import { AnimatePresence, motion, useInView } from 'motion/react';
+import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
-import { PHOTOS, type StockPhoto, photoUrl } from '@/lib/stock-photos';
+import { PHOTOS, type StockPhoto, stockSrc } from '@/lib/stock-photos';
 import { DURATION, EASE } from '../motion/primitives';
 
 interface Step {
@@ -80,18 +81,18 @@ function StepItem({
         {String(index + 1).padStart(2, '0')}
       </span>
       <div className="flex flex-col gap-2">
-        <img
-          src={photoUrl(step.photo, 720, 16 / 9)}
-          alt=""
-          loading="lazy"
-          className="mb-2 aspect-video w-full rounded-2xl object-cover lg:hidden"
-        />
+        <div className="relative mb-2 aspect-video w-full overflow-hidden rounded-2xl lg:hidden">
+          <Image src={stockSrc(step.photo)} alt="" fill sizes="100vw" className="object-cover" />
+        </div>
         <h3 className="font-display text-2xl font-bold text-primary sm:text-3xl">{step.title}</h3>
         <p className="max-w-md text-lg text-foreground-muted">{step.body}</p>
       </div>
     </li>
   );
 }
+
+/** The pinned photo is half of the 80rem page on large screens. */
+const STICKY_SIZES = '(min-width: 1024px) 38rem, 100vw';
 
 /** Six steps with a pinned visual that follows the step in view (desktop). The list alone tells the whole story. */
 export function HowItWorksStory() {
@@ -112,7 +113,7 @@ export function HowItWorksStory() {
               exit={{ opacity: 0 }}
               transition={{ duration: DURATION.normal, ease: EASE }}
             >
-              <img src={photoUrl(step.photo, 1080, 1)} alt="" className="size-full object-cover" />
+              <Image src={stockSrc(step.photo)} alt="" fill sizes={STICKY_SIZES} className="object-cover" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
               <div className="absolute inset-x-0 bottom-14 flex items-center gap-4 px-8">
                 <span
@@ -124,9 +125,10 @@ export function HowItWorksStory() {
               </div>
             </motion.div>
           </AnimatePresence>
-          <div className="hidden" aria-hidden="true">
+          {/* Loads the other steps' photos (same sizes, so the same files) for a smooth change between steps. */}
+          <div className="pointer-events-none invisible absolute size-px overflow-hidden" aria-hidden="true">
             {STEPS.map((s) => (
-              <img key={s.title} src={photoUrl(s.photo, 1080, 1)} alt="" />
+              <Image key={s.title} src={stockSrc(s.photo)} alt="" fill sizes={STICKY_SIZES} />
             ))}
           </div>
           <ol className="absolute bottom-6 left-1/2 flex -translate-x-1/2 gap-2" aria-hidden="true">

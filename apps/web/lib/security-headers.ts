@@ -36,8 +36,7 @@ export function contentSecurityPolicy({ nonce, isDev, apiUrl, storageUrl }: CspO
     // Inline style attributes are needed: React renders `style` props (and the animation library its initial
     // values) as attributes, which a nonce cannot cover. Styles cannot run code.
     ['style-src', "'self'", "'unsafe-inline'"],
-    // TEMPORARY: images.unsplash.com until the stock photos are self-hosted (Phase 1, task 4).
-    ['img-src', "'self'", 'blob:', 'data:', ...(storage ? [storage] : []), 'https://images.unsplash.com'],
+    ['img-src', "'self'", 'blob:', 'data:', ...(storage ? [storage] : [])],
     // next/font serves the fonts from this origin.
     ['font-src', "'self'"],
     ['connect-src', "'self'", ...(api ? [api] : [])],

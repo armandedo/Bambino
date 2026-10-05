@@ -3,10 +3,11 @@
 import { buttonClasses } from '@bambino/ui';
 import { ArrowRight } from 'lucide-react';
 import { motion } from 'motion/react';
+import Image from 'next/image';
 import NextLink from 'next/link';
 import { Entrance } from '../motion/entrance';
 import { DURATION, EASE } from '../motion/primitives';
-import { PHOTOS, photoSrcSet, photoUrl } from '@/lib/stock-photos';
+import { PHOTOS, stockSrc } from '@/lib/stock-photos';
 
 const SIZES = [
   { label: '0–3M', tone: 'bg-brand-100 text-brand-700' },
@@ -32,13 +33,15 @@ function HeroVisual() {
         delay={0.1}
         className="relative aspect-[4/5] overflow-hidden rounded-[2rem] bg-sand-100 shadow-xl"
       >
-        <img
-          src={photoUrl(PHOTOS.heroMother, 1080, 4 / 5)}
-          srcSet={photoSrcSet(PHOTOS.heroMother, 4 / 5)}
-          sizes="(min-width: 1024px) 34rem, 100vw"
+        {/* The page's largest paint: fetched early, never lazy. */}
+        <Image
+          src={stockSrc(PHOTOS.heroMother)}
           alt=""
+          fill
+          sizes="(min-width: 1024px) 34rem, 100vw"
           fetchPriority="high"
-          className="absolute inset-0 size-full object-cover"
+          loading="eager"
+          className="object-cover"
         />
         <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/35 to-transparent" />
         <div className="absolute top-4 left-4 flex gap-2">
@@ -61,7 +64,7 @@ function HeroVisual() {
         animate={{ opacity: 1, scale: 1, rotate: -4 }}
         transition={{ duration: DURATION.slow, ease: EASE, delay: 0.75 }}
       >
-        <img src={photoUrl(PHOTOS.heroBaby, 480, 1)} alt="" className="size-full object-cover" />
+        <Image src={stockSrc(PHOTOS.heroBaby)} alt="" fill sizes="12rem" className="object-cover" />
       </motion.div>
       <motion.div
         className="absolute right-3 -bottom-4 flex items-center gap-2 rounded-2xl border border-border bg-surface px-4 py-3 shadow-md sm:-right-6 sm:bottom-10"

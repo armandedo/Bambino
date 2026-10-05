@@ -36,6 +36,8 @@ describe('contentSecurityPolicy', () => {
     const csp = parse(contentSecurityPolicy({ ...base, isDev: false }));
     expect(csp.get('connect-src')).toEqual(["'self'", 'https://api.bambino.rw']);
     expect(csp.get('img-src')).toContain('https://media.bambino.rw');
+    // Stock photos are self-hosted: no third-party image host.
+    expect(csp.get('img-src')).toEqual(["'self'", 'blob:', 'data:', 'https://media.bambino.rw']);
   });
 
   it('does not upgrade requests to https when the API is on plain http (a local production build)', () => {

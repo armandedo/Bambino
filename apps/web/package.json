@@ -9,7 +9,8 @@
     "start": "next start --port 3000",
     "typecheck": "next typegen && tsc --noEmit",
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "stock-photos": "node scripts/download-stock-photos.ts"
   },
   "dependencies": {
     "@bambino/api-client": "workspace:*",

@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation';
 import { type ReactNode, useEffect, useState } from 'react';
 import { useCart } from '@/components/header-actions';
 import { useSession } from '@/lib/session';
+import { PHOTO_CREDITS } from '@/lib/stock-photos';
 import { Logo } from '../logo';
 
 const DESKTOP_NAV = [
@@ -261,6 +262,13 @@ function Footer() {
           <NextLink href="/design" className="underline underline-offset-4">
             Design system
           </NextLink>
+        </p>
+        <p className="mx-auto max-w-7xl px-4 pb-5 text-xs text-brand-200 sm:px-6">
+          Photography from{' '}
+          <a href="https://unsplash.com" className="underline underline-offset-4">
+            Unsplash
+          </a>{' '}
+          by {PHOTO_CREDITS.join(', ')}.
         </p>
       </div>
     </footer>

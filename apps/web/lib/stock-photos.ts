@@ -2,29 +2,27 @@
  * Professional stock photography used across the marketing pages until Bambino's own shoot is ready.
  *
  * All photos are from Unsplash (https://unsplash.com/license): free for commercial use, no permission needed.
- * They are served from Unsplash's image CDN, which resizes and converts them on the fly (`w`, `q`, `auto=format`).
- * To replace one, swap its `id` (the part after `photo-` in an images.unsplash.com URL) or point `src` at a local file.
+ * They are self-hosted under public/images/stock/ (no request to a third party from the visitor's browser) and
+ * resized by next/image. To add or replace one, edit the list below and run
+ * `pnpm --filter @bambino/web stock-photos`, which downloads any missing file.
  */
 
 export interface StockPhoto {
+  /** The Unsplash photo id: the part after `photo-` in an images.unsplash.com URL. Also the local file name. */
   id: string;
   alt: string;
+  /** The photographer, shown in the footer's photo credits. */
   credit: string;
-  /** imgix focal point, e.g. 'faces' or 'center'. */
-  crop?: string;
 }
 
-/** Builds a sized, optimised Unsplash CDN URL. */
-export function photoUrl(photo: StockPhoto, width: number, aspect?: number): string {
-  const params = new URLSearchParams({ w: String(width), q: '80', auto: 'format', fit: 'crop' });
-  if (aspect) params.set('h', String(Math.round(width / aspect)));
-  if (photo.crop) params.set('crop', photo.crop);
-  return `https://images.unsplash.com/photo-${photo.id}?${params.toString()}`;
+/** The self-hosted file, for next/image. */
+export function stockSrc(photo: StockPhoto): string {
+  return `/images/stock/${photo.id}.jpg`;
 }
 
-/** `srcSet` for responsive images at common widths. */
-export function photoSrcSet(photo: StockPhoto, aspect?: number, widths = [480, 768, 1080, 1440]): string {
-  return widths.map((w) => `${photoUrl(photo, w, aspect)} ${w}w`).join(', ');
+/** Where the download script fetches the original (large enough for next/image to resize down from). */
+export function unsplashDownloadUrl(photo: StockPhoto): string {
+  return `https://images.unsplash.com/photo-${photo.id}?w=1440&q=72&fm=jpg`;
 }
 
 export const PHOTOS = {
@@ -131,3 +129,14 @@ const PRODUCT_PHOTOS: { match: RegExp; photo: StockPhoto }[] = [
 export function productPhotoFor(seed: string): StockPhoto | undefined {
   return PRODUCT_PHOTOS.find((entry) => entry.match.test(seed))?.photo;
 }
+
+/** Every stock photo the site uses. */
+export const ALL_STOCK_PHOTOS: StockPhoto[] = [
+  ...Object.values(PHOTOS),
+  ...PRODUCT_PHOTOS.map((p) => p.photo),
+];
+
+/** Named photographers, for the credits line ("Unsplash" entries have no named author). */
+export const PHOTO_CREDITS: string[] = [...new Set(ALL_STOCK_PHOTOS.map((p) => p.credit))]
+  .filter((name) => name !== 'Unsplash')
+  .sort();
