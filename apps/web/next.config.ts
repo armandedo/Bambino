@@ -1,3 +1,4 @@
+import { resolve } from 'node:path';
 import type { NextConfig } from 'next';
 import { PHASE_PRODUCTION_BUILD } from 'next/constants';
 import { assertLaunchReady } from './lib/launch-env';
@@ -14,6 +15,9 @@ const config: NextConfig = {
     '@bambino/types',
   ],
   poweredByHeader: false,
+  // A self-contained server for the container image (Dockerfile); traced from the monorepo root.
+  output: 'standalone',
+  outputFileTracingRoot: resolve(process.cwd(), '../..'),
   // The Content-Security-Policy carries a per-request nonce, so proxy.ts sets it.
   async headers() {
     return [{ source: '/:path*', headers: staticSecurityHeaders(process.env.NODE_ENV === 'production') }];

@@ -1,0 +1,73 @@
+# EXAMPLE ONLY: how the production pieces connect. Not a deployment; the cloud and region are open question 12.
+# Copy to docker-compose.prod.yml, put real values in a git-ignored .env.prod (every CHANGE_ME is refused at
+# startup), and front it with a TLS-terminating proxy: production requires https origins.
+#
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod run --rm migrate
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: bambino
+      POSTGRES_USER: bambino
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env.prod}
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U bambino -d bambino']
+      interval: 10s
+      retries: 5
+
+  # One-off: applies database migrations before a deploy (docs/09-operations.md).
+  migrate:
+    image: bambino-api
+    build: { context: ., dockerfile: apps/api/Dockerfile }
+    command: ['pnpm', 'db:migrate']
+    env_file: .env.prod
+    depends_on:
+      postgres: { condition: service_healthy }
+    profiles: ['tools']
+
+  api:
+    image: bambino-api
+    build: { context: ., dockerfile: apps/api/Dockerfile }
+    env_file: .env.prod
+    environment:
+      NODE_ENV: production
+      # Several API containers share rate limits through the database.
+      RATE_LIMITER: postgres
+      TRUST_PROXY: 'true'
+    depends_on:
+      postgres: { condition: service_healthy }
+    ports: ['4000:4000']
+
+  web:
+    image: bambino-web
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${PUBLIC_API_URL:?e.g. https://api.example.rw/graphql}
+        NEXT_PUBLIC_SITE_URL: ${PUBLIC_SITE_URL:?e.g. https://example.rw}
+    environment:
+      API_URL: http://api:4000/graphql
+      STORAGE_PUBLIC_BASE_URL: ${STORAGE_PUBLIC_BASE_URL:?}
+      SITE_INDEXING: 'false'
+    depends_on: [api]
+    ports: ['3000:3000']
+
+  admin:
+    image: bambino-admin
+    build:
+      context: .
+      dockerfile: apps/admin/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${PUBLIC_API_URL:?}
+    environment:
+      API_URL: http://api:4000/graphql
+    depends_on: [api]
+    ports: ['3001:3001']
+
+volumes:
+  pgdata:

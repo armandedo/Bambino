@@ -1,3 +1,4 @@
+import { resolve } from 'node:path';
 import type { NextConfig } from 'next';
 
 const config: NextConfig = {
@@ -5,6 +6,9 @@ const config: NextConfig = {
   basePath: '/admin',
   transpilePackages: ['@bambino/ui', '@bambino/api-client', '@bambino/utils', '@bambino/types'],
   poweredByHeader: false,
+  // A self-contained server for the container image (Dockerfile); traced from the monorepo root.
+  output: 'standalone',
+  outputFileTracingRoot: resolve(process.cwd(), '../..'),
   reactStrictMode: true,
   async headers() {
     return [
