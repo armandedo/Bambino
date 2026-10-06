@@ -136,9 +136,7 @@ describe('data export', () => {
     // Eight days on, the old access token has expired: sign in again.
     const login = await t.gql(LOGIN, { input: { email: parent.email, password: PASSWORD } });
     const token = (login.data?.login as { accessToken: string }).accessToken;
-    expect(errorReason(await t.gql(DOWNLOAD, { id }, { token }))).toBe(
-      'EXPORT_NOT_AVAILABLE',
-    );
+    expect(errorReason(await t.gql(DOWNLOAD, { id }, { token }))).toBe('EXPORT_NOT_AVAILABLE');
   });
 });
 

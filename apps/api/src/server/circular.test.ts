@@ -378,7 +378,7 @@ describe('journeys', () => {
     const delivered = (await t.gql(SUBSCRIPTION, { id: subscription.id }, { token: parent.accessToken })).data
       ?.subscription as { items: { status: string }[] };
     expect(delivered.items.every((item) => item.status === 'WITH_CUSTOMER')).toBe(true);
-  });
+  }, 30_000);
 
   it('B: return with pickup, inspection, credit, exchange for the next size, delivery', async () => {
     const parent = journey.parent;

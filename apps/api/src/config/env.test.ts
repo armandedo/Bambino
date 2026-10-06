@@ -1,3 +1,4 @@
+import { noopErrorReporter } from '@bambino/utils';
 import { GraphQLError } from 'graphql';
 import { describe, expect, it } from 'vitest';
 import { formatError } from '../graphql/errors';
@@ -22,6 +23,11 @@ describe('environment validation', () => {
       ACCESS_TOKEN_TTL_SECONDS: 900,
       TRUST_PROXY: false,
     });
+  });
+
+  it('treats empty optional values copied from .env.example as unset, and checks a Sentry DSN is a URL', () => {
+    expect(loadEnv({ ...development, SENTRY_DSN: '', SENTRY_ENVIRONMENT: '' }).SENTRY_DSN).toBeUndefined();
+    expect(() => loadEnv({ ...development, SENTRY_DSN: 'not-a-url' })).toThrow(/SENTRY_DSN/);
   });
 
   it('names missing and weak values without printing them', () => {
@@ -55,7 +61,7 @@ describe('error formatting', () => {
   it('hides unexpected errors and logs them with the request id', () => {
     const lines: string[] = [];
     const logger = createLogger('error', (line) => lines.push(line));
-    const context = { meta: { requestId: 'req-1' }, logger } as never;
+    const context = { meta: { requestId: 'req-1' }, logger, errorReporter: noopErrorReporter } as never;
     const leaked = new GraphQLError('db password is hunter2', {
       originalError: new Error('db password is hunter2'),
     });
