@@ -1,7 +1,6 @@
 import { mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { PGlite } from '@electric-sql/pglite';
-import type { SQL } from 'drizzle-orm';
 import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core';
 import { drizzle as drizzleNodePg } from 'drizzle-orm/node-postgres';
 import { migrate as migrateNodePg } from 'drizzle-orm/node-postgres/migrator';
@@ -27,14 +26,7 @@ export interface DatabaseConnection {
   close(): Promise<void>;
 }
 
-/**
- * Runs raw SQL and returns its rows. Both drivers return `{ rows }`, but the shared
- * Database type cannot express that, so the shape is asserted in this one place.
- */
-export async function queryRows<T>(db: Executor, query: SQL): Promise<T[]> {
-  const result = (await db.execute(query)) as unknown as { rows: T[] };
-  return result.rows;
-}
+export { queryRows } from './query';
 
 export const migrationsFolder = fileURLToPath(new URL('../migrations', import.meta.url));
 

@@ -48,6 +48,8 @@ export interface AppDependencies {
   /** True only outside production: lets checkout use the MOCK provider. */
   allowMockPayments?: boolean;
   storage?: StorageProvider;
+  /** The GraphQL contract as SDL. Defaults to reading src/graphql/schema (the Worker passes the bundled copy). */
+  typeDefs?: string;
   /** Unexpected errors go here as well as to the log (Sentry when SENTRY_DSN is set). */
   errorReporter?: ErrorReporter;
 }
@@ -58,8 +60,10 @@ const MAX_BODY_BYTES = 100_000;
 const MAX_WEBHOOK_BYTES = 64_000;
 const WEBHOOK_PATH = /^\/webhooks\/payments\/([a-z_]+)$/;
 
-interface ServerContext {
+export interface ServerContext {
   req?: IncomingMessage;
+  /** Set by runtimes that know the caller's address themselves (the Cloudflare Worker). */
+  clientIp?: string;
   res?: ServerResponse;
 }
 
@@ -89,7 +93,7 @@ export function createApp(deps: AppDependencies) {
   });
 
   const schema = createSchema<GraphQLContext>({
-    typeDefs: loadTypeDefs(),
+    typeDefs: deps.typeDefs ?? loadTypeDefs(),
     resolvers: [resolvers, commerceResolvers, circularResolvers],
   });
   const coverage = applyGuards(schema);
@@ -98,6 +102,7 @@ export function createApp(deps: AppDependencies) {
   const perRequest = new WeakMap<Request, { requestId: string; cookies: CookieJar }>();
 
   const clientIp = (request: Request, serverContext: ServerContext): string | null => {
+    if (serverContext.clientIp) return serverContext.clientIp;
     if (config.trustProxy) {
       const forwarded = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
       if (forwarded) return forwarded;

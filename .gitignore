@@ -22,3 +22,11 @@ next-env.d.ts
 test-results/
 playwright-report/
 blob-report/
+
+# Cloudflare Workers local secrets and build output
+.dev.vars
+.dev.vars.*
+.wrangler/
+
+# OpenNext build output
+.open-next/

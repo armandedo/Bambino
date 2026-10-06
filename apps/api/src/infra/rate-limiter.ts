@@ -1,5 +1,5 @@
 import { type Database } from '@bambino/database';
-import { queryRows } from '@bambino/database/client';
+import { queryRows } from '@bambino/database/query';
 import { sql } from '@bambino/database/orm';
 
 export interface RateLimitPolicy {

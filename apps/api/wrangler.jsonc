@@ -1,0 +1,69 @@
+// Cloudflare Worker for the Bambino API. See docs/10-cloudflare.md.
+// Secrets are never written here: set them with `wrangler secret put <NAME> [--env preview]`.
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "bambino-api",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-10-01",
+  // pg, node:crypto and AsyncLocalStorage need the Node.js compatibility layer.
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  // Background jobs: once a minute, a single run for the whole deployment (replaces the Node server's timer).
+  "triggers": { "crons": ["* * * * *"] },
+  "vars": {
+    "NODE_ENV": "development",
+    "LOG_LEVEL": "info",
+    "MARKET_CODE": "RW",
+    "WEB_ORIGIN": "http://localhost:3000",
+    "ADMIN_ORIGIN": "http://localhost:3001",
+    "EMAIL_FROM": "Bambino <no-reply@localhost>",
+    "RATE_LIMITER": "postgres",
+    "PAYMENT_PROVIDERS_ENABLED": "mock",
+    "STORAGE_PROVIDER": "local",
+  },
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      // Replaced by the real id from `wrangler hyperdrive create` (needs the production database).
+      "id": "00000000000000000000000000000000",
+      // `wrangler dev` connects here instead: the Docker PostgreSQL from docker-compose.yml.
+      "localConnectionString": "postgresql://bambino:bambino_dev_password@localhost:5433/bambino_dev",
+    },
+  ],
+  "env": {
+    // A preview deployment: mock payments and the console email provider are allowed (NODE_ENV is not production).
+    "preview": {
+      "name": "bambino-api-preview",
+      "triggers": { "crons": ["* * * * *"] },
+      "vars": {
+        "NODE_ENV": "development",
+        "LOG_LEVEL": "info",
+        "MARKET_CODE": "RW",
+        "WEB_ORIGIN": "https://CHANGE_ME-preview-web.example",
+        "ADMIN_ORIGIN": "https://CHANGE_ME-preview-admin.example",
+        "EMAIL_FROM": "Bambino Preview <no-reply@example.com>",
+        "RATE_LIMITER": "postgres",
+        "PAYMENT_PROVIDERS_ENABLED": "mock",
+        "STORAGE_PROVIDER": "local",
+      },
+      "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "00000000000000000000000000000000" }],
+    },
+    // Production refuses to start until a real email provider and payment provider exist (docs/09-operations.md).
+    "production": {
+      "name": "bambino-api-production",
+      "triggers": { "crons": ["* * * * *"] },
+      "vars": {
+        "NODE_ENV": "production",
+        "LOG_LEVEL": "info",
+        "MARKET_CODE": "RW",
+        "WEB_ORIGIN": "https://CHANGE_ME.example",
+        "ADMIN_ORIGIN": "https://CHANGE_ME-admin.example",
+        "EMAIL_FROM": "Bambino <no-reply@CHANGE_ME.example>",
+        "RATE_LIMITER": "postgres",
+        "PAYMENT_PROVIDERS_ENABLED": "",
+        "STORAGE_PROVIDER": "s3",
+      },
+      "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "00000000000000000000000000000000" }],
+    },
+  },
+}

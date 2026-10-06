@@ -1,5 +1,5 @@
 import { type Database, schema } from '@bambino/database';
-import { queryRows } from '@bambino/database/client';
+import { queryRows } from '@bambino/database/query';
 import { and, desc, eq, ilike, inArray, ne, or, sql } from '@bambino/database/orm';
 import { type CurrencyCode, type Money, money } from '@bambino/utils';
 import { z } from 'zod';

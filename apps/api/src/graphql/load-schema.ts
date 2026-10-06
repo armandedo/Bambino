@@ -3,10 +3,10 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { type GraphQLSchema, buildSchema } from 'graphql';
 
-const schemaDirectory = fileURLToPath(new URL('./schema', import.meta.url));
-
 /** The full contract as one SDL document, assembled from the per-area files. */
 export function loadTypeDefs(): string {
+  // Resolved when called, not on import: the Worker bundle imports this module but has no files to read.
+  const schemaDirectory = fileURLToPath(new URL('./schema', import.meta.url));
   return readdirSync(schemaDirectory)
     .filter((file) => file.endsWith('.graphql'))
     .sort()

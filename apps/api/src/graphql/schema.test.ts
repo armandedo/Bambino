@@ -253,3 +253,11 @@ describe('default role grants', () => {
     }
   });
 });
+
+describe('bundled schema for the Cloudflare Worker', () => {
+  it('matches the .graphql files (run `pnpm --filter @bambino/api schema:bundle` if not)', async () => {
+    const { SCHEMA_SDL } = await import('./schema-sdl.generated');
+    const { loadTypeDefs } = await import('./load-schema');
+    expect(SCHEMA_SDL).toBe(loadTypeDefs());
+  });
+});

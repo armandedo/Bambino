@@ -9,3 +9,6 @@ packages/ui/src/theme.css
 test-results
 playwright-report
 Claude outputs
+apps/api/src/graphql/schema-sdl.generated.ts
+.wrangler
+.open-next

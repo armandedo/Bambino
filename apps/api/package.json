@@ -11,7 +11,10 @@
     "storage:init": "tsx src/scripts/storage-init.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "worker:dev": "wrangler dev",
+    "worker:deploy:preview": "wrangler deploy --env preview",
+    "schema:bundle": "tsx src/scripts/bundle-schema.ts"
   },
   "dependencies": {
     "@bambino/config": "workspace:*",
@@ -19,6 +22,7 @@
     "@bambino/types": "workspace:*",
     "@bambino/utils": "workspace:*",
     "@bambino/validation": "workspace:*",
+    "@noble/hashes": "^2.4.0",
     "@node-rs/argon2": "^2.2.1",
     "graphql": "^17.0.2",
     "graphql-yoga": "^5.24.1",
@@ -26,6 +30,8 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
-    "tsx": "^4.23.15"
+    "@cloudflare/workers-types": "^5.20261005.1",
+    "tsx": "^4.23.15",
+    "wrangler": "^4.147.0"
   }
 }

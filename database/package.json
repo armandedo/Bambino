@@ -7,6 +7,8 @@
     ".": "./src/index.ts",
     "./client": "./src/client.ts",
     "./orm": "./src/orm.ts",
+    "./query": "./src/query.ts",
+    "./postgres": "./src/postgres.ts",
     "./seeds": "./seeds/index.ts",
     "./testing": "./src/testing.ts"
   },
