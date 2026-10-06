@@ -27,7 +27,11 @@ describe('error reporting', () => {
       throw new Error(`database exploded for ${customer.email}`);
     };
     try {
-      const response = await t.gql('{ myOrders { edges { node { id } } } }', {}, { token: customer.accessToken });
+      const response = await t.gql(
+        '{ myOrders { edges { node { id } } } }',
+        {},
+        { token: customer.accessToken },
+      );
       expect(errorCode(response)).toBe('INTERNAL');
       expect(JSON.stringify(response.errors)).not.toContain('exploded');
       const requestId = (response.errors?.[0]?.extensions as { requestId: string }).requestId;
