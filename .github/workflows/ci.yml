@@ -1,0 +1,116 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TURBO_TELEMETRY_DISABLED: 1
+  NEXT_TELEMETRY_DISABLED: 1
+
+jobs:
+  checks:
+    name: Format, lint, typecheck, unit tests, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: bambino
+          POSTGRES_PASSWORD: bambino-ci-only
+          POSTGRES_DB: bambino
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U bambino" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      # Unit tests create a fresh database per test file on this server (database/src/testing.ts).
+      TEST_DATABASE_URL: postgresql://bambino:bambino-ci-only@localhost:5432/bambino
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+      - name: Turbo cache
+        uses: actions/cache@v4
+        with:
+          path: .turbo/cache
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: turbo-${{ runner.os }}-
+      - run: pnpm format:check
+      - run: pnpm lint --cache-dir=.turbo/cache
+      - run: pnpm typecheck --cache-dir=.turbo/cache
+      - run: pnpm test --cache-dir=.turbo/cache
+      - name: Build web and admin
+        # A CI build is a preview build: mock payments and http URLs are refused otherwise (apps/web/lib/launch-env.ts).
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:4000/graphql
+          NEXT_PUBLIC_SITE_URL: http://localhost:3000
+          NEXT_PUBLIC_MOCK_PAYMENTS: 'true'
+          NEXT_PUBLIC_PREVIEW_BANNER: 'true'
+        run: pnpm turbo run build --filter=@bambino/web --filter=@bambino/admin --cache-dir=.turbo/cache
+
+  e2e:
+    name: Playwright journeys
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    needs: checks
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: bambino
+          POSTGRES_PASSWORD: bambino-ci-only
+          POSTGRES_DB: bambino
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U bambino" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      # Test-only values for a throwaway CI database. Not secrets; production refuses development settings.
+      DATABASE_URL: postgresql://bambino:bambino-ci-only@localhost:5432/bambino
+      WEB_ORIGIN: http://localhost:3000
+      ADMIN_ORIGIN: http://localhost:3001
+      JWT_SECRET: ci-only-jwt-secret-not-used-anywhere-else-0000
+      EMAIL_FROM: Bambino CI <ci@example.com>
+      RECONCILE_INTERVAL_SECONDS: 10
+      SEED_ADMIN_PASSWORD: ci-only-admin-password-2026
+      API_URL: http://127.0.0.1:4000/graphql
+      NEXT_PUBLIC_API_URL: http://localhost:4000/graphql
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      NEXT_PUBLIC_MOCK_PAYMENTS: 'true'
+      NEXT_PUBLIC_PREVIEW_BANNER: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Database
+        run: pnpm --filter @bambino/api db:migrate && pnpm --filter @bambino/api db:seed
+      - name: Build web and admin (production builds are steadier than dev servers)
+        run: pnpm turbo run build --filter=@bambino/web --filter=@bambino/admin
+      - name: Start API, web and admin
+        run: |
+          pnpm --filter @bambino/api start > api.log 2>&1 &
+          pnpm --filter @bambino/web start > web.log 2>&1 &
+          pnpm --filter @bambino/admin start > admin.log 2>&1 &
+          npx --yes wait-on -t 120000 http://localhost:4000/ready http://localhost:3000/ready http://localhost:3001/admin/ready
+      - run: pnpm --filter @bambino/e2e exec playwright install --with-deps chromium
+      - run: pnpm --filter @bambino/e2e e2e
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-results
+          path: |
+            tests/e2e/test-results
+            *.log
