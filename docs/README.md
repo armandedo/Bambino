@@ -10,6 +10,7 @@
 | 6   | [Route maps](06-routes.md)                     | Web routes (12), mobile navigation (13), admin routes (14)                                                                       |
 | 7   | [Testing and phases](07-testing-and-phases.md) | Testing strategy (16), development phases (17)                                                                                   |
 | 8   | [Open questions](08-open-questions.md)         | Business decisions the build depends on                                                                                          |
+| 9   | [Operations](09-operations.md)                 | Deploys, migrations, rollback, backups and restore, secret rotation, launch checklist                                            |
 
 The GraphQL schema (5) is the SDL itself: [`apps/api/src/graphql/schema/`](../apps/api/src/graphql/schema).
 
@@ -46,6 +47,10 @@ Labels follow the specification: **IMPLEMENTED** (built and tested), **MOCKED** 
 | Mobile app                                                                                                                                                                                                                              | Not started (Phase 7)                                                                                               |
 | Push, SMS                                                                                                                                                                                                                               | NOT YET INTEGRATED                                                                                                  |
 | Production object storage (AWS S3, R2 or similar)                                                                                                                                                                                       | Works through the same S3 provider; not yet configured, needs a hosting decision                                    |
+| Operations: PostgreSQL rate limiter, error reporting (no-op or Sentry, scrubbed), readiness checks                                                                                                                                      | IMPLEMENTED and tested (Sentry only exercised against a stub endpoint, no real project yet)                         |
+| Containers (API, web, admin Dockerfiles; docker-compose.prod.example.yml)                                                                                                                                                               | WRITTEN, NOT YET BUILT (not built locally: the machine ran out of disk space); cloud choice is open question 12     |
+| CI (.github/workflows/ci.yml): format, lint, typecheck, unit tests on PostgreSQL 18, builds, Playwright                                                                                                                                 | WRITTEN, NOT YET RUN on GitHub (runs on the next push)                                                              |
+| Operations runbook (docs/09-operations.md), restore test script                                                                                                                                                                         | IMPLEMENTED (restore test passed against the local PostgreSQL 18)                                                   |
 
 ## Phase 1 report
 
