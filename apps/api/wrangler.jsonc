@@ -39,14 +39,14 @@
         "NODE_ENV": "development",
         "LOG_LEVEL": "info",
         "MARKET_CODE": "RW",
-        "WEB_ORIGIN": "https://CHANGE_ME-preview-web.example",
-        "ADMIN_ORIGIN": "https://CHANGE_ME-preview-admin.example",
+        "WEB_ORIGIN": "https://bambino-web-preview.rwanyindoarmand.workers.dev",
+        "ADMIN_ORIGIN": "https://bambino-admin-preview.rwanyindoarmand.workers.dev",
         "EMAIL_FROM": "Bambino Preview <no-reply@example.com>",
         "RATE_LIMITER": "postgres",
         "PAYMENT_PROVIDERS_ENABLED": "mock",
         "STORAGE_PROVIDER": "local",
       },
-      "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "00000000000000000000000000000000" }],
+      "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "df5cf078370e4c69a806fe8f70c5bef0" }],
     },
     // Production refuses to start until a real email provider and payment provider exist (docs/09-operations.md).
     "production": {
