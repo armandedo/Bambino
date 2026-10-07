@@ -1,0 +1,31 @@
+// Cloudflare Worker for the customer website, built with OpenNext (`pnpm --filter @bambino/web cf:build`).
+// See docs/10-cloudflare.md. Secrets are set with `wrangler secret put`, never written here.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "bambino-web",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "observability": { "enabled": true },
+  // Static files (/_next/static, /images) are served from Cloudflare's CDN; pages are rendered by the Worker.
+  "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
+  "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "bambino-web" }],
+  // next/image resizing through Cloudflare Images.
+  "images": { "binding": "IMAGES" },
+  "vars": {
+    "API_URL": "http://localhost:8787/graphql",
+    "STORAGE_PUBLIC_BASE_URL": "http://127.0.0.1:9000/bambino-media",
+    "SITE_INDEXING": "false",
+  },
+  "env": {
+    "preview": {
+      "name": "bambino-web-preview",
+      "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "bambino-web-preview" }],
+      "vars": {
+        "API_URL": "https://CHANGE_ME-preview-api.example/graphql",
+        "STORAGE_PUBLIC_BASE_URL": "https://CHANGE_ME-preview-media.example",
+        "SITE_INDEXING": "false",
+      },
+    },
+  },
+}

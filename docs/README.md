@@ -11,6 +11,7 @@
 | 7   | [Testing and phases](07-testing-and-phases.md) | Testing strategy (16), development phases (17)                                                                                   |
 | 8   | [Open questions](08-open-questions.md)         | Business decisions the build depends on                                                                                          |
 | 9   | [Operations](09-operations.md)                 | Deploys, migrations, rollback, backups and restore, secret rotation, launch checklist                                            |
+| 10  | [Cloudflare](10-cloudflare.md)                 | Cloudflare architecture, setup, deploying, DNS, security settings, costs                                                         |
 
 The GraphQL schema (5) is the SDL itself: [`apps/api/src/graphql/schema/`](../apps/api/src/graphql/schema).
 

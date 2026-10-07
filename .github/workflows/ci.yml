@@ -57,6 +57,15 @@ jobs:
           NEXT_PUBLIC_MOCK_PAYMENTS: 'true'
           NEXT_PUBLIC_PREVIEW_BANNER: 'true'
         run: pnpm turbo run build --filter=@bambino/web --filter=@bambino/admin --cache-dir=.turbo/cache
+      - name: Cloudflare Worker bundle for the API (no deploy)
+        run: pnpm --filter @bambino/api exec wrangler deploy --dry-run --outdir .wrangler/dry-run
+      - name: Cloudflare (OpenNext) build for the website (no deploy)
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:4000/graphql
+          NEXT_PUBLIC_SITE_URL: http://localhost:3000
+          NEXT_PUBLIC_MOCK_PAYMENTS: 'true'
+          NEXT_PUBLIC_PREVIEW_BANNER: 'true'
+        run: pnpm --filter @bambino/web cf:build
 
   e2e:
     name: Playwright journeys
