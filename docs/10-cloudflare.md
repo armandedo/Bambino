@@ -52,9 +52,13 @@ environment's `vars` in `wrangler.jsonc`; every `CHANGE_ME` there must be replac
 1. Migrations, once per release, from a machine or CI job that can reach the database directly (not through the
    Worker): `DATABASE_URL=… pnpm --filter @bambino/api db:migrate`. Never automatic, never a reset or seed.
 2. API: `pnpm --filter @bambino/api worker:deploy:preview` (or `wrangler deploy --env production`).
-3. Website: build on Linux (CI, WSL or Cloudflare Workers Builds; OpenNext does not build on plain Windows
-   because it creates symlinks), then `pnpm --filter @bambino/web cf:deploy:preview`.
-4. Check `https://api.<domain>/ready`, sign in, and watch `wrangler tail`.
+3. Website: build **and deploy** on Linux (CI, WSL or Cloudflare Workers Builds; OpenNext does not build on plain
+   Windows because it creates symlinks, and the build output holds absolute Linux paths, so deploy from the same
+   machine), then `pnpm --filter @bambino/web cf:deploy:preview`.
+4. Seeding a new database (roles and permissions are required; sign-up fails without them): run `db:seed` once.
+   In PowerShell, `$env:X = ""` **deletes** the variable, so the seed falls back to `.env.local`: unset the seed
+   passwords there, or a seed admin with the local password is created.
+5. Check `https://api.<domain>/ready`, sign in, and watch `wrangler tail`.
 
 ## 10.4 DNS (proposed; check before changing anything)
 
@@ -81,13 +85,14 @@ records for these names are listed and kept until the new ones are verified.
 
 ## 10.6 Status and limits
 
-| Part               | Status                                                                                                         |
-| ------------------ | -------------------------------------------------------------------------------------------------------------- |
-| API Worker         | Ported; verified locally in workerd (`wrangler dev`) against PostgreSQL through local Hyperdrive. Not deployed |
-| Website (OpenNext) | Builds on Linux; the Next 16 `proxy.ts` (Node runtime) is supported by OpenNext only as _experimental_         |
-| Admin              | Not ported yet (same OpenNext steps as the website)                                                            |
-| Email              | No production provider (open question 11): production refuses to start                                         |
-| Payments           | Mock only; MTN MoMo and Airtel not integrated (open question 10)                                               |
+| Part               | Status                                                                                                                                                                                              |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| API Worker         | **Preview deployed** (`bambino-api-preview`, Neon PostgreSQL through Hyperdrive). Verified live: health, ready, register, login, authorization, catalogue, rate limits, `no-store`, cron jobs       |
+| Website (OpenNext) | **Preview deployed** (`bambino-web-preview`). Pages, per-request CSP nonce and CORS to the API verified live. The Next 16 `proxy.ts` (Node runtime) is supported by OpenNext only as _experimental_ |
+| Production         | Not deployed: needs the domain, an email provider and a payment decision                                                                                                                            |
+| Admin              | Not ported yet (same OpenNext steps as the website)                                                                                                                                                 |
+| Email              | No production provider (open question 11): production refuses to start                                                                                                                              |
+| Payments           | Mock only; MTN MoMo and Airtel not integrated (open question 10)                                                                                                                                    |
 
 Costs beyond the free tier: Workers Paid plan (USD 5/month base, then per request and CPU time; needed for
 password hashing), Hyperdrive (included with Workers Paid within limits), R2 (storage and operations above the

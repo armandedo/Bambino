@@ -1,0 +1,4 @@
+# Cloudflare static assets (OpenNext build). Next's build files have content hashes in their names, so they never
+# change: let browsers and the CDN keep them for a year. Pages are not listed here and stay uncached.
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable
