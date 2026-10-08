@@ -27,13 +27,13 @@ export function Hero() {
         <div className="flex flex-col gap-8">
           <h1
             id="hero-title"
-            className="max-w-[14ch] font-display text-[2.75rem] leading-[0.98] font-bold tracking-[-0.025em] text-primary sm:text-7xl lg:text-[5.5rem]"
+            className="max-w-[12ch] font-display text-[2.75rem] leading-[0.98] font-bold tracking-[-0.02em] text-primary uppercase sm:text-7xl lg:text-[5.25rem]"
           >
             The right size, every month.
           </h1>
           <p className="max-w-[46ch] text-lg leading-relaxed text-foreground-muted sm:text-xl">
-            Babies outgrow clothes every few months. We bring clothes in your baby&rsquo;s size to your door in
-            Kigali, collect them when they get small, and bring the next size up.
+            Babies outgrow clothes every few months. We bring clothes in your baby&rsquo;s size to your door
+            in Kigali, collect them when they get small, and bring the next size up.
           </p>
           <div className="flex flex-col gap-3 sm:flex-row">
             <NextLink href="/fit" className={buttonClasses({ size: 'lg', variant: 'accent' })}>
@@ -57,10 +57,7 @@ export function Hero() {
                   style={{ animationDelay: `${0.15 + index * 0.12}s` }}
                 />
                 <span
-                  className={cn(
-                    'rounded-md px-2.5 py-1 text-sm font-semibold text-foreground',
-                    stage.tag,
-                  )}
+                  className={cn('rounded-md px-2.5 py-1 text-sm font-semibold text-foreground', stage.tag)}
                 >
                   {stage.label}
                 </span>
@@ -71,17 +68,25 @@ export function Hero() {
         </div>
 
         {/* A doorway on large screens: the arch frames the one photo. A wide band below the ruler on small ones. */}
-        <div className="relative aspect-[16/10] w-full overflow-hidden rounded-xl bg-sand-100 lg:mx-auto lg:aspect-auto lg:h-full lg:min-h-[30rem] lg:max-w-[17rem] lg:rounded-t-[999px] lg:rounded-b-none">
-          {/* The page's largest paint: fetched early, never lazy. */}
-          <Image
-            src={stockSrc(PHOTOS.heroMother)}
-            alt={PHOTOS.heroMother.alt}
-            fill
-            sizes="(min-width: 1024px) 17rem, 100vw"
-            fetchPriority="high"
-            loading="eager"
-            className="object-cover"
-          />
+        <div className="relative lg:mx-auto lg:w-full lg:max-w-[17rem]">
+          <div className="relative aspect-[16/10] w-full overflow-hidden rounded-xl bg-sand-100 lg:aspect-auto lg:h-full lg:min-h-[30rem] lg:rounded-t-[999px] lg:rounded-b-none">
+            {/* The page's largest paint: fetched early, never lazy. */}
+            <Image
+              src={stockSrc(PHOTOS.heroMother)}
+              alt={PHOTOS.heroMother.alt}
+              fill
+              sizes="(min-width: 1024px) 17rem, 100vw"
+              fetchPriority="high"
+              loading="eager"
+              className="object-cover"
+            />
+          </div>
+          {/* The one stamp on the photo: the span of sizes Bambino covers. */}
+          <p className="absolute -bottom-4 left-4 flex size-24 flex-col items-center justify-center rounded-full bg-primary text-center leading-tight text-primary-foreground shadow-md sm:-left-6 lg:-left-10 lg:size-28">
+            <span className="text-xs">Sizes for</span>
+            <span className="font-display text-xl font-bold text-accent">0–24</span>
+            <span className="text-xs">months</span>
+          </p>
         </div>
       </div>
     </section>

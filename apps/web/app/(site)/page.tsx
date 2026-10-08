@@ -1,9 +1,10 @@
-import { ProductsQuery, SubscriptionPlansQuery } from '@bambino/api-client';
+import { CatalogueFiltersQuery, ProductsQuery, SubscriptionPlansQuery } from '@bambino/api-client';
 import { EmptyState, buttonClasses } from '@bambino/ui';
-import { ArrowRight, Check } from 'lucide-react';
+import { ArrowRight, Check, RefreshCw, Smartphone, Truck } from 'lucide-react';
 import Image from 'next/image';
 import NextLink from 'next/link';
 import { ApiErrorState } from '@/components/api-error';
+import { CategoryTiles } from '@/components/category-tiles';
 import { Hero } from '@/components/hero/hero';
 import { PlanCard } from '@/components/plan-card';
 import { ProductCard } from '@/components/product-card';
@@ -15,9 +16,9 @@ export const revalidate = 60;
 
 /** Three short facts in the band under the hero. */
 const HIGHLIGHTS = [
-  { title: 'Delivered in Kigali', body: 'Standard or same-day delivery' },
-  { title: 'Pay by mobile money', body: 'MTN MoMo and Airtel Money' },
-  { title: 'Swap as they grow', body: 'The next size, whenever you need it' },
+  { icon: Truck, title: 'Delivered in Kigali', body: 'Standard or same-day delivery' },
+  { icon: Smartphone, title: 'Pay by mobile money', body: 'MTN MoMo and Airtel Money' },
+  { icon: RefreshCw, title: 'Swap as they grow', body: 'The next size, whenever you need it' },
 ];
 
 const STEPS = [
@@ -41,27 +42,42 @@ const SWAP_POINTS = [
 const SECTION = 'mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:py-24';
 
 export default async function HomePage() {
-  const [plans, products] = await Promise.all([
+  const [plans, products, filters] = await Promise.all([
     load(SubscriptionPlansQuery),
     load(ProductsQuery, { first: 4, sort: 'NEWEST' }),
+    load(CatalogueFiltersQuery),
   ]);
+  const categories = filters.ok ? filters.data.categories : [];
   const productList = products.ok ? products.data.products.edges.map((edge) => edge.node) : [];
 
   return (
     <>
       <Hero />
 
-      {/* Highlights */}
-      <section aria-label="Why Bambino" className="bg-primary text-primary-foreground">
-        <ul className="mx-auto grid max-w-6xl gap-6 px-4 py-8 sm:grid-cols-3 sm:gap-10 sm:px-6">
+      {/* Highlights: a quiet strip of the three facts a parent asks first. */}
+      <section aria-label="Why Bambino" className="border-y border-border bg-surface">
+        <ul className="mx-auto grid max-w-6xl divide-y divide-border px-4 sm:grid-cols-3 sm:divide-x sm:divide-y-0 sm:px-6">
           {HIGHLIGHTS.map((item) => (
-            <li key={item.title} className="flex flex-col gap-1">
-              <span className="font-display text-xl font-bold tracking-tight">{item.title}</span>
-              <span className="text-brand-200">{item.body}</span>
+            <li key={item.title} className="flex items-center gap-4 py-5 sm:px-6 sm:first:pl-0 sm:last:pr-0">
+              <item.icon aria-hidden="true" className="size-8 shrink-0 text-primary" strokeWidth={1.5} />
+              <span className="flex flex-col">
+                <span className="font-semibold text-primary">{item.title}</span>
+                <span className="text-sm text-foreground-muted">{item.body}</span>
+              </span>
             </li>
           ))}
         </ul>
       </section>
+
+      {/* Categories */}
+      {categories.length > 0 ? (
+        <section aria-labelledby="browse" className={`${SECTION} pb-4 lg:pb-8`}>
+          <div className="flex flex-col gap-8">
+            <SectionHeading id="browse" title="Shop by category" />
+            <CategoryTiles categories={categories} />
+          </div>
+        </section>
+      ) : null}
 
       {/* How it works: a real sequence, so the steps are numbered; ruled columns, not cards. */}
       <section aria-labelledby="how" className={SECTION}>
@@ -70,7 +86,10 @@ export default async function HomePage() {
           <ol className="grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
             {STEPS.map((step, index) => (
               <li key={step.title} className="flex flex-col gap-3 border-t-4 border-primary pt-4">
-                <span aria-hidden="true" className="font-display text-4xl font-bold text-primary tabular-nums">
+                <span
+                  aria-hidden="true"
+                  className="font-display text-4xl font-bold text-primary tabular-nums"
+                >
                   {index + 1}
                 </span>
                 <h3 className="font-display text-xl font-bold tracking-tight text-primary">{step.title}</h3>
@@ -92,9 +111,9 @@ export default async function HomePage() {
         <div className={SECTION}>
           <div className="flex flex-col gap-10">
             <div className="flex flex-wrap items-end justify-between gap-4">
-              <SectionHeading id="new" title="Soft everyday basics" />
+              <SectionHeading id="new" title="New this month" />
               <NextLink href="/shop" className={buttonClasses({ variant: 'outline' })}>
-                Shop all clothes
+                View all clothes <ArrowRight aria-hidden="true" className="size-4" />
               </NextLink>
             </div>
             {!products.ok ? (
@@ -174,22 +193,47 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Call to action */}
-      <section aria-labelledby="start" className="bg-primary text-primary-foreground">
-        <div className="mx-auto flex max-w-6xl flex-col items-start gap-6 px-4 py-16 sm:px-6 lg:py-24">
-          <h2
-            id="start"
-            className="max-w-[18ch] font-display text-4xl leading-[1.02] font-bold tracking-tight sm:text-6xl"
-          >
-            Not sure of your baby&rsquo;s size?
-          </h2>
-          <p className="max-w-[46ch] text-lg text-brand-200">
-            Answer four quick questions and we&rsquo;ll suggest a size. It takes about two minutes.
-          </p>
-          <NextLink href="/fit" className={buttonClasses({ variant: 'accent', size: 'lg' })}>
-            Start the fit finder <ArrowRight aria-hidden="true" className="size-4" />
-          </NextLink>
-        </div>
+      {/* Three ways in: the fit finder, swapping and plans. */}
+      <section aria-label="Get started" className={SECTION}>
+        <ul className="grid gap-4 lg:grid-cols-3">
+          {[
+            {
+              href: '/fit',
+              title: 'Not sure of your baby’s size?',
+              body: 'Answer four quick questions and we’ll suggest a size.',
+              action: 'Start the fit finder',
+              tone: 'bg-primary text-primary-foreground',
+              bodyTone: 'text-brand-200',
+              button: buttonClasses({ variant: 'accent' }),
+            },
+            {
+              href: '/exchange',
+              title: 'Outgrown it already?',
+              body: 'Swap what is small for the next size and earn credit.',
+              action: 'How swapping works',
+              tone: 'bg-accent text-accent-foreground',
+              bodyTone: 'text-accent-foreground',
+              button: buttonClasses({ variant: 'primary' }),
+            },
+            {
+              href: '/plans',
+              title: 'One plan per baby',
+              body: 'Monthly, every three months or yearly. Pause or stop any time.',
+              action: 'See plans and prices',
+              tone: 'bg-surface-muted text-primary',
+              bodyTone: 'text-foreground-muted',
+              button: buttonClasses({ variant: 'outline' }),
+            },
+          ].map((card) => (
+            <li key={card.href} className={`flex flex-col items-start gap-4 rounded-xl p-8 ${card.tone}`}>
+              <h2 className="font-display text-2xl leading-tight font-bold tracking-tight">{card.title}</h2>
+              <p className={`max-w-[34ch] ${card.bodyTone}`}>{card.body}</p>
+              <NextLink href={card.href} className={`${card.button} mt-auto`}>
+                {card.action} <ArrowRight aria-hidden="true" className="size-4" />
+              </NextLink>
+            </li>
+          ))}
+        </ul>
       </section>
     </>
   );
