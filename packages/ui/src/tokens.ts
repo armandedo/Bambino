@@ -6,50 +6,50 @@
  */
 
 /**
- * Raw palette, "Sage & Clay": deep sage #2F5D50 for primary actions and bands, a light sage tint #EEF4F0 for
- * alternating sections, clay #E07A5F as a fill accent (dark text on it) and a darker clay for small emphasis text.
- * Neutrals are soft warm greys on white. Components never use these directly; they use the semantic colours below.
+ * Raw palette, "Doorframe": ink navy #16213A for text, bands and primary actions on a cool paper #F5F7F4, with
+ * pencil yellow #F2D14B as the one accent. Each size stage also has its own colour (see `stage`), like the
+ * coloured tags on a garment. Components never use these directly; they use the semantic colours below.
  */
 export const palette = {
   /** Sage: primary actions, headings, navigation, solid bands (800) and section tints (50). */
   brand: {
-    50: '#eef4f0',
-    100: '#dde9e2',
-    200: '#c3dbd1',
-    300: '#9ec2b4',
-    400: '#7aa898',
-    500: '#5b8f7f',
-    600: '#4a7f70',
-    700: '#3b6e60',
-    800: '#2f5d50',
-    900: '#1f3f36',
+    50: '#eef2f8',
+    100: '#dce4f0',
+    200: '#bccbe2',
+    300: '#93a9cb',
+    400: '#6a85b0',
+    500: '#4a6a98',
+    600: '#385582',
+    700: '#2a4168',
+    800: '#1d2f52',
+    900: '#16213a',
   },
-  /** Clay: highlights and secondary calls to action (400 as a fill), emphasis text (600 to 700). */
+  /** Pencil yellow: highlights and secondary calls to action (400 as a fill), emphasis text (700). */
   accent: {
-    50: '#fdf2ee',
-    100: '#fbe2d9',
-    200: '#f6c6b5',
-    300: '#eda08a',
-    400: '#e07a5f',
-    500: '#cf6447',
-    600: '#b5543a',
-    700: '#96432d',
-    800: '#763524',
-    900: '#5a281c',
+    50: '#fffbe6',
+    100: '#fef3b8',
+    200: '#fae885',
+    300: '#f6dc65',
+    400: '#f2d14b',
+    500: '#d9b52a',
+    600: '#a98712',
+    700: '#7d6208',
+    800: '#5d4a08',
+    900: '#403206',
   },
-  /** Warm greys: surfaces, borders and body text. 0 is the white page. */
+  /** Cool paper greys: surfaces, borders and body text. 0 is white, 50 the page. */
   sand: {
     0: '#ffffff',
-    50: '#faf9f6',
-    100: '#f3f1ec',
-    200: '#e6e3dc',
-    300: '#cfcbc2',
-    400: '#a39e94',
-    500: '#77726a',
-    600: '#57534c',
-    700: '#403d38',
-    800: '#2b2926',
-    900: '#1c1b19',
+    50: '#f5f7f4',
+    100: '#ebeee9',
+    200: '#dde2db',
+    300: '#c5ccc3',
+    400: '#98a096',
+    500: '#6b7468',
+    600: '#4f5750',
+    700: '#3a403b',
+    800: '#262b27',
+    900: '#171b18',
   },
   /**
    * Size stages: the colour of a size follows the baby through the site (tags, plans, boxes). All are light fills
@@ -71,13 +71,13 @@ export const palette = {
 /** Semantic colours: what components use. Every text/background pair is contrast-tested to WCAG AA. */
 export const colors = {
   /** Clean white pages, with a light olive tint for alternating sections. */
-  background: palette.sand[0],
+  background: palette.sand[50],
   surface: palette.sand[0],
   'surface-muted': palette.brand[50],
   'surface-sunken': palette.sand[100],
-  foreground: palette.sand[900],
+  foreground: palette.brand[900],
   'foreground-muted': palette.sand[600],
-  border: palette.brand[100],
+  border: palette.sand[200],
   /** Borders of form controls must reach 3:1 against the surface (WCAG 1.4.11). */
   'border-strong': palette.sand[500],
   primary: palette.brand[800],
@@ -153,10 +153,10 @@ export const radii = {
 } as const;
 
 export const shadows = {
-  xs: '0 1px 2px rgb(30 27 24 / 0.06)',
-  sm: '0 1px 3px rgb(30 27 24 / 0.08), 0 1px 2px rgb(30 27 24 / 0.04)',
-  md: '0 4px 12px rgb(30 27 24 / 0.08), 0 2px 4px rgb(30 27 24 / 0.04)',
-  lg: '0 12px 32px rgb(30 27 24 / 0.12), 0 4px 8px rgb(30 27 24 / 0.04)',
+  xs: '0 1px 2px rgb(22 33 58 / 0.06)',
+  sm: '0 1px 3px rgb(22 33 58 / 0.08), 0 1px 2px rgb(22 33 58 / 0.04)',
+  md: '0 4px 12px rgb(22 33 58 / 0.08), 0 2px 4px rgb(22 33 58 / 0.04)',
+  lg: '0 12px 32px rgb(22 33 58 / 0.12), 0 4px 8px rgb(22 33 58 / 0.04)',
 } as const;
 
 /** Minimum touch target (WCAG 2.5.8 asks for 24px; 44px follows the platform guidelines). */
