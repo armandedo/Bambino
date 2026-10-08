@@ -7,7 +7,7 @@ const PER: Record<BillingInterval, string> = { MONTHLY: 'month', QUARTERLY: '3 m
 /**
  * One plan, as a row of a ledger like the care label on a garment: name and what is included on the left, price
  * and the action on the right. Name, price, items and exchanges all come from the API; nothing is computed here.
- * Put rows in a list with `divide-y`; the featured one carries a yellow mark on its left edge.
+ * Put rows in a list with `divide-y`; the featured one carries a mark hanging in the left margin.
  */
 export function PlanCard({
   plan,
@@ -26,8 +26,8 @@ export function PlanCard({
   return (
     <article
       className={cn(
-        'grid gap-5 py-8 md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:gap-12',
-        featured && 'border-l-[6px] border-accent pl-5 sm:pl-7',
+        'relative grid gap-5 py-8 md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:gap-12',
+        featured && 'before:absolute before:inset-y-0 before:-left-4 before:w-1.5 before:rounded-full before:bg-accent',
       )}
     >
       <div className="flex flex-col gap-3">

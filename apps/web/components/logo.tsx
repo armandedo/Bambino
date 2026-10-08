@@ -11,7 +11,7 @@ export function Logo() {
           strokeLinecap="round"
           className="stroke-accent"
         />
-        <path d="M25 26V6" fill="none" strokeWidth="2" strokeLinecap="round" className="stroke-stage-newborn" />
+        <path d="M25 26V6" fill="none" strokeWidth="2" strokeLinecap="round" className="stroke-brand-200" />
       </svg>
       <span className="font-display text-2xl font-bold tracking-tight text-primary">bambino</span>
     </span>
