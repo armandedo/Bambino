@@ -36,7 +36,7 @@ function GrowingBaby({ months }: { months: number }) {
   return (
     <div
       aria-hidden="true"
-      className="relative flex aspect-[4/3] w-full items-end justify-center overflow-hidden rounded-[2rem] bg-brand-50 sm:aspect-square"
+      className="relative flex aspect-[4/3] w-full items-end justify-center overflow-hidden rounded-2xl bg-brand-50 sm:aspect-square"
     >
       <div className="absolute inset-x-[12%] bottom-[10%] h-px bg-brand-200" />
       <motion.svg
@@ -76,13 +76,13 @@ export function GrowthSlider({ chart, products }: { chart: SizeChartRow[]; produ
   if (!current) return null;
 
   return (
-    <div className="grid gap-8 rounded-[2rem] border border-border bg-surface p-5 shadow-sm sm:p-8 lg:grid-cols-[0.9fr_1.1fr] lg:gap-12">
+    <div className="grid gap-8 rounded-2xl border border-border bg-surface p-5 shadow-sm sm:p-8 lg:grid-cols-[0.9fr_1.1fr] lg:gap-12">
       <GrowingBaby months={months} />
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-3">
           <label htmlFor={sliderId} className="flex items-baseline justify-between gap-3">
             <span className="text-sm font-semibold text-foreground-muted">Your baby’s age</span>
-            <span className="font-display text-2xl font-extrabold text-primary" aria-live="polite">
+            <span className="font-display text-2xl font-semibold text-primary" aria-live="polite">
               {monthsLabel(months)}
             </span>
           </label>
@@ -107,7 +107,7 @@ export function GrowthSlider({ chart, products }: { chart: SizeChartRow[]; produ
         <dl className="grid gap-3 sm:grid-cols-2">
           <div className="rounded-2xl bg-primary p-4 text-primary-foreground">
             <dt className="text-sm text-brand-100">Size on our chart</dt>
-            <dd className="font-display text-2xl font-extrabold">
+            <dd className="font-display text-2xl font-semibold">
               <AnimatePresence mode="wait" initial={false}>
                 <motion.span
                   key={current.code}
@@ -126,7 +126,7 @@ export function GrowthSlider({ chart, products }: { chart: SizeChartRow[]; produ
             <dt className="flex items-center gap-1.5 text-sm text-accent-soft-foreground">
               <RefreshCw aria-hidden="true" className="size-4" /> Next exchange
             </dt>
-            <dd className="font-display text-xl font-extrabold text-primary">
+            <dd className="font-display text-xl font-semibold text-primary">
               {next && nextExchangeMonth !== null
                 ? `Around ${monthsLabel(nextExchangeMonth)} → ${next.label}`
                 : 'Largest size on the chart'}

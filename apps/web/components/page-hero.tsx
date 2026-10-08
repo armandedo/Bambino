@@ -15,14 +15,14 @@ export function PageHero({
 }) {
   return (
     <section className="border-b border-border bg-background">
-      <div className="mx-auto flex max-w-7xl flex-col gap-5 px-4 pt-12 pb-14 sm:px-6 lg:pt-20 lg:pb-20">
+      <div className="mx-auto flex max-w-6xl flex-col gap-5 px-4 pt-12 pb-14 sm:px-6 lg:pt-20 lg:pb-20">
         <Entrance as="p" className="text-sm font-bold tracking-[0.14em] text-emphasis uppercase">
           {eyebrow}
         </Entrance>
         <Entrance
           as="h1"
           delay={0.08}
-          className="max-w-4xl font-display text-4xl leading-[1.05] font-extrabold tracking-tight text-primary sm:text-6xl"
+          className="max-w-4xl font-display text-4xl leading-[1.05] font-semibold text-primary sm:text-6xl"
         >
           {title}
         </Entrance>

@@ -13,7 +13,7 @@ export function Logo() {
         />
         <circle cx="16" cy="12" r="4.5" fill="none" strokeWidth="2" className="stroke-primary-foreground" />
       </svg>
-      <span className="font-display text-xl font-extrabold tracking-tight text-primary">bambino</span>
+      <span className="font-display text-xl font-semibold text-primary">bambino</span>
     </span>
   );
 }

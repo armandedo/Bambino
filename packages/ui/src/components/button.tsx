@@ -17,7 +17,7 @@ const VARIANTS: Record<ButtonVariant, string> = {
 const SIZES: Record<ButtonSize, string> = {
   sm: 'min-h-9 px-3 text-sm gap-1.5',
   md: 'min-h-11 px-4 text-base gap-2',
-  lg: 'min-h-12 px-6 text-lg gap-2',
+  lg: 'min-h-12 px-6 text-base gap-2',
 };
 
 /**
@@ -31,7 +31,7 @@ export function buttonClasses({
   className,
 }: { variant?: ButtonVariant; size?: ButtonSize; fullWidth?: boolean; className?: string } = {}): string {
   return cn(
-    'inline-flex items-center justify-center rounded-full font-semibold transition-colors',
+    'inline-flex items-center justify-center rounded-md font-semibold transition-colors',
     'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
     'disabled:cursor-not-allowed disabled:opacity-60 aria-disabled:cursor-not-allowed aria-disabled:opacity-60',
     VARIANTS[variant],

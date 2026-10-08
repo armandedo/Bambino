@@ -35,7 +35,7 @@ export default function ExchangePage() {
       />
       <section
         aria-labelledby="sequence"
-        className="mx-auto flex max-w-7xl flex-col gap-10 px-4 py-14 sm:px-6 lg:py-20"
+        className="mx-auto flex max-w-6xl flex-col gap-10 px-4 py-14 sm:px-6 lg:py-20"
       >
         <SectionHeading
           id="sequence"
@@ -46,7 +46,7 @@ export default function ExchangePage() {
         <ExchangePanel />
       </section>
       <section aria-labelledby="details" className="bg-surface-muted">
-        <div className="mx-auto grid max-w-7xl gap-6 px-4 py-14 sm:px-6 md:grid-cols-2 lg:py-20">
+        <div className="mx-auto grid max-w-6xl gap-6 px-4 py-14 sm:px-6 md:grid-cols-2 lg:py-20">
           <h2 id="details" className="sr-only">
             Details
           </h2>

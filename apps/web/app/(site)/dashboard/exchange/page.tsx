@@ -457,9 +457,7 @@ export default function ExchangesPage() {
                 title={<span id="credit-title">Exchange credit</span>}
                 description="Balance"
                 level={2}
-                action={
-                  <MoneyText value={summary.balance} className="font-display text-2xl font-extrabold" />
-                }
+                action={<MoneyText value={summary.balance} className="font-display text-2xl font-semibold" />}
               />
               <DataTable
                 caption="Credit history"

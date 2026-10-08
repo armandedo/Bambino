@@ -5,6 +5,6 @@
 @source '../../../packages/ui/src';
 
 @theme {
-  --font-display: var(--font-manrope), ui-sans-serif, 'Segoe UI', system-ui, sans-serif;
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, 'Segoe UI', Roboto, sans-serif;
+  --font-display: var(--font-rubik), ui-sans-serif, 'Segoe UI', system-ui, sans-serif;
+  --font-sans: var(--font-rubik), ui-sans-serif, system-ui, 'Segoe UI', Roboto, sans-serif;
 }

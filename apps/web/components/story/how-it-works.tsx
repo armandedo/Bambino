@@ -77,7 +77,7 @@ function StepItem({
   }, [inView, index, onActive]);
   return (
     <li ref={ref} className="flex gap-5 py-8 lg:min-h-[42vh] lg:items-center">
-      <span className="font-display text-sm font-extrabold text-emphasis tabular-nums" aria-hidden="true">
+      <span className="font-display text-sm font-semibold text-emphasis tabular-nums" aria-hidden="true">
         {String(index + 1).padStart(2, '0')}
       </span>
       <div className="flex flex-col gap-2">
@@ -103,7 +103,7 @@ export function HowItWorksStory() {
   return (
     <div className="grid gap-6 lg:grid-cols-2 lg:gap-16">
       <div className="hidden lg:block">
-        <div className="sticky top-28 aspect-square overflow-hidden rounded-[2rem] border border-border bg-sand-100">
+        <div className="sticky top-28 aspect-square overflow-hidden rounded-2xl border border-border bg-sand-100">
           <AnimatePresence mode="wait">
             <motion.div
               key={active}

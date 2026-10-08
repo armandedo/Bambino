@@ -65,9 +65,7 @@ export function PageTitle({
   return (
     <div className="flex flex-wrap items-end justify-between gap-4">
       <div className="flex flex-col gap-1">
-        <h1 className="font-display text-3xl font-extrabold tracking-tight text-primary sm:text-4xl">
-          {title}
-        </h1>
+        <h1 className="font-display text-3xl font-semibold text-primary sm:text-4xl">{title}</h1>
         {description ? <p className="text-foreground-muted">{description}</p> : null}
       </div>
       {action}

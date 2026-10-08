@@ -1,12 +1,16 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter, Manrope } from 'next/font/google';
+import { Rubik } from 'next/font/google';
 import { connection } from 'next/server';
 import type { ReactNode } from 'react';
 import './globals.css';
 
 // Self-hosted at build time by next/font: no request to Google from the visitor's browser.
-const display = Manrope({ subsets: ['latin'], variable: '--font-manrope', display: 'swap' });
-const sans = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
+const rubik = Rubik({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-rubik',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: { default: 'Bambino: babywear that grows with your baby', template: '%s · Bambino' },
@@ -17,7 +21,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#283618',
+  themeColor: '#2F5D50',
 };
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
@@ -25,7 +29,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   // time has none. API data is still cached by each fetch's own `revalidate`.
   await connection();
   return (
-    <html lang="en" className={`${display.variable} ${sans.variable}`}>
+    <html lang="en" className={rubik.variable}>
       <body>{children}</body>
     </html>
   );

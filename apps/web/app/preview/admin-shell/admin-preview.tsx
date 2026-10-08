@@ -72,7 +72,7 @@ export function AdminPreview() {
           ].map(([label, value]) => (
             <Card key={label} padding="sm">
               <p className="text-sm text-foreground-muted">{label}</p>
-              <p className="font-display text-3xl font-extrabold">{value}</p>
+              <p className="font-display text-3xl font-semibold">{value}</p>
               <p className="text-xs text-foreground-muted">Sample figure</p>
             </Card>
           ))}

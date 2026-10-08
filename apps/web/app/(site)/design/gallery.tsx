@@ -86,7 +86,7 @@ export function Gallery() {
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-10 px-4 py-12">
       <div className="flex flex-col gap-3">
-        <h1 className="font-display text-4xl font-extrabold">Design system</h1>
+        <h1 className="font-display text-4xl font-semibold">Design system</h1>
         <p className="max-w-prose text-lg text-foreground-muted">
           Tokens and components from <code className="font-mono text-base">@bambino/ui</code>, shared by the
           website and the admin dashboard. Every colour pair below is tested to reach WCAG AA contrast.
@@ -145,7 +145,7 @@ export function Gallery() {
       <Section
         id="type"
         title="Type, radius and shadow"
-        intro="Manrope for headings, Inter for text. Body text is 16px."
+        intro="Rubik for everything: semibold headings, regular text. Body text is 16px."
       >
         <div className="flex flex-col gap-2">
           {(Object.keys(fontSizes) as (keyof typeof fontSizes)[])

@@ -276,7 +276,7 @@ export function RecommendationCard({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-sm text-foreground-muted">Recommended size for {babyName}</p>
-          <h2 id={`rec-${recommendation.id}`} className="font-display text-4xl font-extrabold text-primary">
+          <h2 id={`rec-${recommendation.id}`} className="font-display text-4xl font-semibold text-primary">
             {recommendation.recommendedSize.label}
           </h2>
           <p className="font-semibold">{confidenceWords(recommendation.confidence)}</p>

@@ -40,7 +40,7 @@ export default async function PlansPage() {
       />
       <section
         aria-labelledby="choose"
-        className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-14 sm:px-6 lg:py-20"
+        className="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-14 sm:px-6 lg:py-20"
       >
         <h2 id="choose" className="sr-only">
           Choose a plan
@@ -68,7 +68,7 @@ export default async function PlansPage() {
         )}
       </section>
       <section aria-labelledby="included" className="bg-surface-muted">
-        <div className="mx-auto flex max-w-7xl flex-col gap-10 px-4 py-14 sm:px-6 lg:py-20">
+        <div className="mx-auto flex max-w-6xl flex-col gap-10 px-4 py-14 sm:px-6 lg:py-20">
           <SectionHeading
             id="included"
             eyebrow="Included in every plan"
@@ -81,7 +81,7 @@ export default async function PlansPage() {
         aria-labelledby="faq"
         className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-14 sm:px-6 lg:py-20"
       >
-        <h2 id="faq" className="font-display text-3xl font-extrabold text-primary">
+        <h2 id="faq" className="font-display text-3xl font-semibold text-primary">
           Questions
         </h2>
         <div className="flex flex-col divide-y divide-border rounded-2xl border border-border bg-surface">

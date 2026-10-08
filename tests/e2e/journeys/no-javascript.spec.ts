@@ -20,5 +20,5 @@ test('the home page calls to action work without JavaScript', async ({ page }) =
     .first();
   await expect(cta).toBeVisible();
   await expect(cta).toHaveCSS('opacity', '1');
-  await expect(page.getByRole('main').getByRole('link', { name: /see what it costs/ })).toBeVisible();
+  await expect(page.getByRole('main').getByRole('link', { name: /See plans and prices/ })).toBeVisible();
 });

@@ -1,6 +1,6 @@
 'use client';
 
-import { cn } from '@bambino/ui';
+import { buttonClasses, cn } from '@bambino/ui';
 import { House, RefreshCw, Search, Shirt, ShoppingBag, UserRound } from 'lucide-react';
 import NextLink from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -13,9 +13,8 @@ import { Logo } from '../logo';
 const DESKTOP_NAV = [
   { href: '/shop', label: 'Shop' },
   { href: '/how-it-works', label: 'How it works' },
-  { href: '/plans', label: 'Subscriptions' },
+  { href: '/plans', label: 'Plans' },
   { href: '/exchange', label: 'Exchange' },
-  { href: '/sustainability', label: 'Sustainability' },
 ] as const;
 
 function isCurrent(pathname: string, href: string): boolean {
@@ -61,11 +60,11 @@ function Navbar() {
       className={cn(
         'sticky top-0 z-40 transition-[background-color,border-color,box-shadow] duration-300 ease-brand',
         scrolled
-          ? 'border-b border-border bg-background/90 shadow-xs backdrop-blur'
+          ? 'border-b border-border bg-background/95 backdrop-blur'
           : 'border-b border-transparent bg-background',
       )}
     >
-      <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3 sm:px-6">
+      <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:px-6">
         <NextLink
           href="/"
           aria-label="Bambino home"
@@ -125,6 +124,12 @@ function Navbar() {
             </NextLink>
           )}
           <BagLink count={cart.data?.itemCount ?? 0} />
+          <NextLink
+            href="/fit"
+            className={buttonClasses({ size: 'sm', className: 'ml-2 hidden px-4 lg:inline-flex' })}
+          >
+            Find my size
+          </NextLink>
         </div>
       </div>
     </header>
@@ -233,9 +238,9 @@ const FOOTER_LINKS = [
 function Footer() {
   return (
     <footer className="mt-auto bg-primary text-primary-foreground">
-      <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-[1.4fr_repeat(3,1fr)]">
+      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-[1.4fr_repeat(3,1fr)]">
         <div className="flex flex-col gap-4">
-          <span className="font-display text-2xl font-extrabold tracking-tight">bambino</span>
+          <span className="font-display text-2xl font-semibold">bambino</span>
           <p className="max-w-xs text-sm text-brand-100">
             Baby clothes that keep up with your baby. Designed in Kigali, and worn by more than one family.
           </p>
@@ -263,13 +268,13 @@ function Footer() {
         ))}
       </div>
       <div className="border-t border-brand-700">
-        <p className="mx-auto max-w-7xl px-4 py-5 text-xs text-brand-200 sm:px-6">
+        <p className="mx-auto max-w-6xl px-4 py-5 text-xs text-brand-200 sm:px-6">
           © {new Date().getFullYear()} Bambino · Kigali, Rwanda ·{' '}
           <NextLink href="/design" className="underline underline-offset-4">
             Design system
           </NextLink>
         </p>
-        <p className="mx-auto max-w-7xl px-4 pb-5 text-xs text-brand-200 sm:px-6">
+        <p className="mx-auto max-w-6xl px-4 pb-5 text-xs text-brand-200 sm:px-6">
           Photography from{' '}
           <a href="https://unsplash.com" className="underline underline-offset-4">
             Unsplash

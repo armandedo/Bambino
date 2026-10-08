@@ -147,7 +147,7 @@ function StepFrame({
         <h2
           ref={headingRef}
           tabIndex={-1}
-          className="font-display text-3xl font-extrabold text-primary focus:outline-none sm:text-4xl"
+          className="font-display text-3xl font-semibold text-primary focus:outline-none sm:text-4xl"
         >
           {title}
         </h2>
@@ -372,7 +372,7 @@ export function FitWizard() {
   } else if (step === 'account') {
     body = (
       <div className="flex flex-col gap-5">
-        <h2 className="font-display text-3xl font-extrabold text-primary">
+        <h2 className="font-display text-3xl font-semibold text-primary">
           Create a free account to see the result
         </h2>
         <p className="text-foreground-muted">
@@ -434,14 +434,14 @@ export function FitWizard() {
   if (loading || (viewer && babies.isPending)) {
     return (
       <div
-        className="h-72 animate-pulse rounded-[2rem] bg-surface-muted motion-reduce:animate-none"
+        className="h-72 animate-pulse rounded-2xl bg-surface-muted motion-reduce:animate-none"
         aria-busy="true"
       />
     );
   }
 
   return (
-    <div className="flex flex-col gap-8 rounded-[2rem] border border-border bg-surface p-6 shadow-sm sm:p-10">
+    <div className="flex flex-col gap-8 rounded-2xl border border-border bg-surface p-6 shadow-sm sm:p-10">
       <Progress steps={labels} current={position} />
       <AnimatePresence mode="wait" initial={false}>
         <motion.div

@@ -30,7 +30,7 @@ const TEXT_PAIRS: readonly [ColorToken, ColorToken][] = [
   ['primary-soft-foreground', 'primary-soft'],
   ['emphasis', 'surface'],
   ['emphasis', 'background'],
-  // Gold is a fill: forest text on it.
+  // Clay is a fill: near-black text on it.
   ['accent-foreground', 'accent'],
   ['accent-foreground', 'accent-hover'],
   ['accent-soft-foreground', 'accent-soft'],

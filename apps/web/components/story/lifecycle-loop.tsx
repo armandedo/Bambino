@@ -53,7 +53,7 @@ export function LifecycleLoop() {
           x={CENTER}
           y={CENTER - 6}
           textAnchor="middle"
-          className="fill-brand-800 font-display text-[26px] font-extrabold"
+          className="fill-brand-800 font-display text-[26px] font-semibold"
         >
           One garment,
         </text>
@@ -61,7 +61,7 @@ export function LifecycleLoop() {
           x={CENTER}
           y={CENTER + 26}
           textAnchor="middle"
-          className="fill-brand-800 font-display text-[26px] font-extrabold"
+          className="fill-brand-800 font-display text-[26px] font-semibold"
         >
           many babies
         </text>

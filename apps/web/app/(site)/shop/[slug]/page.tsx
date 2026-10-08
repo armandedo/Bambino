@@ -71,7 +71,7 @@ export default async function ProductPage({ params }: { params: Params }) {
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-2">
             <p className="text-sm font-semibold text-primary">{product.brand}</p>
-            <h1 className="font-display text-3xl font-extrabold sm:text-4xl">{product.name}</h1>
+            <h1 className="font-display text-3xl font-semibold sm:text-4xl">{product.name}</h1>
             {product.priceFrom ? (
               <p className="text-2xl font-semibold">
                 <MoneyText value={product.priceFrom} />

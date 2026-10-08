@@ -14,7 +14,7 @@ function SignedInPanel() {
   const exchanges = useExchanges();
   const credits = useCredits();
   if (garments.isPending || returns.isPending || exchanges.isPending || credits.isPending) {
-    return <Skeleton className="h-48 rounded-[2rem]" />;
+    return <Skeleton className="h-48 rounded-2xl" />;
   }
   const held = garments.data ?? [];
   const eligible = held.filter((g) => g.status === 'WITH_CUSTOMER');
@@ -23,23 +23,23 @@ function SignedInPanel() {
     (e) => !['COMPLETED', 'REJECTED', 'CANCELLED'].includes(e.status),
   );
   return (
-    <div className="grid gap-6 rounded-[2rem] border border-border bg-surface p-6 shadow-sm sm:p-8 lg:grid-cols-[1fr_auto] lg:items-center">
+    <div className="grid gap-6 rounded-2xl border border-border bg-surface p-6 shadow-sm sm:p-8 lg:grid-cols-[1fr_auto] lg:items-center">
       <div className="flex flex-col gap-5">
         <h2 className="font-display text-2xl font-bold text-primary">Your exchanges</h2>
         <dl className="grid gap-3 sm:grid-cols-3">
           <div className="rounded-2xl bg-brand-50 p-4">
             <dt className="text-sm text-foreground-muted">Ready to return</dt>
-            <dd className="font-display text-3xl font-extrabold text-primary">{eligible.length}</dd>
+            <dd className="font-display text-3xl font-semibold text-primary">{eligible.length}</dd>
           </div>
           <div className="rounded-2xl bg-surface-muted p-4">
             <dt className="text-sm text-foreground-muted">In progress</dt>
-            <dd className="font-display text-3xl font-extrabold text-primary">
+            <dd className="font-display text-3xl font-semibold text-primary">
               {openReturns.length + openExchanges.length}
             </dd>
           </div>
           <div className="rounded-2xl bg-accent-50 p-4">
             <dt className="text-sm text-accent-soft-foreground">Exchange credit</dt>
-            <dd className="font-display text-3xl font-extrabold text-primary">
+            <dd className="font-display text-3xl font-semibold text-primary">
               {credits.data ? <MoneyText value={credits.data.balance} /> : '—'}
             </dd>
           </div>
@@ -65,13 +65,13 @@ function SignedInPanel() {
 
 export function ExchangePanel() {
   const { viewer, loading } = useSession();
-  if (loading) return <Skeleton className="h-48 rounded-[2rem]" />;
+  if (loading) return <Skeleton className="h-48 rounded-2xl" />;
   return (
     <Reveal>
       {viewer ? (
         <SignedInPanel />
       ) : (
-        <div className="flex flex-col items-start gap-4 rounded-[2rem] bg-accent-50 p-6 sm:p-8">
+        <div className="flex flex-col items-start gap-4 rounded-2xl bg-accent-50 p-6 sm:p-8">
           <h2 className="font-display text-2xl font-bold text-primary">Already a subscriber?</h2>
           <p className="text-foreground-muted">Sign in to see the pieces you have and start a return.</p>
           <NextLink href="/login?next=/dashboard/exchange" className={buttonClasses()}>

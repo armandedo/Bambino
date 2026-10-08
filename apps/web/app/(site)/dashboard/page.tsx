@@ -157,7 +157,7 @@ export default function DashboardPage() {
           >
             {recommendation ? (
               <div className="flex flex-col gap-2">
-                <p className="font-display text-2xl font-extrabold">
+                <p className="font-display text-2xl font-semibold">
                   {outgrown.length > 0
                     ? `${outgrown.length} ${outgrown.length === 1 ? 'piece is' : 'pieces are'} smaller than ${recommendation.recommendedSize.label}`
                     : recommendation.nextSize
@@ -243,7 +243,7 @@ export default function DashboardPage() {
             error={garments.error}
             action={{ href: '/dashboard/wardrobe', label: 'Open wardrobe' }}
           >
-            <p className="font-display text-3xl font-extrabold text-primary">{withYou.length}</p>
+            <p className="font-display text-3xl font-semibold text-primary">{withYou.length}</p>
             <p className="text-sm text-foreground-muted">
               {withYou.length === 1 ? 'piece with you now' : 'pieces with you now'}
             </p>
@@ -283,7 +283,7 @@ export default function DashboardPage() {
             loading={credits.isPending}
             error={credits.error}
           >
-            <p className="font-display text-3xl font-extrabold text-primary">
+            <p className="font-display text-3xl font-semibold text-primary">
               {credits.data ? <MoneyText value={credits.data.balance} /> : '—'}
             </p>
             <p className="text-sm text-foreground-muted">Earned when returned pieces pass inspection.</p>

@@ -46,7 +46,7 @@ export default function SustainabilityPage() {
       />
       <section
         aria-labelledby="loop"
-        className="mx-auto flex max-w-7xl flex-col gap-10 px-4 py-14 sm:px-6 lg:py-20"
+        className="mx-auto flex max-w-6xl flex-col gap-10 px-4 py-14 sm:px-6 lg:py-20"
       >
         <SectionHeading
           id="loop"
@@ -56,7 +56,7 @@ export default function SustainabilityPage() {
         <LifecycleLoop />
       </section>
       <section aria-labelledby="principles" className="bg-surface-muted">
-        <div className="mx-auto flex max-w-7xl flex-col gap-10 px-4 py-14 sm:px-6 lg:py-20">
+        <div className="mx-auto flex max-w-6xl flex-col gap-10 px-4 py-14 sm:px-6 lg:py-20">
           <SectionHeading
             id="principles"
             eyebrow="How we work"

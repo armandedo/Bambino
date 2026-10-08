@@ -6,50 +6,50 @@
  */
 
 /**
- * Raw palette, from Bambino's visual identity: Forest #283618, Olive #606C38, Cream #FEFAE0, Warm Gold #DDA15E and
- * Terracotta #BC6C25. Target balance: about 70% cream and neutral, 15% forest, 8% olive, 5% gold, 2% terracotta.
- * Components never use these directly; they use the semantic colours below.
+ * Raw palette, "Sage & Clay": deep sage #2F5D50 for primary actions and bands, a light sage tint #EEF4F0 for
+ * alternating sections, clay #E07A5F as a fill accent (dark text on it) and a darker clay for small emphasis text.
+ * Neutrals are soft warm greys on white. Components never use these directly; they use the semantic colours below.
  */
 export const palette = {
-  /** Forest (800) and olive (500): primary actions, headings, navigation. */
+  /** Sage: primary actions, headings, navigation, solid bands (800) and section tints (50). */
   brand: {
-    50: '#f4f5ea',
-    100: '#e6e9d2',
-    200: '#cdd3a8',
-    300: '#aab47a',
-    400: '#848f52',
-    500: '#606c38',
-    600: '#4a5629',
-    700: '#36421f',
-    800: '#283618',
-    900: '#1b250f',
+    50: '#eef4f0',
+    100: '#dde9e2',
+    200: '#c3dbd1',
+    300: '#9ec2b4',
+    400: '#7aa898',
+    500: '#5b8f7f',
+    600: '#4a7f70',
+    700: '#3b6e60',
+    800: '#2f5d50',
+    900: '#1f3f36',
   },
-  /** Warm gold (400) and terracotta (600): highlights, premium accents, limited emphasis. */
+  /** Clay: highlights and secondary calls to action (400 as a fill), emphasis text (600 to 700). */
   accent: {
-    50: '#fdf6ec',
-    100: '#faeacf',
-    200: '#f3d3a3',
-    300: '#eab97a',
-    400: '#dda15e',
-    500: '#c98443',
-    600: '#bc6c25',
-    700: '#94531b',
-    800: '#714014',
-    900: '#57300f',
+    50: '#fdf2ee',
+    100: '#fbe2d9',
+    200: '#f6c6b5',
+    300: '#eda08a',
+    400: '#e07a5f',
+    500: '#cf6447',
+    600: '#b5543a',
+    700: '#96432d',
+    800: '#763524',
+    900: '#5a281c',
   },
-  /** Cream neutrals: backgrounds, surfaces, borders and body text. */
+  /** Warm greys: surfaces, borders and body text. 0 is the white page. */
   sand: {
-    0: '#fffdf5',
-    50: '#fefae0',
-    100: '#f7f1d4',
-    200: '#ebe3c3',
-    300: '#d6cda9',
-    400: '#aba485',
-    500: '#787258',
-    600: '#5b5745',
-    700: '#434033',
-    800: '#2e2c22',
-    900: '#1f1e16',
+    0: '#ffffff',
+    50: '#faf9f6',
+    100: '#f3f1ec',
+    200: '#e6e3dc',
+    300: '#cfcbc2',
+    400: '#a39e94',
+    500: '#77726a',
+    600: '#57534c',
+    700: '#403d38',
+    800: '#2b2926',
+    900: '#1c1b19',
   },
   success: { 50: '#eef5e6', 200: '#bcd6a0', 700: '#3f6212', 800: '#33500f' },
   warning: { 50: '#fdf3df', 200: '#f0cf8a', 700: '#7a4f00', 800: '#5f3d00' },
@@ -59,13 +59,14 @@ export const palette = {
 
 /** Semantic colours: what components use. Every text/background pair is contrast-tested to WCAG AA. */
 export const colors = {
-  background: palette.sand[50],
+  /** Clean white pages, with a light olive tint for alternating sections. */
+  background: palette.sand[0],
   surface: palette.sand[0],
-  'surface-muted': palette.sand[100],
-  'surface-sunken': palette.sand[200],
-  foreground: palette.brand[900],
+  'surface-muted': palette.brand[50],
+  'surface-sunken': palette.sand[100],
+  foreground: palette.sand[900],
   'foreground-muted': palette.sand[600],
-  border: palette.sand[200],
+  border: palette.brand[100],
   /** Borders of form controls must reach 3:1 against the surface (WCAG 1.4.11). */
   'border-strong': palette.sand[500],
   primary: palette.brand[800],
@@ -73,15 +74,15 @@ export const colors = {
   'primary-foreground': palette.sand[50],
   'primary-soft': palette.brand[50],
   'primary-soft-foreground': palette.brand[800],
-  /** Gold is a fill colour (buttons, highlights) with forest text on it; it is too light for text on cream. */
+  /** Clay is a fill colour (buttons, highlights) with near-black text on it; it is too light for text on white. */
   accent: palette.accent[400],
   'accent-hover': palette.accent[300],
-  'accent-foreground': palette.brand[900],
+  'accent-foreground': palette.sand[900],
   'accent-soft': palette.accent[50],
   'accent-soft-foreground': palette.accent[800],
-  /** Terracotta dark enough for text, for limited emphasis. */
+  /** Clay dark enough for text, for limited emphasis. */
   emphasis: palette.accent[700],
-  link: palette.brand[600],
+  link: palette.brand[700],
   focus: palette.brand[500],
   'success-soft': palette.success[50],
   'success-border': palette.success[200],
@@ -102,9 +103,9 @@ export const colors = {
 export type ColorToken = keyof typeof colors;
 
 export const fonts = {
-  /** Confident editorial headings. Loaded by each app (next/font on web); the stack is the fallback. */
-  display: '"Manrope", "DM Sans", ui-sans-serif, "Segoe UI", system-ui, sans-serif',
-  sans: '"Inter", ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif',
+  /** One friendly, rounded sans for everything. Loaded by each app (next/font on web); the stack is the fallback. */
+  display: '"Rubik", ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif',
+  sans: '"Rubik", ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif',
   mono: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
 } as const;
 

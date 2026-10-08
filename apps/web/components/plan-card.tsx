@@ -40,7 +40,7 @@ export function PlanCard({
           {plan.name}
         </Heading>
         <p>
-          <MoneyText value={plan.price} className="font-display text-4xl font-extrabold tracking-tight" />
+          <MoneyText value={plan.price} className="font-display text-4xl font-semibold" />
           <span className={featured ? 'text-brand-100' : 'text-foreground-muted'}>
             {' '}
             / {PER[plan.billingInterval]}

@@ -30,11 +30,11 @@ export default function HowItWorksPage() {
           </NextLink>
         </div>
       </PageHero>
-      <section aria-label="The six steps" className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:py-16">
+      <section aria-label="The six steps" className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:py-16">
         <HowItWorksStory />
       </section>
       <section aria-labelledby="swap" className="bg-surface-muted">
-        <div className="mx-auto flex max-w-7xl flex-col gap-10 px-4 py-14 sm:px-6 lg:py-20">
+        <div className="mx-auto flex max-w-6xl flex-col gap-10 px-4 py-14 sm:px-6 lg:py-20">
           <SectionHeading id="swap" eyebrow="The exchange" title="From current size to next size." />
           <ExchangeSequence />
         </div>
