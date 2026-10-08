@@ -126,7 +126,7 @@ function Navbar() {
           <BagLink count={cart.data?.itemCount ?? 0} />
           <NextLink
             href="/fit"
-            className={buttonClasses({ size: 'sm', className: 'ml-2 hidden px-4 lg:inline-flex' })}
+            className={buttonClasses({ size: 'sm', className: 'ml-2 px-4 max-lg:hidden' })}
           >
             Find my size
           </NextLink>

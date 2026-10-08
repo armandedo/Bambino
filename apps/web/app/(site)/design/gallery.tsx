@@ -145,7 +145,7 @@ export function Gallery() {
       <Section
         id="type"
         title="Type, radius and shadow"
-        intro="Rubik for everything: semibold headings, regular text. Body text is 16px."
+        intro="Bricolage Grotesque for everything: semibold headings, regular text. Body text is 16px."
       >
         <div className="flex flex-col gap-2">
           {(Object.keys(fontSizes) as (keyof typeof fontSizes)[])

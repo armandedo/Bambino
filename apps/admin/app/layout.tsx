@@ -1,13 +1,13 @@
 import type { Metadata } from 'next';
-import { Rubik } from 'next/font/google';
+import { Bricolage_Grotesque } from 'next/font/google';
 import type { ReactNode } from 'react';
 import { AdminProviders } from '@/lib/session';
 import './globals.css';
 
-const rubik = Rubik({
+const bricolage = Bricolage_Grotesque({
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-rubik',
+  axes: ['opsz', 'wdth'],
+  variable: '--font-bricolage',
   display: 'swap',
 });
 
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={rubik.variable}>
+    <html lang="en" className={bricolage.variable}>
       <body>
         <AdminProviders>{children}</AdminProviders>
       </body>

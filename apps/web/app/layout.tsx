@@ -1,14 +1,14 @@
 import type { Metadata, Viewport } from 'next';
-import { Rubik } from 'next/font/google';
+import { Bricolage_Grotesque } from 'next/font/google';
 import { connection } from 'next/server';
 import type { ReactNode } from 'react';
 import './globals.css';
 
 // Self-hosted at build time by next/font: no request to Google from the visitor's browser.
-const rubik = Rubik({
+const bricolage = Bricolage_Grotesque({
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-rubik',
+  axes: ['opsz', 'wdth'],
+  variable: '--font-bricolage',
   display: 'swap',
 });
 
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#2F5D50',
+  themeColor: '#16213A',
 };
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
@@ -29,7 +29,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   // time has none. API data is still cached by each fetch's own `revalidate`.
   await connection();
   return (
-    <html lang="en" className={rubik.variable}>
+    <html lang="en" className={bricolage.variable}>
       <body>{children}</body>
     </html>
   );

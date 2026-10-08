@@ -1,11 +1,14 @@
 import type { BillingInterval, PlanSummary } from '@bambino/api-client';
 import { MoneyText, buttonClasses, cn } from '@bambino/ui';
-import { Check } from 'lucide-react';
 import NextLink from 'next/link';
 
 const PER: Record<BillingInterval, string> = { MONTHLY: 'month', QUARTERLY: '3 months', ANNUAL: 'year' };
 
-/** One plan. Name, price, items and exchanges all come from the API; nothing here is computed client-side. */
+/**
+ * One plan, as a row of a ledger like the care label on a garment: name and what is included on the left, price
+ * and the action on the right. Name, price, items and exchanges all come from the API; nothing is computed here.
+ * Put rows in a list with `divide-y`; the featured one carries a yellow mark on its left edge.
+ */
 export function PlanCard({
   plan,
   featured = false,
@@ -16,69 +19,45 @@ export function PlanCard({
   level?: 2 | 3;
 }) {
   const Heading = `h${level}` as const;
+  const exchanges =
+    plan.exchangesPerCycle === null
+      ? 'unlimited size exchanges'
+      : `${plan.exchangesPerCycle} size ${plan.exchangesPerCycle === 1 ? 'exchange' : 'exchanges'} per cycle`;
   return (
     <article
       className={cn(
-        'group relative flex h-full flex-col gap-6 rounded-[1.75rem] p-7 transition-[transform,box-shadow] duration-500 ease-brand focus-within:-translate-y-1 hover:-translate-y-1',
-        featured
-          ? 'bg-primary text-primary-foreground shadow-lg'
-          : 'border border-border bg-surface text-foreground shadow-xs hover:shadow-md',
+        'grid gap-5 py-8 md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:gap-12',
+        featured && 'border-l-[6px] border-accent pl-5 sm:pl-7',
       )}
     >
-      {featured ? (
-        <span className="absolute -top-3 left-7 rounded-full bg-accent px-3 py-1 text-xs font-bold text-accent-foreground">
-          Most flexible
-        </span>
-      ) : null}
-      <div className="flex flex-col gap-2">
-        <Heading
-          className={cn(
-            'font-display text-xl font-bold',
-            featured ? 'text-primary-foreground' : 'text-primary',
-          )}
-        >
+      <div className="flex flex-col gap-3">
+        <Heading className="font-display text-2xl font-bold tracking-tight text-primary">
           {plan.name}
+          {featured ? (
+            <span className="ml-3 rounded-md bg-accent px-2 py-0.5 align-middle text-sm font-semibold text-accent-foreground">
+              Most flexible
+            </span>
+          ) : null}
         </Heading>
-        <p>
-          <MoneyText value={plan.price} className="font-display text-4xl font-semibold" />
-          <span className={featured ? 'text-brand-100' : 'text-foreground-muted'}>
-            {' '}
-            / {PER[plan.billingInterval]}
-          </span>
+        <p className="max-w-[56ch] text-foreground-muted">{plan.description}</p>
+        <p className="text-foreground">
+          {plan.itemsPerCycle} {plan.itemsPerCycle === 1 ? 'piece' : 'pieces'} each cycle in your baby&rsquo;s
+          size, {exchanges}. Pause or cancel from your account.
         </p>
       </div>
-      <ul className="flex flex-col gap-3 text-sm">
-        {[
-          `${plan.itemsPerCycle} ${plan.itemsPerCycle === 1 ? 'piece' : 'pieces'} each cycle, in your baby’s size`,
-          plan.exchangesPerCycle === null
-            ? 'Unlimited size exchanges'
-            : `${plan.exchangesPerCycle} size ${plan.exchangesPerCycle === 1 ? 'exchange' : 'exchanges'} per cycle`,
-          'Pause or cancel from your account',
-        ].map((line) => (
-          <li key={line} className="flex gap-2">
-            <Check
-              aria-hidden="true"
-              className={cn('mt-0.5 size-4 shrink-0', featured ? 'text-accent' : 'text-brand-500')}
-              strokeWidth={2.5}
-            />
-            {line}
-          </li>
-        ))}
-      </ul>
-      <p className={cn('text-sm', featured ? 'text-brand-100' : 'text-foreground-muted')}>
-        {plan.description}
-      </p>
-      <NextLink
-        href={`/dashboard/subscription/new?plan=${encodeURIComponent(plan.code)}`}
-        className={buttonClasses({
-          variant: featured ? 'accent' : 'primary',
-          fullWidth: true,
-          className: 'mt-auto',
-        })}
-      >
-        Choose this plan
-        <span className="sr-only">: {plan.name}</span>
-      </NextLink>
+      <div className="flex items-center justify-between gap-6 md:flex-col md:items-end md:gap-3">
+        <p className="whitespace-nowrap">
+          <MoneyText value={plan.price} className="font-display text-4xl font-bold tracking-tight" />
+          <span className="text-foreground-muted"> / {PER[plan.billingInterval]}</span>
+        </p>
+        <NextLink
+          href={`/dashboard/subscription/new?plan=${encodeURIComponent(plan.code)}`}
+          className={buttonClasses({ variant: featured ? 'accent' : 'primary' })}
+        >
+          Choose this plan
+          <span className="sr-only">: {plan.name}</span>
+        </NextLink>
+      </div>
     </article>
   );
 }

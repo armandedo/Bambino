@@ -28,7 +28,7 @@ export function SectionHeading({
       {eyebrow ? (
         <p
           className={cn(
-            'text-xs font-semibold tracking-[0.16em] uppercase',
+            'text-base font-semibold',
             tone === 'inverse' ? 'text-accent-200' : 'text-emphasis',
           )}
         >
@@ -38,7 +38,7 @@ export function SectionHeading({
       <h2
         id={id}
         className={cn(
-          'font-display text-3xl leading-tight font-semibold sm:text-[2.5rem]',
+          'font-display text-3xl leading-[1.05] font-bold tracking-tight sm:text-5xl',
           tone === 'inverse' ? 'text-primary-foreground' : 'text-primary',
         )}
       >

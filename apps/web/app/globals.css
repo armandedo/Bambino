@@ -7,8 +7,8 @@
 
 /* next/font serves the brand fonts under generated family names, exposed as these variables on <html>. */
 @theme {
-  --font-display: var(--font-rubik), ui-sans-serif, 'Segoe UI', system-ui, sans-serif;
-  --font-sans: var(--font-rubik), ui-sans-serif, system-ui, 'Segoe UI', Roboto, sans-serif;
+  --font-display: var(--font-bricolage), ui-sans-serif, 'Segoe UI', system-ui, sans-serif;
+  --font-sans: var(--font-bricolage), ui-sans-serif, system-ui, 'Segoe UI', Roboto, sans-serif;
 }
 
 /*
@@ -25,6 +25,25 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .entrance {
+    animation: none;
+  }
+}
+
+/*
+ * The growth ruler in the home hero: each mark is drawn in once, from the baseline up. Transform only, so every
+ * mark is in the server HTML and visible without JavaScript; off for reduced motion.
+ */
+@keyframes ruler-mark {
+  from {
+    transform: scaleX(0);
+  }
+}
+.ruler-mark {
+  transform-origin: left center;
+  animation: ruler-mark 600ms var(--ease-brand) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ruler-mark {
     animation: none;
   }
 }

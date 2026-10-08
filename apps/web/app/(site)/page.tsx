@@ -37,7 +37,7 @@ const SWAP_POINTS = [
   'Clean pieces go on to another family',
 ];
 
-/** Sections alternate white and a light tint, like the reference design; all share one width and rhythm. */
+/** Sections alternate paper and a pale ink tint; all share one width and rhythm. */
 const SECTION = 'mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:py-24';
 
 export default async function HomePage() {
@@ -53,33 +53,27 @@ export default async function HomePage() {
 
       {/* Highlights */}
       <section aria-label="Why Bambino" className="bg-primary text-primary-foreground">
-        <ul className="mx-auto grid max-w-6xl gap-8 px-4 py-10 text-center sm:grid-cols-3 sm:px-6">
+        <ul className="mx-auto grid max-w-6xl gap-6 px-4 py-8 sm:grid-cols-3 sm:gap-10 sm:px-6">
           {HIGHLIGHTS.map((item) => (
             <li key={item.title} className="flex flex-col gap-1">
-              <span className="font-display text-xl font-semibold">{item.title}</span>
-              <span className="text-sm text-brand-100">{item.body}</span>
+              <span className="font-display text-xl font-bold tracking-tight">{item.title}</span>
+              <span className="text-brand-200">{item.body}</span>
             </li>
           ))}
         </ul>
       </section>
 
-      {/* How it works */}
+      {/* How it works: a real sequence, so the steps are numbered; ruled columns, not cards. */}
       <section aria-labelledby="how" className={SECTION}>
         <div className="flex flex-col gap-10">
-          <SectionHeading id="how" eyebrow="How it works" title="Four simple steps" />
-          <ol className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <SectionHeading id="how" title="How it works" />
+          <ol className="grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
             {STEPS.map((step, index) => (
-              <li
-                key={step.title}
-                className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-7"
-              >
-                <span
-                  aria-hidden="true"
-                  className="flex size-10 items-center justify-center rounded-full bg-surface-muted font-semibold text-primary"
-                >
+              <li key={step.title} className="flex flex-col gap-3 border-t-4 border-primary pt-4">
+                <span aria-hidden="true" className="font-display text-4xl font-bold text-primary tabular-nums">
                   {index + 1}
                 </span>
-                <h3 className="font-display text-lg font-semibold text-foreground">{step.title}</h3>
+                <h3 className="font-display text-xl font-bold tracking-tight text-primary">{step.title}</h3>
                 <p className="text-foreground-muted">{step.body}</p>
               </li>
             ))}
@@ -98,7 +92,7 @@ export default async function HomePage() {
         <div className={SECTION}>
           <div className="flex flex-col gap-10">
             <div className="flex flex-wrap items-end justify-between gap-4">
-              <SectionHeading id="new" eyebrow="The clothes" title="Soft everyday basics" />
+              <SectionHeading id="new" title="Soft everyday basics" />
               <NextLink href="/shop" className={buttonClasses({ variant: 'outline' })}>
                 Shop all clothes
               </NextLink>
@@ -128,8 +122,7 @@ export default async function HomePage() {
         <div className="flex flex-col gap-10">
           <SectionHeading
             id="plans"
-            eyebrow="Plans"
-            title="One simple plan per baby"
+            title="One plan per baby"
             intro="Change or pause your plan whenever you need to. Prices are placeholders until launch."
           />
           {!plans.ok ? (
@@ -137,7 +130,7 @@ export default async function HomePage() {
           ) : plans.data.subscriptionPlans.length === 0 ? (
             <EmptyState title="No plans yet" description="Plans appear here once they are published." />
           ) : (
-            <div className="grid gap-6 pt-3 md:grid-cols-3">
+            <div className="divide-y divide-border border-y border-border">
               {plans.data.subscriptionPlans.map((plan, index) => (
                 <PlanCard key={plan.id} plan={plan} featured={index === 0} />
               ))}
@@ -149,7 +142,7 @@ export default async function HomePage() {
       {/* Swapping and reuse */}
       <section aria-labelledby="swap" className="bg-surface-muted">
         <div className={`${SECTION} grid items-center gap-10 lg:grid-cols-2 lg:gap-16`}>
-          <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-sand-100">
+          <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-sand-100">
             <Image
               src={stockSrc(PHOTOS.circular)}
               alt={PHOTOS.circular.alt}
@@ -161,8 +154,7 @@ export default async function HomePage() {
           <div className="flex flex-col gap-6">
             <SectionHeading
               id="swap"
-              eyebrow="When clothes get small"
-              title="Swap them for the next size"
+              title="Swap for the next size when they grow"
               intro="No need to buy a new wardrobe. Send back what no longer fits and choose the next size."
             />
             <ul className="flex flex-col gap-3">
@@ -184,11 +176,14 @@ export default async function HomePage() {
 
       {/* Call to action */}
       <section aria-labelledby="start" className="bg-primary text-primary-foreground">
-        <div className="mx-auto flex max-w-6xl flex-col items-center gap-5 px-4 py-16 text-center sm:px-6 lg:py-20">
-          <h2 id="start" className="font-display text-3xl font-semibold sm:text-[2.5rem]">
+        <div className="mx-auto flex max-w-6xl flex-col items-start gap-6 px-4 py-16 sm:px-6 lg:py-24">
+          <h2
+            id="start"
+            className="max-w-[18ch] font-display text-4xl leading-[1.02] font-bold tracking-tight sm:text-6xl"
+          >
             Not sure of your baby&rsquo;s size?
           </h2>
-          <p className="max-w-xl text-lg text-brand-100">
+          <p className="max-w-[46ch] text-lg text-brand-200">
             Answer four quick questions and we&rsquo;ll suggest a size. It takes about two minutes.
           </p>
           <NextLink href="/fit" className={buttonClasses({ variant: 'accent', size: 'lg' })}>
