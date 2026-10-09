@@ -1,13 +1,13 @@
 import type { Metadata } from 'next';
-import { Bricolage_Grotesque } from 'next/font/google';
+import { Space_Grotesk } from 'next/font/google';
 import type { ReactNode } from 'react';
 import { AdminProviders } from '@/lib/session';
 import './globals.css';
 
-const bricolage = Bricolage_Grotesque({
+const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
-  axes: ['opsz', 'wdth'],
-  variable: '--font-bricolage',
+  weight: ['400', '500', '700'],
+  variable: '--font-grotesk',
   display: 'swap',
 });
 
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={bricolage.variable}>
+    <html lang="en" className={spaceGrotesk.variable}>
       <body>
         <AdminProviders>{children}</AdminProviders>
       </body>

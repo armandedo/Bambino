@@ -1,5 +1,5 @@
 import { buttonClasses, cn } from '@bambino/ui';
-import { ArrowRight, Ruler } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import Image from 'next/image';
 import NextLink from 'next/link';
 import { PHOTOS, stockSrc } from '@/lib/stock-photos';
@@ -22,21 +22,34 @@ const STAGES = [
  */
 export function Hero() {
   return (
-    <section aria-labelledby="hero-title" className="overflow-hidden bg-background">
-      <div className="mx-auto grid max-w-6xl gap-x-14 gap-y-10 px-4 py-12 sm:px-6 lg:grid-cols-[minmax(0,1fr)_24rem] lg:py-20">
-        <div className="flex flex-col gap-8">
+    <section aria-labelledby="hero-title" className="bg-surface-muted">
+      {/* Split hero: the photo fills the left half, the headline and ruler sit on the cream panel. */}
+      <div className="mx-auto grid max-w-[1400px] lg:grid-cols-2">
+        <div className="relative aspect-[4/3] bg-sand-200 lg:aspect-auto lg:min-h-[40rem]">
+          {/* The page's largest paint: fetched early, never lazy. */}
+          <Image
+            src={stockSrc(PHOTOS.heroMother)}
+            alt={PHOTOS.heroMother.alt}
+            fill
+            sizes="(min-width: 1024px) 50vw, 100vw"
+            fetchPriority="high"
+            loading="eager"
+            className="object-cover"
+          />
+        </div>
+        <div className="flex flex-col justify-center gap-7 px-4 py-12 sm:px-10 lg:px-16 lg:py-20">
           <h1
             id="hero-title"
-            className="max-w-[11ch] font-display text-[3rem] leading-[0.96] font-medium tracking-[-0.045em] text-primary sm:text-7xl lg:text-[5.75rem]"
+            className="font-display text-[2.5rem] leading-[1.1] font-bold tracking-[0.016em] text-primary uppercase sm:text-5xl lg:text-[3.5rem]"
           >
             The right size, every month.
           </h1>
-          <p className="max-w-[46ch] text-lg leading-relaxed text-foreground-muted sm:text-xl">
+          <p className="max-w-[44ch] text-lg leading-relaxed text-foreground-muted">
             Babies outgrow clothes every few months. We bring clothes in your baby&rsquo;s size to your door
             in Kigali, collect them when they get small, and bring the next size up.
           </p>
           <div className="flex flex-col gap-3 sm:flex-row">
-            <NextLink href="/fit" className={buttonClasses({ size: 'lg', variant: 'accent' })}>
+            <NextLink href="/fit" className={buttonClasses({ size: 'lg', variant: 'primary' })}>
               Find my baby&rsquo;s size <ArrowRight aria-hidden="true" className="size-4" />
             </NextLink>
             <NextLink href="/plans" className={buttonClasses({ size: 'lg', variant: 'outline' })}>
@@ -47,18 +60,18 @@ export function Hero() {
           {/* The ruler: oldest stage at the top, like marks on a doorframe. */}
           <ol
             aria-label="Baby sizes from newborn to 24 months"
-            className="mt-2 flex flex-col-reverse border-l-2 border-primary"
+            className="mt-2 flex flex-col-reverse border-l border-primary"
           >
             {STAGES.map((stage, index) => (
               <li key={stage.label} className="relative flex items-center gap-4 py-1.5">
                 <span
                   aria-hidden="true"
-                  className={cn('ruler-mark h-0.5 bg-primary', stage.mark)}
+                  className={cn('ruler-mark h-px bg-primary', stage.mark)}
                   style={{ animationDelay: `${0.15 + index * 0.12}s` }}
                 />
                 <span
                   className={cn(
-                    'rounded-full px-3.5 py-1 text-sm font-medium text-foreground shadow-xs',
+                    'rounded-full border border-primary/20 px-3.5 py-1 text-xs font-medium tracking-[0.08em] text-foreground uppercase',
                     stage.tag,
                   )}
                 >
@@ -68,28 +81,6 @@ export function Hero() {
               </li>
             ))}
           </ol>
-        </div>
-
-        {/* The one photo, framed like a card: white margin, softly rounded inside. */}
-        <div className="relative lg:self-start">
-          <div className="rounded-[1.75rem] bg-surface p-2 shadow-md">
-            <div className="relative aspect-[4/5] overflow-hidden rounded-[1.25rem] bg-sand-100">
-              {/* The page's largest paint: fetched early, never lazy. */}
-              <Image
-                src={stockSrc(PHOTOS.heroMother)}
-                alt={PHOTOS.heroMother.alt}
-                fill
-                sizes="(min-width: 1024px) 24rem, 100vw"
-                fetchPriority="high"
-                loading="eager"
-                className="object-cover"
-              />
-            </div>
-          </div>
-          <p className="absolute bottom-6 left-6 flex items-center gap-2 rounded-full bg-surface px-4 py-2.5 text-sm font-medium text-primary shadow-lg">
-            <Ruler aria-hidden="true" className="size-4" />
-            Sizes for 0–24 months
-          </p>
         </div>
       </div>
     </section>

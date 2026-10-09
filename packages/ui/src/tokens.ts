@@ -6,61 +6,61 @@
  */
 
 /**
- * Raw palette, "Doorframe": ink navy #16213A for text, bands and primary actions on a cool paper #F5F7F4, with
- * pencil yellow #F2D14B as the one accent. Each size stage also has its own colour (see `stage`), like the
- * coloured tags on a garment. Components never use these directly; they use the semantic colours below.
+ * Raw palette, "Editorial": black ink on white, vellum cream #F7F5E8 for panels, pewter greys for hairlines, and
+ * one rust accent #B94E3A. Size stages keep faint tints so a size is still recognisable. Components never use
+ * these directly; they use the semantic colours below.
  */
 export const palette = {
   /** Sage: primary actions, headings, navigation, solid bands (800) and section tints (50). */
   brand: {
-    50: '#eef2f8',
-    100: '#dce4f0',
-    200: '#bccbe2',
-    300: '#93a9cb',
-    400: '#6a85b0',
-    500: '#4a6a98',
-    600: '#385582',
-    700: '#2a4168',
-    800: '#1d2f52',
-    900: '#16213a',
+    50: '#f7f5e8',
+    100: '#ece9d8',
+    200: '#d6d3c4',
+    300: '#b3b0a6',
+    400: '#888888',
+    500: '#6b6868',
+    600: '#4d4a4b',
+    700: '#373334',
+    800: '#231f20',
+    900: '#000000',
   },
   /** Pencil yellow: highlights and secondary calls to action (400 as a fill), emphasis text (700). */
   accent: {
-    50: '#fffbe6',
-    100: '#fef3b8',
-    200: '#fae885',
-    300: '#f6dc65',
-    400: '#f2d14b',
-    500: '#d9b52a',
-    600: '#a98712',
-    700: '#7d6208',
-    800: '#5d4a08',
-    900: '#403206',
+    50: '#fbefec',
+    100: '#f5d9d3',
+    200: '#ebb5a9',
+    300: '#d98b79',
+    400: '#b94e3a',
+    500: '#a14331',
+    600: '#8a3829',
+    700: '#7a3122',
+    800: '#5f2518',
+    900: '#43190f',
   },
   /** Cool canvas greys: 0 is white (cards), 50 the page canvas, 100 to 200 quiet surfaces and hairlines. */
   sand: {
     0: '#ffffff',
-    50: '#f2f4f5',
-    100: '#eaecee',
-    200: '#e1e4e6',
-    300: '#c5ccc3',
-    400: '#98a096',
-    500: '#6b7468',
-    600: '#4f5750',
-    700: '#3a403b',
-    800: '#262b27',
-    900: '#171b18',
+    50: '#ffffff',
+    100: '#f7f5e8',
+    200: '#e4e1d1',
+    300: '#cfccbd',
+    400: '#a8a59a',
+    500: '#888888',
+    600: '#5c5857',
+    700: '#3d3839',
+    800: '#231f20',
+    900: '#000000',
   },
   /**
    * Size stages: the colour of a size follows the baby through the site (tags, plans, boxes). All are light fills
    * that carry ink text, never text on white.
    */
   stage: {
-    newborn: '#a9d3f5',
-    early: '#93d9bd',
-    mid: '#f2d14b',
-    toddler: '#f5a07e',
-    big: '#c9b0ec',
+    newborn: '#e3ecf3',
+    early: '#dcebe2',
+    mid: '#f1e6b4',
+    toddler: '#f0d3c8',
+    big: '#e2d8ee',
   },
   success: { 50: '#eef5e6', 200: '#bcd6a0', 700: '#3f6212', 800: '#33500f' },
   warning: { 50: '#fdf3df', 200: '#f0cf8a', 700: '#7a4f00', 800: '#5f3d00' },
@@ -71,7 +71,7 @@ export const palette = {
 /** Semantic colours: what components use. Every text/background pair is contrast-tested to WCAG AA. */
 export const colors = {
   /** Clean white pages, with a light olive tint for alternating sections. */
-  background: palette.sand[50],
+  background: palette.sand[0],
   surface: palette.sand[0],
   'surface-muted': palette.sand[100],
   'surface-sunken': palette.sand[100],
@@ -80,15 +80,15 @@ export const colors = {
   border: palette.sand[200],
   /** Borders of form controls must reach 3:1 against the surface (WCAG 1.4.11). */
   'border-strong': palette.sand[500],
-  primary: palette.brand[800],
-  'primary-hover': palette.brand[900],
+  primary: palette.brand[900],
+  'primary-hover': palette.brand[700],
   'primary-foreground': palette.sand[50],
   'primary-soft': palette.brand[50],
   'primary-soft-foreground': palette.brand[800],
   /** Clay is a fill colour (buttons, highlights) with near-black text on it; it is too light for text on white. */
   accent: palette.accent[400],
-  'accent-hover': palette.accent[300],
-  'accent-foreground': palette.sand[900],
+  'accent-hover': palette.accent[500],
+  'accent-foreground': palette.sand[0],
   'stage-newborn': palette.stage.newborn,
   'stage-early': palette.stage.early,
   'stage-mid': palette.stage.mid,
@@ -119,9 +119,9 @@ export const colors = {
 export type ColorToken = keyof typeof colors;
 
 export const fonts = {
-  /** One characterful grotesque (Bricolage Grotesque) for everything. Loaded by each app (next/font on web); the stack is the fallback. */
-  display: '"Bricolage Grotesque", ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif',
-  sans: '"Bricolage Grotesque", ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif',
+  /** One grotesque (Space Grotesk) for everything. Loaded by each app (next/font on web); the stack is the fallback. */
+  display: '"Space Grotesk", ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif',
+  sans: '"Space Grotesk", ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif',
   mono: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
 } as const;
 
@@ -145,18 +145,18 @@ export const spacingUnit = '0.25rem';
 
 export const radii = {
   sm: '0.5rem',
-  md: '0.75rem',
-  lg: '1rem',
-  xl: '1.25rem',
-  '2xl': '1.75rem',
+  md: '0.625rem',
+  lg: '0.9375rem',
+  xl: '0.9375rem',
+  '2xl': '0.9375rem',
   full: '9999px',
 } as const;
 
 export const shadows = {
-  xs: '0 1px 2px rgb(0 0 0 / 0.05)',
-  sm: '0 2px 8px rgb(0 0 0 / 0.06)',
-  md: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
-  lg: '0 4px 24px rgb(0 0 0 / 0.12)',
+  xs: 'none',
+  sm: 'none',
+  md: 'none',
+  lg: 'none',
 } as const;
 
 /** Minimum touch target (WCAG 2.5.8 asks for 24px; 44px follows the platform guidelines). */

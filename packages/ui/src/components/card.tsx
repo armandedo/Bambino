@@ -20,9 +20,8 @@ export function Card({
   return (
     <Tag
       className={cn(
-        'rounded-2xl bg-surface shadow-sm',
-        interactive &&
-          'transition-[box-shadow,transform] duration-300 ease-brand focus-within:-translate-y-0.5 focus-within:shadow-lg hover:-translate-y-0.5 hover:shadow-lg',
+        'rounded-2xl border border-border bg-surface',
+        interactive && 'transition-colors focus-within:border-border-strong hover:border-border-strong',
         PADDING[padding],
         className,
       )}

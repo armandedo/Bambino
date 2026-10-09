@@ -15,7 +15,7 @@ function iconFor(slug: string): LucideIcon {
 }
 
 const PILL =
-  'inline-flex min-h-12 items-center gap-2.5 rounded-full bg-surface py-1.5 pr-5 pl-2 font-medium tracking-tight text-primary shadow-sm transition-[box-shadow,transform] duration-300 ease-brand hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus';
+  'inline-flex min-h-12 items-center gap-2.5 rounded-full border border-border bg-surface py-1.5 pr-5 pl-2 text-sm font-medium tracking-[0.06em] text-primary uppercase transition-colors hover:border-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus';
 
 const ICON_DISC = 'flex size-9 items-center justify-center rounded-full bg-surface-muted text-primary';
 

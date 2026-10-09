@@ -26,15 +26,15 @@ export function PlanCard({
   return (
     <article
       className={cn(
-        'grid gap-5 rounded-[1.75rem] bg-surface p-6 shadow-sm sm:p-8 md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:gap-12',
-        featured && 'shadow-lg ring-2 ring-accent',
+        'grid gap-5 rounded-[15px] border border-border bg-surface p-6 sm:p-8 md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:gap-12',
+        featured && 'border-primary ring-1 ring-primary',
       )}
     >
       <div className="flex flex-col gap-3">
         <Heading className="font-display text-2xl font-semibold tracking-tight text-primary">
           {plan.name}
           {featured ? (
-            <span className="ml-3 rounded-full bg-accent px-3 py-1 align-middle text-sm font-medium text-accent-foreground">
+            <span className="ml-3 rounded-full bg-accent px-3 py-1 align-middle text-[0.7rem] font-medium tracking-[0.08em] uppercase text-accent-foreground">
               Most flexible
             </span>
           ) : null}

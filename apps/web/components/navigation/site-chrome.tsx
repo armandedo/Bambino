@@ -80,7 +80,7 @@ function Navbar() {
                     href={item.href}
                     aria-current={current ? 'page' : undefined}
                     className={cn(
-                      'relative rounded-full px-3 py-2 text-[0.95rem] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-focus',
+                      'relative rounded-full px-3 py-2 text-xs font-medium tracking-[0.08em] uppercase transition-colors focus-visible:outline-2 focus-visible:outline-focus',
                       current ? 'text-primary' : 'text-foreground-muted hover:text-foreground',
                     )}
                   >

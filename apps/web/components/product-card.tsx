@@ -20,10 +20,10 @@ export function ProductCard({ product, level = 3 }: { product: ProductCardData; 
           <img
             src={image.url}
             alt={image.altText}
-            className="aspect-[4/5] w-full rounded-[1.25rem] object-cover"
+            className="aspect-[4/5] w-full rounded-[15px] object-cover"
           />
         ) : (
-          <ProductArt seed={product.slug} className="aspect-[4/5] rounded-[1.25rem]" />
+          <ProductArt seed={product.slug} className="aspect-[4/5] rounded-[15px]" />
         )}
       </div>
       <div className="flex flex-1 flex-col gap-2 px-5 pt-2 pb-5">

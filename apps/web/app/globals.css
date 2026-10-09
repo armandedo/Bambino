@@ -7,8 +7,8 @@
 
 /* next/font serves the brand fonts under generated family names, exposed as these variables on <html>. */
 @theme {
-  --font-display: var(--font-bricolage), ui-sans-serif, 'Segoe UI', system-ui, sans-serif;
-  --font-sans: var(--font-bricolage), ui-sans-serif, system-ui, 'Segoe UI', Roboto, sans-serif;
+  --font-display: var(--font-grotesk), ui-sans-serif, 'Segoe UI', system-ui, sans-serif;
+  --font-sans: var(--font-grotesk), ui-sans-serif, system-ui, 'Segoe UI', Roboto, sans-serif;
 }
 
 /*

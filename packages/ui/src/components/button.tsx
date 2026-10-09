@@ -31,7 +31,7 @@ export function buttonClasses({
   className,
 }: { variant?: ButtonVariant; size?: ButtonSize; fullWidth?: boolean; className?: string } = {}): string {
   return cn(
-    'inline-flex items-center justify-center rounded-full font-medium tracking-tight transition-colors',
+    'inline-flex items-center justify-center rounded-full font-medium tracking-[0.06em] uppercase transition-colors',
     'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
     'disabled:cursor-not-allowed disabled:opacity-60 aria-disabled:cursor-not-allowed aria-disabled:opacity-60',
     VARIANTS[variant],

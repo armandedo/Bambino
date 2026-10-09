@@ -55,14 +55,14 @@ export default async function HomePage() {
       <Hero />
 
       {/* Highlights: a quiet strip of the three facts a parent asks first. */}
-      <section aria-label="Why Bambino" className="bg-surface shadow-sm">
-        <ul className="mx-auto grid max-w-6xl divide-y divide-border px-4 sm:grid-cols-3 sm:divide-x sm:divide-y-0 sm:px-6">
+      <section aria-label="Why Bambino" className="bg-primary text-primary-foreground">
+        <ul className="mx-auto grid max-w-6xl divide-y divide-brand-800 px-4 sm:grid-cols-3 sm:divide-x sm:divide-y-0 sm:px-6">
           {HIGHLIGHTS.map((item) => (
             <li key={item.title} className="flex items-center gap-4 py-5 sm:px-6 sm:first:pl-0 sm:last:pr-0">
-              <item.icon aria-hidden="true" className="size-8 shrink-0 text-primary" strokeWidth={1.5} />
+              <item.icon aria-hidden="true" className="size-7 shrink-0" strokeWidth={1.4} />
               <span className="flex flex-col">
-                <span className="font-semibold text-primary">{item.title}</span>
-                <span className="text-sm text-foreground-muted">{item.body}</span>
+                <span className="text-sm font-medium tracking-[0.06em] uppercase">{item.title}</span>
+                <span className="text-sm text-brand-300">{item.body}</span>
               </span>
             </li>
           ))}
@@ -85,10 +85,13 @@ export default async function HomePage() {
           <SectionHeading id="how" title="How it works" />
           <ol className="grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
             {STEPS.map((step, index) => (
-              <li key={step.title} className="flex flex-col gap-3 rounded-[1.75rem] bg-surface p-7 shadow-sm">
+              <li
+                key={step.title}
+                className="flex flex-col gap-3 rounded-[15px] border border-border bg-surface p-7"
+              >
                 <span
                   aria-hidden="true"
-                  className="flex size-11 items-center justify-center rounded-full bg-accent font-display text-xl font-medium text-accent-foreground tabular-nums"
+                  className="flex size-11 items-center justify-center rounded-full bg-primary font-display text-lg font-medium text-primary-foreground tabular-nums"
                 >
                   {index + 1}
                 </span>
@@ -109,7 +112,7 @@ export default async function HomePage() {
       </section>
 
       {/* Products */}
-      <section aria-labelledby="new">
+      <section aria-labelledby="new" className="bg-surface-muted">
         <div className={SECTION}>
           <div className="flex flex-col gap-10">
             <div className="flex flex-wrap items-end justify-between gap-4">
@@ -161,9 +164,9 @@ export default async function HomePage() {
       </section>
 
       {/* Swapping and reuse */}
-      <section aria-labelledby="swap" className="bg-surface">
+      <section aria-labelledby="swap" className="bg-surface-muted">
         <div className={`${SECTION} grid items-center gap-10 lg:grid-cols-2 lg:gap-16`}>
-          <div className="relative aspect-[4/3] overflow-hidden rounded-[1.75rem] bg-sand-100">
+          <div className="relative aspect-[4/3] overflow-hidden rounded-[15px] bg-sand-100">
             <Image
               src={stockSrc(PHOTOS.circular)}
               alt={PHOTOS.circular.alt}
@@ -205,7 +208,7 @@ export default async function HomePage() {
               body: 'Answer four quick questions and we’ll suggest a size.',
               action: 'Start the fit finder',
               tone: 'bg-primary text-primary-foreground',
-              bodyTone: 'text-brand-200',
+              bodyTone: 'text-brand-300',
               button: buttonClasses({ variant: 'accent' }),
             },
             {
@@ -213,9 +216,9 @@ export default async function HomePage() {
               title: 'Outgrown it already?',
               body: 'Swap what is small for the next size and earn credit.',
               action: 'How swapping works',
-              tone: 'bg-accent text-accent-foreground',
-              bodyTone: 'text-accent-foreground',
-              button: buttonClasses({ variant: 'primary' }),
+              tone: 'bg-surface-muted text-primary',
+              bodyTone: 'text-foreground-muted',
+              button: buttonClasses({ variant: 'outline' }),
             },
             {
               href: '/plans',
@@ -229,7 +232,7 @@ export default async function HomePage() {
           ].map((card) => (
             <li
               key={card.href}
-              className={`flex flex-col items-start gap-4 rounded-[1.75rem] p-8 shadow-sm ${card.tone}`}
+              className={`flex flex-col items-start gap-4 rounded-[15px] border border-border p-8 ${card.tone}`}
             >
               <h2 className="font-display text-2xl leading-tight font-semibold tracking-tight">
                 {card.title}

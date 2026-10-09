@@ -1,14 +1,14 @@
 import type { Metadata, Viewport } from 'next';
-import { Bricolage_Grotesque } from 'next/font/google';
+import { Space_Grotesk } from 'next/font/google';
 import { connection } from 'next/server';
 import type { ReactNode } from 'react';
 import './globals.css';
 
 // Self-hosted at build time by next/font: no request to Google from the visitor's browser.
-const bricolage = Bricolage_Grotesque({
+const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
-  axes: ['opsz', 'wdth'],
-  variable: '--font-bricolage',
+  weight: ['400', '500', '700'],
+  variable: '--font-grotesk',
   display: 'swap',
 });
 
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#16213A',
+  themeColor: '#000000',
 };
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
@@ -29,7 +29,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   // time has none. API data is still cached by each fetch's own `revalidate`.
   await connection();
   return (
-    <html lang="en" className={bricolage.variable}>
+    <html lang="en" className={spaceGrotesk.variable}>
       <body>{children}</body>
     </html>
   );
