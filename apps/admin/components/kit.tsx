@@ -163,7 +163,7 @@ export function Section({
   return (
     <section aria-label={title} className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="font-display text-xl font-bold">{title}</h2>
+        <h2 className="font-display text-xl font-semibold">{title}</h2>
         {action}
       </div>
       {children}

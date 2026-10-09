@@ -39,7 +39,7 @@ export function AddToCart({ variants, oneTimeEligible }: { variants: Variant[]; 
     <div className="flex flex-col gap-4">
       {colors.length > 1 ? (
         <fieldset className="flex flex-col gap-2">
-          <legend className="mb-1 font-display text-lg font-bold">Colour</legend>
+          <legend className="mb-1 font-display text-lg font-semibold">Colour</legend>
           <div className="flex flex-wrap gap-2">
             {colors.map((c) => (
               <label
@@ -68,7 +68,7 @@ export function AddToCart({ variants, oneTimeEligible }: { variants: Variant[]; 
       ) : null}
 
       <fieldset className="flex flex-col gap-2">
-        <legend className="mb-1 font-display text-lg font-bold">
+        <legend className="mb-1 font-display text-lg font-semibold">
           Size{' '}
           {colors.length === 1 ? (
             <span className="font-sans text-sm font-normal text-foreground-muted">· {color}</span>

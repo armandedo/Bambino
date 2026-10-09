@@ -21,7 +21,7 @@ function BabySection({ baby }: { baby: BabyProfile }) {
     <section aria-labelledby={`baby-${baby.id}`} className="flex flex-col gap-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 id={`baby-${baby.id}`} className="font-display text-2xl font-bold">
+          <h2 id={`baby-${baby.id}`} className="font-display text-2xl font-semibold">
             {baby.nickname}
           </h2>
           <p className="text-foreground-muted">

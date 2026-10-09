@@ -399,7 +399,7 @@ export function FitWizard() {
             transition={{ duration: 1, ease: 'linear', repeat: Infinity }}
           />
         </div>
-        <p className="font-display text-2xl font-bold text-primary">Comparing with our size chart…</p>
+        <p className="font-display text-2xl font-semibold text-primary">Comparing with our size chart…</p>
         <p className="text-foreground-muted">
           Checking age{draft.heightCm ? ', height' : ''}
           {draft.weightKg ? ' and weight' : ''}.

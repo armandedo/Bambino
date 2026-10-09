@@ -127,7 +127,7 @@ export default function NewSubscriptionPage() {
         description="One plan per baby. You can pause or cancel from your account."
       />
       <Card as="section" aria-labelledby="plan-step" className="flex flex-col gap-4">
-        <h2 id="plan-step" className="font-display text-xl font-bold">
+        <h2 id="plan-step" className="font-display text-xl font-semibold">
           1. Plan
         </h2>
         <QueryState query={plans} what="plans">
@@ -148,7 +148,7 @@ export default function NewSubscriptionPage() {
       </Card>
 
       <Card as="section" aria-labelledby="baby-step" className="flex flex-col gap-4">
-        <h2 id="baby-step" className="font-display text-xl font-bold">
+        <h2 id="baby-step" className="font-display text-xl font-semibold">
           2. Baby
         </h2>
         <QueryState query={babies} what="your baby profiles">
@@ -185,7 +185,7 @@ export default function NewSubscriptionPage() {
       </Card>
 
       <Card as="section" aria-labelledby="address-step" className="flex flex-col gap-4">
-        <h2 id="address-step" className="font-display text-xl font-bold">
+        <h2 id="address-step" className="font-display text-xl font-semibold">
           3. Delivery
         </h2>
         <AddressPicker viewer={viewer} value={addressId} onChange={setAddressId} />

@@ -47,7 +47,7 @@ function Section({
   return (
     <section aria-labelledby={id} className="flex flex-col gap-4 border-t border-border pt-10">
       <div>
-        <h2 id={id} className="font-display text-2xl font-bold">
+        <h2 id={id} className="font-display text-2xl font-semibold">
           {title}
         </h2>
         {intro ? <p className="mt-1 max-w-prose text-foreground-muted">{intro}</p> : null}
@@ -155,7 +155,7 @@ export function Gallery() {
               <p key={size} className="flex items-baseline gap-4">
                 <span className="w-12 shrink-0 text-xs text-foreground-muted">{size}</span>
                 <span
-                  className={size.match(/xl/) ? 'font-display font-bold' : ''}
+                  className={size.match(/xl/) ? 'font-display font-semibold' : ''}
                   style={{ fontSize: fontSizes[size][0] }}
                 >
                   Clothes that keep up with your baby

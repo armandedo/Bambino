@@ -221,7 +221,7 @@ function Subscriptions() {
                   </p>
                   <p className="font-mono text-xs text-foreground-muted">{plan.code}</p>
                   <p>
-                    <MoneyText value={plan.price} className="font-display text-xl font-bold" /> /{' '}
+                    <MoneyText value={plan.price} className="font-display text-xl font-semibold" /> /{' '}
                     {plan.billingInterval.toLowerCase()}
                   </p>
                   <p className="text-sm text-foreground-muted">

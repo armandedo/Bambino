@@ -1,5 +1,5 @@
 import { buttonClasses, cn } from '@bambino/ui';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Ruler } from 'lucide-react';
 import Image from 'next/image';
 import NextLink from 'next/link';
 import { PHOTOS, stockSrc } from '@/lib/stock-photos';
@@ -23,11 +23,11 @@ const STAGES = [
 export function Hero() {
   return (
     <section aria-labelledby="hero-title" className="overflow-hidden bg-background">
-      <div className="mx-auto grid max-w-6xl gap-x-12 gap-y-10 px-4 py-12 sm:px-6 lg:grid-cols-[minmax(0,1fr)_17rem] lg:py-20">
+      <div className="mx-auto grid max-w-6xl gap-x-14 gap-y-10 px-4 py-12 sm:px-6 lg:grid-cols-[minmax(0,1fr)_24rem] lg:py-20">
         <div className="flex flex-col gap-8">
           <h1
             id="hero-title"
-            className="max-w-[12ch] font-display text-[2.75rem] leading-[0.98] font-bold tracking-[-0.02em] text-primary uppercase sm:text-7xl lg:text-[5.25rem]"
+            className="max-w-[11ch] font-display text-[3rem] leading-[0.96] font-medium tracking-[-0.045em] text-primary sm:text-7xl lg:text-[5.75rem]"
           >
             The right size, every month.
           </h1>
@@ -47,17 +47,20 @@ export function Hero() {
           {/* The ruler: oldest stage at the top, like marks on a doorframe. */}
           <ol
             aria-label="Baby sizes from newborn to 24 months"
-            className="mt-2 flex flex-col-reverse border-l-2 border-primary pl-0"
+            className="mt-2 flex flex-col-reverse border-l-2 border-primary"
           >
             {STAGES.map((stage, index) => (
-              <li key={stage.label} className="group relative flex items-center gap-4 py-2">
+              <li key={stage.label} className="relative flex items-center gap-4 py-1.5">
                 <span
                   aria-hidden="true"
                   className={cn('ruler-mark h-0.5 bg-primary', stage.mark)}
                   style={{ animationDelay: `${0.15 + index * 0.12}s` }}
                 />
                 <span
-                  className={cn('rounded-md px-2.5 py-1 text-sm font-semibold text-foreground', stage.tag)}
+                  className={cn(
+                    'rounded-full px-3.5 py-1 text-sm font-medium text-foreground shadow-xs',
+                    stage.tag,
+                  )}
                 >
                   {stage.label}
                 </span>
@@ -67,25 +70,25 @@ export function Hero() {
           </ol>
         </div>
 
-        {/* A doorway on large screens: the arch frames the one photo. A wide band below the ruler on small ones. */}
-        <div className="relative lg:mx-auto lg:w-full lg:max-w-[17rem]">
-          <div className="relative aspect-[16/10] w-full overflow-hidden rounded-xl bg-sand-100 lg:aspect-auto lg:h-full lg:min-h-[30rem] lg:rounded-t-[999px] lg:rounded-b-none">
-            {/* The page's largest paint: fetched early, never lazy. */}
-            <Image
-              src={stockSrc(PHOTOS.heroMother)}
-              alt={PHOTOS.heroMother.alt}
-              fill
-              sizes="(min-width: 1024px) 17rem, 100vw"
-              fetchPriority="high"
-              loading="eager"
-              className="object-cover"
-            />
+        {/* The one photo, framed like a card: white margin, softly rounded inside. */}
+        <div className="relative lg:self-start">
+          <div className="rounded-[1.75rem] bg-surface p-2 shadow-md">
+            <div className="relative aspect-[4/5] overflow-hidden rounded-[1.25rem] bg-sand-100">
+              {/* The page's largest paint: fetched early, never lazy. */}
+              <Image
+                src={stockSrc(PHOTOS.heroMother)}
+                alt={PHOTOS.heroMother.alt}
+                fill
+                sizes="(min-width: 1024px) 24rem, 100vw"
+                fetchPriority="high"
+                loading="eager"
+                className="object-cover"
+              />
+            </div>
           </div>
-          {/* The one stamp on the photo: the span of sizes Bambino covers. */}
-          <p className="absolute -bottom-4 left-4 flex size-24 flex-col items-center justify-center rounded-full bg-primary text-center leading-tight text-primary-foreground shadow-md sm:-left-6 lg:-left-10 lg:size-28">
-            <span className="text-xs">Sizes for</span>
-            <span className="font-display text-xl font-bold text-accent">0–24</span>
-            <span className="text-xs">months</span>
+          <p className="absolute bottom-6 left-6 flex items-center gap-2 rounded-full bg-surface px-4 py-2.5 text-sm font-medium text-primary shadow-lg">
+            <Ruler aria-hidden="true" className="size-4" />
+            Sizes for 0–24 months
           </p>
         </div>
       </div>

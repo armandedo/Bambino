@@ -231,7 +231,7 @@ export function AdminShell({
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-surface px-6 py-4">
-          <h1 className="font-display text-2xl font-bold">{title}</h1>
+          <h1 className="font-display text-2xl font-semibold">{title}</h1>
           {actions ? <div className="flex flex-wrap gap-2">{actions}</div> : null}
         </header>
         <main id="main" tabIndex={-1} className="flex-1 p-6 focus:outline-none">

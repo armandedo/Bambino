@@ -55,7 +55,7 @@ export default async function HomePage() {
       <Hero />
 
       {/* Highlights: a quiet strip of the three facts a parent asks first. */}
-      <section aria-label="Why Bambino" className="border-y border-border bg-surface">
+      <section aria-label="Why Bambino" className="bg-surface shadow-sm">
         <ul className="mx-auto grid max-w-6xl divide-y divide-border px-4 sm:grid-cols-3 sm:divide-x sm:divide-y-0 sm:px-6">
           {HIGHLIGHTS.map((item) => (
             <li key={item.title} className="flex items-center gap-4 py-5 sm:px-6 sm:first:pl-0 sm:last:pr-0">
@@ -79,20 +79,22 @@ export default async function HomePage() {
         </section>
       ) : null}
 
-      {/* How it works: a real sequence, so the steps are numbered; ruled columns, not cards. */}
+      {/* How it works: a real sequence, so the steps are numbered; white cards. */}
       <section aria-labelledby="how" className={SECTION}>
         <div className="flex flex-col gap-10">
           <SectionHeading id="how" title="How it works" />
           <ol className="grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
             {STEPS.map((step, index) => (
-              <li key={step.title} className="flex flex-col gap-3 border-t-4 border-primary pt-4">
+              <li key={step.title} className="flex flex-col gap-3 rounded-[1.75rem] bg-surface p-7 shadow-sm">
                 <span
                   aria-hidden="true"
-                  className="font-display text-4xl font-bold text-primary tabular-nums"
+                  className="flex size-11 items-center justify-center rounded-full bg-accent font-display text-xl font-medium text-accent-foreground tabular-nums"
                 >
                   {index + 1}
                 </span>
-                <h3 className="font-display text-xl font-bold tracking-tight text-primary">{step.title}</h3>
+                <h3 className="font-display text-xl font-semibold tracking-tight text-primary">
+                  {step.title}
+                </h3>
                 <p className="text-foreground-muted">{step.body}</p>
               </li>
             ))}
@@ -107,7 +109,7 @@ export default async function HomePage() {
       </section>
 
       {/* Products */}
-      <section aria-labelledby="new" className="bg-surface-muted">
+      <section aria-labelledby="new">
         <div className={SECTION}>
           <div className="flex flex-col gap-10">
             <div className="flex flex-wrap items-end justify-between gap-4">
@@ -149,7 +151,7 @@ export default async function HomePage() {
           ) : plans.data.subscriptionPlans.length === 0 ? (
             <EmptyState title="No plans yet" description="Plans appear here once they are published." />
           ) : (
-            <div className="divide-y divide-border border-y border-border">
+            <div className="flex flex-col gap-4">
               {plans.data.subscriptionPlans.map((plan, index) => (
                 <PlanCard key={plan.id} plan={plan} featured={index === 0} />
               ))}
@@ -159,9 +161,9 @@ export default async function HomePage() {
       </section>
 
       {/* Swapping and reuse */}
-      <section aria-labelledby="swap" className="bg-surface-muted">
+      <section aria-labelledby="swap" className="bg-surface">
         <div className={`${SECTION} grid items-center gap-10 lg:grid-cols-2 lg:gap-16`}>
-          <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-sand-100">
+          <div className="relative aspect-[4/3] overflow-hidden rounded-[1.75rem] bg-sand-100">
             <Image
               src={stockSrc(PHOTOS.circular)}
               alt={PHOTOS.circular.alt}
@@ -220,13 +222,18 @@ export default async function HomePage() {
               title: 'One plan per baby',
               body: 'Monthly, every three months or yearly. Pause or stop any time.',
               action: 'See plans and prices',
-              tone: 'bg-surface-muted text-primary',
+              tone: 'bg-surface text-primary',
               bodyTone: 'text-foreground-muted',
               button: buttonClasses({ variant: 'outline' }),
             },
           ].map((card) => (
-            <li key={card.href} className={`flex flex-col items-start gap-4 rounded-xl p-8 ${card.tone}`}>
-              <h2 className="font-display text-2xl leading-tight font-bold tracking-tight">{card.title}</h2>
+            <li
+              key={card.href}
+              className={`flex flex-col items-start gap-4 rounded-[1.75rem] p-8 shadow-sm ${card.tone}`}
+            >
+              <h2 className="font-display text-2xl leading-tight font-semibold tracking-tight">
+                {card.title}
+              </h2>
               <p className={`max-w-[34ch] ${card.bodyTone}`}>{card.body}</p>
               <NextLink href={card.href} className={`${card.button} mt-auto`}>
                 {card.action} <ArrowRight aria-hidden="true" className="size-4" />

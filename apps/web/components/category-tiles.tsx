@@ -14,35 +14,34 @@ function iconFor(slug: string): LucideIcon {
   return ICONS.find(([pattern]) => pattern.test(slug))?.[1] ?? Shirt;
 }
 
-const TILE =
-  'group flex flex-col items-center gap-3 rounded-xl bg-surface-muted px-3 py-5 text-center transition-colors hover:bg-brand-100 focus-visible:outline-2 focus-visible:outline-focus';
+const PILL =
+  'inline-flex min-h-12 items-center gap-2.5 rounded-full bg-surface py-1.5 pr-5 pl-2 font-medium tracking-tight text-primary shadow-sm transition-[box-shadow,transform] duration-300 ease-brand hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus';
 
-/** One tile per shop category, linking to the shop filtered by it, plus a tile for everything. */
+const ICON_DISC = 'flex size-9 items-center justify-center rounded-full bg-surface-muted text-primary';
+
+/** One pill per shop category, linking to the shop filtered by it, plus one for everything. */
 export function CategoryTiles({ categories }: { categories: CategorySummary[] }) {
   return (
-    <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-      {categories.slice(0, 5).map((category) => {
+    <ul className="flex flex-wrap gap-3">
+      {categories.slice(0, 6).map((category) => {
         const Icon = iconFor(category.slug);
         return (
-          <li key={category.id} className="flex">
-            <NextLink
-              href={`/shop?category=${encodeURIComponent(category.slug)}`}
-              className={`${TILE} w-full`}
-            >
-              <span className="flex size-14 items-center justify-center rounded-full bg-surface text-primary shadow-xs">
-                <Icon aria-hidden="true" className="size-7" strokeWidth={1.6} />
+          <li key={category.id}>
+            <NextLink href={`/shop?category=${encodeURIComponent(category.slug)}`} className={PILL}>
+              <span className={ICON_DISC}>
+                <Icon aria-hidden="true" className="size-[1.1rem]" strokeWidth={1.7} />
               </span>
-              <span className="font-semibold text-primary">{category.name}</span>
+              {category.name}
             </NextLink>
           </li>
         );
       })}
-      <li className="flex">
-        <NextLink href="/shop" className={`${TILE} w-full`}>
-          <span className="flex size-14 items-center justify-center rounded-full bg-surface text-primary shadow-xs">
-            <LayoutGrid aria-hidden="true" className="size-7" strokeWidth={1.6} />
+      <li>
+        <NextLink href="/shop" className={PILL}>
+          <span className={ICON_DISC}>
+            <LayoutGrid aria-hidden="true" className="size-[1.1rem]" strokeWidth={1.7} />
           </span>
-          <span className="font-semibold text-primary">All clothes</span>
+          All clothes
         </NextLink>
       </li>
     </ul>

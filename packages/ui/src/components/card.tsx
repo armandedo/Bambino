@@ -20,8 +20,9 @@ export function Card({
   return (
     <Tag
       className={cn(
-        'rounded-xl border border-border bg-surface shadow-xs',
-        interactive && 'transition-shadow focus-within:shadow-md hover:shadow-md',
+        'rounded-2xl bg-surface shadow-sm',
+        interactive &&
+          'transition-[box-shadow,transform] duration-300 ease-brand focus-within:-translate-y-0.5 focus-within:shadow-lg hover:-translate-y-0.5 hover:shadow-lg',
         PADDING[padding],
         className,
       )}
@@ -44,7 +45,7 @@ export function CardHeader({ title, description, action, level = 2, className }:
   return (
     <div className={cn('mb-4 flex items-start justify-between gap-4', className)}>
       <div className="flex flex-col gap-1">
-        <Heading className="font-display text-lg font-bold text-foreground">{title}</Heading>
+        <Heading className="font-display text-lg font-semibold text-foreground">{title}</Heading>
         {description ? <p className="text-sm text-foreground-muted">{description}</p> : null}
       </div>
       {action}

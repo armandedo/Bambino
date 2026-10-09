@@ -13,15 +13,22 @@ export function ProductCard({ product, level = 3 }: { product: ProductCardData; 
 
   return (
     <Card as="article" padding="none" interactive className="group relative flex flex-col overflow-hidden">
-      {image ? (
-        // Plain img: product photos come from object storage, and next/image needs its domain configured first.
-        <img src={image.url} alt={image.altText} className="aspect-[4/5] w-full object-cover" />
-      ) : (
-        <ProductArt seed={product.slug} className="aspect-[4/5]" />
-      )}
-      <div className="flex flex-1 flex-col gap-2 p-4">
+      {/* The photo sits in a white margin with softly rounded corners inside the card. */}
+      <div className="p-2">
+        {image ? (
+          // Plain img: product photos come from object storage, and next/image needs its domain configured first.
+          <img
+            src={image.url}
+            alt={image.altText}
+            className="aspect-[4/5] w-full rounded-[1.25rem] object-cover"
+          />
+        ) : (
+          <ProductArt seed={product.slug} className="aspect-[4/5] rounded-[1.25rem]" />
+        )}
+      </div>
+      <div className="flex flex-1 flex-col gap-2 px-5 pt-2 pb-5">
         <p className="text-sm text-foreground-muted">{product.category.name}</p>
-        <Heading className="font-display text-lg leading-snug font-bold">
+        <Heading className="font-display text-lg leading-snug font-medium tracking-tight">
           <NextLink
             href={`/shop/${product.slug}`}
             className="after:absolute after:inset-0 focus-visible:outline-none group-focus-within:underline"

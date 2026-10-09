@@ -55,7 +55,7 @@ function OrderDetail({ id }: { id: string }) {
           <div className="flex flex-col gap-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h2 className="font-mono text-2xl font-bold">{order.orderNumber}</h2>
+                <h2 className="font-mono text-2xl font-semibold">{order.orderNumber}</h2>
                 <p className="text-foreground-muted">
                   {humanizeStatus(order.type)} ·{' '}
                   {can('customer:read') ? (
@@ -122,7 +122,7 @@ function OrderDetail({ id }: { id: string }) {
                       </dd>
                     </div>
                   ))}
-                  <div className="flex justify-between font-bold">
+                  <div className="flex justify-between font-semibold">
                     <dt>Total</dt>
                     <dd>
                       <MoneyText value={order.totals.total} />

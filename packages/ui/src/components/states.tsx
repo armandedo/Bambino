@@ -37,7 +37,7 @@ function StateLayout({
           {icon}
         </div>
       ) : null}
-      <Heading className="font-display text-lg font-bold text-foreground">{title}</Heading>
+      <Heading className="font-display text-lg font-semibold text-foreground">{title}</Heading>
       {description ? <p className="max-w-md text-foreground-muted">{description}</p> : null}
       {action ? <div className="mt-2">{action}</div> : null}
     </div>

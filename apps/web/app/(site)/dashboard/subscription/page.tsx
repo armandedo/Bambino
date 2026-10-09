@@ -128,7 +128,7 @@ function SubscriptionCard({ subscription }: { subscription: Subscription }) {
       ) : null}
 
       <div className="flex flex-col gap-2">
-        <h3 className="font-display text-lg font-bold">This cycle’s pieces</h3>
+        <h3 className="font-display text-lg font-semibold">This cycle’s pieces</h3>
         {cycleItems.length === 0 ? (
           <p className="text-sm text-foreground-muted">None chosen yet.</p>
         ) : (

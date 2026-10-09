@@ -32,7 +32,7 @@ function BagLink({ count }: { count: number }) {
       {count > 0 ? (
         <span
           aria-hidden="true"
-          className="absolute top-1.5 right-1.5 flex min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[0.625rem] leading-4 font-bold text-accent-foreground"
+          className="absolute top-1.5 right-1.5 flex min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[0.625rem] leading-4 font-semibold text-accent-foreground"
         >
           {count}
         </span>
@@ -59,9 +59,7 @@ function Navbar() {
     <header
       className={cn(
         'sticky top-0 z-40 transition-[background-color,border-color,box-shadow] duration-300 ease-brand',
-        scrolled
-          ? 'border-b border-border bg-background/95 backdrop-blur'
-          : 'border-b border-transparent bg-background',
+        scrolled ? 'bg-surface/95 shadow-sm backdrop-blur' : 'bg-surface',
       )}
     >
       <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:px-6">

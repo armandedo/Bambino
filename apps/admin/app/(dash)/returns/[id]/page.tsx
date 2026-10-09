@@ -219,7 +219,7 @@ function ReturnDetail({ id }: { id: string }) {
           <div className="flex flex-col gap-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h2 className="font-display text-2xl font-bold">
+                <h2 className="font-display text-2xl font-semibold">
                   Return <span className="font-mono">{request.returnNumber}</span>
                 </h2>
                 <p className="text-foreground-muted">
@@ -271,7 +271,7 @@ function ReturnDetail({ id }: { id: string }) {
 
             <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
               <section aria-label="Pieces" className="flex flex-col gap-3">
-                <h3 className="font-display text-lg font-bold">Pieces</h3>
+                <h3 className="font-display text-lg font-semibold">Pieces</h3>
                 <ul className="flex flex-col gap-3">
                   {request.items.map((item) => (
                     <ItemCard key={item.id} item={item} request={request} />

@@ -126,7 +126,7 @@ export function PaymentPanel({
         aria-live="polite"
       >
         <Spinner label={null} size="lg" className="text-primary" />
-        <h3 className="font-display text-xl font-bold">Approve the payment on your phone</h3>
+        <h3 className="font-display text-xl font-semibold">Approve the payment on your phone</h3>
         <p className="text-primary-soft-foreground">
           We asked your wallet for <MoneyText value={payment.amount} className="font-semibold" />. Enter your
           PIN on the prompt to confirm.

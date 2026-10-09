@@ -150,7 +150,7 @@ function CustomerDetail({ id }: { id: string }) {
         ) : (
           <div className="flex flex-col gap-6">
             <div>
-              <h2 className="font-display text-2xl font-bold">
+              <h2 className="font-display text-2xl font-semibold">
                 {customer.firstName} {customer.lastName}
               </h2>
               <p className="text-foreground-muted">

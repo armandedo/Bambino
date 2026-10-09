@@ -5,9 +5,9 @@ import NextLink from 'next/link';
 const PER: Record<BillingInterval, string> = { MONTHLY: 'month', QUARTERLY: '3 months', ANNUAL: 'year' };
 
 /**
- * One plan, as a row of a ledger like the care label on a garment: name and what is included on the left, price
+ * One plan, as a row of a wide card, like the care label on a garment: name and what is included on the left, price
  * and the action on the right. Name, price, items and exchanges all come from the API; nothing is computed here.
- * Put rows in a list with `divide-y`; the featured one carries a mark hanging in the left margin.
+ * Stack them with a gap; the featured one is lifted and outlined in the accent colour.
  */
 export function PlanCard({
   plan,
@@ -26,15 +26,15 @@ export function PlanCard({
   return (
     <article
       className={cn(
-        'relative grid gap-5 py-8 md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:gap-12',
-        featured && 'before:absolute before:inset-y-0 before:-left-4 before:w-1.5 before:rounded-full before:bg-accent',
+        'grid gap-5 rounded-[1.75rem] bg-surface p-6 shadow-sm sm:p-8 md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:gap-12',
+        featured && 'shadow-lg ring-2 ring-accent',
       )}
     >
       <div className="flex flex-col gap-3">
-        <Heading className="font-display text-2xl font-bold tracking-tight text-primary">
+        <Heading className="font-display text-2xl font-semibold tracking-tight text-primary">
           {plan.name}
           {featured ? (
-            <span className="ml-3 rounded-md bg-accent px-2 py-0.5 align-middle text-sm font-semibold text-accent-foreground">
+            <span className="ml-3 rounded-full bg-accent px-3 py-1 align-middle text-sm font-medium text-accent-foreground">
               Most flexible
             </span>
           ) : null}
@@ -47,7 +47,7 @@ export function PlanCard({
       </div>
       <div className="flex items-center justify-between gap-6 md:flex-col md:items-end md:gap-3">
         <p className="whitespace-nowrap">
-          <MoneyText value={plan.price} className="font-display text-4xl font-bold tracking-tight" />
+          <MoneyText value={plan.price} className="font-display text-4xl font-semibold tracking-tight" />
           <span className="text-foreground-muted"> / {PER[plan.billingInterval]}</span>
         </p>
         <NextLink

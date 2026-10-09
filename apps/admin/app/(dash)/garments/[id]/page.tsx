@@ -96,7 +96,7 @@ function GarmentDetail({ id }: { id: string }) {
           <div className="flex flex-col gap-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h2 className="font-mono text-2xl font-bold">{garment.tagCode}</h2>
+                <h2 className="font-mono text-2xl font-semibold">{garment.tagCode}</h2>
                 <p className="text-foreground-muted">
                   {garment.product.name} · {garment.variant.size.label} · {garment.variant.color} ·{' '}
                   {garment.variant.sku}

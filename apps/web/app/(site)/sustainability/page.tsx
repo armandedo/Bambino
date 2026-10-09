@@ -74,7 +74,7 @@ export default function SustainabilityPage() {
                   <span className="flex size-11 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
                     <Icon aria-hidden="true" className="size-5" strokeWidth={1.75} />
                   </span>
-                  <h3 className="font-display text-lg font-bold text-primary">{item.title}</h3>
+                  <h3 className="font-display text-lg font-semibold text-primary">{item.title}</h3>
                   <p className="text-sm text-foreground-muted">{item.body}</p>
                 </StaggerItem>
               );

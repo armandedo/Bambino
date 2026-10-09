@@ -37,12 +37,12 @@ export const palette = {
     800: '#5d4a08',
     900: '#403206',
   },
-  /** Cool paper greys: surfaces, borders and body text. 0 is white, 50 the page. */
+  /** Cool canvas greys: 0 is white (cards), 50 the page canvas, 100 to 200 quiet surfaces and hairlines. */
   sand: {
     0: '#ffffff',
-    50: '#f5f7f4',
-    100: '#ebeee9',
-    200: '#dde2db',
+    50: '#f2f4f5',
+    100: '#eaecee',
+    200: '#e1e4e6',
     300: '#c5ccc3',
     400: '#98a096',
     500: '#6b7468',
@@ -73,7 +73,7 @@ export const colors = {
   /** Clean white pages, with a light olive tint for alternating sections. */
   background: palette.sand[50],
   surface: palette.sand[0],
-  'surface-muted': palette.brand[50],
+  'surface-muted': palette.sand[100],
   'surface-sunken': palette.sand[100],
   foreground: palette.brand[900],
   'foreground-muted': palette.sand[600],
@@ -144,19 +144,19 @@ export const fontSizes = {
 export const spacingUnit = '0.25rem';
 
 export const radii = {
-  sm: '0.25rem',
-  md: '0.5rem',
-  lg: '0.625rem',
-  xl: '0.875rem',
-  '2xl': '1.125rem',
+  sm: '0.5rem',
+  md: '0.75rem',
+  lg: '1rem',
+  xl: '1.25rem',
+  '2xl': '1.75rem',
   full: '9999px',
 } as const;
 
 export const shadows = {
-  xs: '0 1px 2px rgb(22 33 58 / 0.06)',
-  sm: '0 1px 3px rgb(22 33 58 / 0.08), 0 1px 2px rgb(22 33 58 / 0.04)',
-  md: '0 4px 12px rgb(22 33 58 / 0.08), 0 2px 4px rgb(22 33 58 / 0.04)',
-  lg: '0 12px 32px rgb(22 33 58 / 0.12), 0 4px 8px rgb(22 33 58 / 0.04)',
+  xs: '0 1px 2px rgb(0 0 0 / 0.05)',
+  sm: '0 2px 8px rgb(0 0 0 / 0.06)',
+  md: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+  lg: '0 4px 24px rgb(0 0 0 / 0.12)',
 } as const;
 
 /** Minimum touch target (WCAG 2.5.8 asks for 24px; 44px follows the platform guidelines). */

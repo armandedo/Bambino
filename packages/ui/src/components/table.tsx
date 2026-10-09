@@ -40,7 +40,7 @@ export function DataTable<Row>({
           className={cn(
             captionHidden
               ? 'sr-only'
-              : 'px-4 pt-4 pb-2 text-left font-display text-base font-bold text-foreground',
+              : 'px-4 pt-4 pb-2 text-left font-display text-base font-semibold text-foreground',
           )}
         >
           {caption}

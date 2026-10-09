@@ -58,7 +58,7 @@ export default async function PlansPage() {
             level={2}
           />
         ) : (
-          <Stagger className="divide-y divide-border border-y border-border" gap={0.12}>
+          <Stagger className="flex flex-col gap-4" gap={0.12}>
             {plans.data.subscriptionPlans.map((plan, index) => (
               <StaggerItem key={plan.id}>
                 <PlanCard plan={plan} featured={index === 0} level={3} />

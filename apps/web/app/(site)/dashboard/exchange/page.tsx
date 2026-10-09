@@ -318,7 +318,7 @@ export default function ExchangesPage() {
       </Card>
 
       <section aria-labelledby="returns-title" className="flex flex-col gap-3">
-        <h2 id="returns-title" className="font-display text-xl font-bold">
+        <h2 id="returns-title" className="font-display text-xl font-semibold">
           Returns
         </h2>
         <QueryState query={returns} what="your returns">
@@ -397,7 +397,7 @@ export default function ExchangesPage() {
       </section>
 
       <section aria-labelledby="exchanges-title" className="flex flex-col gap-3">
-        <h2 id="exchanges-title" className="font-display text-xl font-bold">
+        <h2 id="exchanges-title" className="font-display text-xl font-semibold">
           Exchanges
         </h2>
         <QueryState query={exchanges} what="your exchanges">

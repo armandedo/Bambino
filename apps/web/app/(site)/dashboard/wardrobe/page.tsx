@@ -17,7 +17,7 @@ function GarmentCard({ garment }: { garment: CustomerGarment }) {
       <ProductArt seed={garment.product.slug} className="aspect-[4/3]" />
       <div className="flex flex-1 flex-col gap-2 p-4">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="font-display font-bold text-primary">{garment.product.name}</h3>
+          <h3 className="font-display font-semibold text-primary">{garment.product.name}</h3>
           <StatusBadge status={garment.status} />
         </div>
         <p className="text-sm text-foreground-muted">
@@ -69,7 +69,7 @@ export default function WardrobePage() {
           return (
             <div className="flex flex-col gap-10">
               <section aria-labelledby="with-you" className="flex flex-col gap-4">
-                <h2 id="with-you" className="font-display text-xl font-bold text-primary">
+                <h2 id="with-you" className="font-display text-xl font-semibold text-primary">
                   With you ({withYou.length})
                 </h2>
                 {withYou.length === 0 ? (
@@ -86,7 +86,7 @@ export default function WardrobePage() {
               </section>
               {goingBack.length > 0 ? (
                 <section aria-labelledby="going-back" className="flex flex-col gap-4">
-                  <h2 id="going-back" className="font-display text-xl font-bold text-primary">
+                  <h2 id="going-back" className="font-display text-xl font-semibold text-primary">
                     On their way back ({goingBack.length})
                   </h2>
                   <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

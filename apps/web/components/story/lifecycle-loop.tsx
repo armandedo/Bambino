@@ -87,8 +87,8 @@ export function LifecycleLoop() {
                 textAnchor="middle"
                 className={
                   index % 2 === 0
-                    ? 'fill-sand-50 text-[18px] font-bold'
-                    : 'fill-brand-900 text-[18px] font-bold'
+                    ? 'fill-sand-50 text-[18px] font-semibold'
+                    : 'fill-brand-900 text-[18px] font-semibold'
                 }
               >
                 {index + 1}
@@ -111,14 +111,14 @@ export function LifecycleLoop() {
               aria-hidden="true"
               className={
                 index % 2 === 0
-                  ? 'flex size-10 shrink-0 items-center justify-center rounded-full bg-primary font-bold text-primary-foreground'
-                  : 'flex size-10 shrink-0 items-center justify-center rounded-full bg-accent font-bold text-accent-foreground'
+                  ? 'flex size-10 shrink-0 items-center justify-center rounded-full bg-primary font-semibold text-primary-foreground'
+                  : 'flex size-10 shrink-0 items-center justify-center rounded-full bg-accent font-semibold text-accent-foreground'
               }
             >
               {index + 1}
             </span>
             <span>
-              <span className="block font-display text-lg font-bold text-primary">{stage.label}</span>
+              <span className="block font-display text-lg font-semibold text-primary">{stage.label}</span>
               <span className="text-foreground-muted">{stage.detail}</span>
             </span>
           </motion.li>

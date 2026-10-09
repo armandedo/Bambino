@@ -55,7 +55,7 @@ export default function ExchangePage() {
               key={item.title}
               className="flex flex-col gap-2 rounded-2xl border border-border bg-surface p-6"
             >
-              <h3 className="font-display text-xl font-bold text-primary">{item.title}</h3>
+              <h3 className="font-display text-xl font-semibold text-primary">{item.title}</h3>
               <p className="text-foreground-muted">{item.body}</p>
             </div>
           ))}

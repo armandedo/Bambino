@@ -135,7 +135,7 @@ function CartContents() {
       </section>
       <aside aria-labelledby="summary">
         <Card className="flex flex-col gap-4 lg:sticky lg:top-24">
-          <h2 id="summary" className="font-display text-xl font-bold">
+          <h2 id="summary" className="font-display text-xl font-semibold">
             Summary
           </h2>
           <div className="flex justify-between">

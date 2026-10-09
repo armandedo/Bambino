@@ -84,7 +84,7 @@ function StepItem({
         <div className="relative mb-2 aspect-video w-full overflow-hidden rounded-2xl lg:hidden">
           <Image src={stockSrc(step.photo)} alt="" fill sizes="100vw" className="object-cover" />
         </div>
-        <h3 className="font-display text-2xl font-bold text-primary sm:text-3xl">{step.title}</h3>
+        <h3 className="font-display text-2xl font-semibold text-primary sm:text-3xl">{step.title}</h3>
         <p className="max-w-md text-lg text-foreground-muted">{step.body}</p>
       </div>
     </li>
@@ -121,7 +121,7 @@ export function HowItWorksStory() {
                 >
                   <Icon aria-hidden="true" className="size-7" strokeWidth={1.75} />
                 </span>
-                <p className="font-display text-2xl font-bold text-white drop-shadow">{step.title}</p>
+                <p className="font-display text-2xl font-semibold text-white drop-shadow">{step.title}</p>
               </div>
             </motion.div>
           </AnimatePresence>

@@ -103,7 +103,7 @@ export default async function ProductPage({ params }: { params: Params }) {
           </NextLink>
 
           <section aria-labelledby="lifecycle" className="flex flex-col gap-3">
-            <h2 id="lifecycle" className="font-display text-lg font-bold text-primary">
+            <h2 id="lifecycle" className="font-display text-lg font-semibold text-primary">
               This piece’s life
             </h2>
             <ol className="flex flex-wrap items-center gap-2 text-sm">

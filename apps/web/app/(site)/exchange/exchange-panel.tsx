@@ -25,7 +25,7 @@ function SignedInPanel() {
   return (
     <div className="grid gap-6 rounded-2xl border border-border bg-surface p-6 shadow-sm sm:p-8 lg:grid-cols-[1fr_auto] lg:items-center">
       <div className="flex flex-col gap-5">
-        <h2 className="font-display text-2xl font-bold text-primary">Your exchanges</h2>
+        <h2 className="font-display text-2xl font-semibold text-primary">Your exchanges</h2>
         <dl className="grid gap-3 sm:grid-cols-3">
           <div className="rounded-2xl bg-brand-50 p-4">
             <dt className="text-sm text-foreground-muted">Ready to return</dt>
@@ -72,7 +72,7 @@ export function ExchangePanel() {
         <SignedInPanel />
       ) : (
         <div className="flex flex-col items-start gap-4 rounded-2xl bg-accent-50 p-6 sm:p-8">
-          <h2 className="font-display text-2xl font-bold text-primary">Already a subscriber?</h2>
+          <h2 className="font-display text-2xl font-semibold text-primary">Already a subscriber?</h2>
           <p className="text-foreground-muted">Sign in to see the pieces you have and start a return.</p>
           <NextLink href="/login?next=/dashboard/exchange" className={buttonClasses()}>
             Sign in

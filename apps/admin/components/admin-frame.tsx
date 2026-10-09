@@ -99,7 +99,7 @@ export function AdminFrame({ children, actions }: { children: ReactNode; actions
   if (!isStaff) {
     return (
       <main id="main" className="flex min-h-dvh flex-col items-center justify-center gap-4 px-4 text-center">
-        <h1 className="font-display text-2xl font-bold">No staff access</h1>
+        <h1 className="font-display text-2xl font-semibold">No staff access</h1>
         <p className="text-foreground-muted">You are signed in as {viewer.email}, which has no staff role.</p>
         <Button variant="outline" onClick={() => void signOut().then(() => router.replace('/login'))}>
           Sign out

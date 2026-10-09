@@ -10,7 +10,7 @@ import {
 import { cn } from './cn';
 
 const CONTROL =
-  'block w-full rounded-md border border-border-strong bg-surface px-3 text-base text-foreground ' +
+  'block w-full rounded-full border border-border-strong bg-surface px-5 text-base text-foreground ' +
   'placeholder:text-foreground-muted focus:outline-2 focus:outline-offset-1 focus:outline-focus ' +
   'disabled:cursor-not-allowed disabled:bg-surface-muted aria-invalid:border-danger';
 
@@ -123,7 +123,7 @@ export function TextareaField({
         rows={rows}
         required={required}
         {...controlAria(ids, error)}
-        className={cn(CONTROL, 'py-2')}
+        className={cn(CONTROL, 'rounded-2xl py-3')}
         {...rest}
       />
     </FieldFrame>

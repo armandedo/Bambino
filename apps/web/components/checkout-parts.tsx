@@ -129,7 +129,7 @@ export function TotalsTable({
       {totals.creditApplied.amount > 0 ? row('Exchange credit', totals.creditApplied, true) : null}
       {row('Delivery', totals.shipping)}
       {totals.tax.amount > 0 ? row('Tax', totals.tax) : null}
-      <div className="mt-2 flex justify-between gap-4 border-t border-border pt-3 text-base font-bold">
+      <div className="mt-2 flex justify-between gap-4 border-t border-border pt-3 text-base font-semibold">
         <dt>Total</dt>
         <dd>
           <MoneyText value={totals.total} />

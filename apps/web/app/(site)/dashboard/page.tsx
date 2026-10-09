@@ -83,7 +83,7 @@ function DashCard({
         </span>
         <h2
           className={cn(
-            'font-display text-lg font-bold',
+            'font-display text-lg font-semibold',
             feature ? 'text-primary-foreground' : 'text-primary',
           )}
         >

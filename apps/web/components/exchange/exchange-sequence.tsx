@@ -33,14 +33,14 @@ export function ExchangeSequence({ tone = 'default' }: { tone?: 'default' | 'inv
                 <Icon aria-hidden="true" className="size-6" strokeWidth={1.75} />
                 <span
                   className={cn(
-                    'text-xs font-bold tabular-nums',
+                    'text-xs font-semibold tabular-nums',
                     inverse && !step.highlight ? 'text-accent-200' : 'text-emphasis',
                   )}
                 >
                   {String(index + 1).padStart(2, '0')}
                 </span>
               </span>
-              <span className="font-display text-lg font-bold">{step.title}</span>
+              <span className="font-display text-lg font-semibold">{step.title}</span>
               <span
                 className={cn(
                   'text-sm',

@@ -21,7 +21,7 @@ import { errorMessage } from '@/lib/messages';
 function Step({ number, title, children }: { number: number; title: string; children: ReactNode }) {
   return (
     <Card as="section" aria-labelledby={`step-${number}`} className="flex flex-col gap-4">
-      <h2 id={`step-${number}`} className="flex items-center gap-3 font-display text-xl font-bold">
+      <h2 id={`step-${number}`} className="flex items-center gap-3 font-display text-xl font-semibold">
         <span
           aria-hidden="true"
           className="flex size-8 items-center justify-center rounded-full bg-primary-soft text-base text-primary-soft-foreground"
@@ -110,7 +110,7 @@ function Checkout({ viewer }: { viewer: Viewer }) {
       <div className="mx-auto flex w-full max-w-xl flex-col gap-6">
         <CheckoutSteps current={1} />
         <Card className="flex flex-col gap-4">
-          <h2 className="font-display text-2xl font-bold">Pay for order {order.orderNumber}</h2>
+          <h2 className="font-display text-2xl font-semibold">Pay for order {order.orderNumber}</h2>
           <p className="text-foreground-muted">
             Your items are reserved while you pay. Total:{' '}
             <MoneyText value={order.totals.total} className="font-semibold text-foreground" />
@@ -179,7 +179,7 @@ function Checkout({ viewer }: { viewer: Viewer }) {
 
         <aside aria-labelledby="summary">
           <Card className="flex flex-col gap-4 lg:sticky lg:top-24">
-            <h2 id="summary" className="font-display text-xl font-bold">
+            <h2 id="summary" className="font-display text-xl font-semibold">
               Order summary
             </h2>
             <ul className="flex flex-col gap-2 text-sm">
@@ -251,10 +251,10 @@ function CheckoutSteps({ current }: { current: number }) {
             aria-hidden="true"
             className={
               index < current
-                ? 'flex size-7 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground'
+                ? 'flex size-7 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground'
                 : index === current
-                  ? 'flex size-7 items-center justify-center rounded-full border-2 border-primary text-xs font-bold text-primary'
-                  : 'flex size-7 items-center justify-center rounded-full border-2 border-sand-300 text-xs font-bold text-foreground-muted'
+                  ? 'flex size-7 items-center justify-center rounded-full border-2 border-primary text-xs font-semibold text-primary'
+                  : 'flex size-7 items-center justify-center rounded-full border-2 border-sand-300 text-xs font-semibold text-foreground-muted'
             }
           >
             {index + 1}

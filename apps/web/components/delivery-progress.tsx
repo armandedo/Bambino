@@ -59,7 +59,7 @@ export function DeliveryProgress({ status }: { status: OrderStatus }) {
               <span
                 aria-hidden="true"
                 className={cn(
-                  'flex size-8 items-center justify-center rounded-full border-2 text-xs font-bold',
+                  'flex size-8 items-center justify-center rounded-full border-2 text-xs font-semibold',
                   done
                     ? 'border-primary bg-primary text-primary-foreground'
                     : active
