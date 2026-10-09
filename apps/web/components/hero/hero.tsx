@@ -49,7 +49,7 @@ export function Hero() {
             in Kigali, collect them when they get small, and bring the next size up.
           </p>
           <div className="flex flex-col gap-3 sm:flex-row">
-            <NextLink href="/fit" className={buttonClasses({ size: 'lg', variant: 'primary' })}>
+            <NextLink href="/fit" className={buttonClasses({ size: 'lg', variant: 'accent' })}>
               Find my baby&rsquo;s size <ArrowRight aria-hidden="true" className="size-4" />
             </NextLink>
             <NextLink href="/plans" className={buttonClasses({ size: 'lg', variant: 'outline' })}>

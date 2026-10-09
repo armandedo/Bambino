@@ -6,50 +6,50 @@
  */
 
 /**
- * Raw palette, "Editorial": black ink on white, vellum cream #F7F5E8 for panels, pewter greys for hairlines, and
- * one rust accent #B94E3A. Size stages keep faint tints so a size is still recognisable. Components never use
- * these directly; they use the semantic colours below.
+ * Raw palette, "Ink & Pencil": ink navy #16213A for text, bands and primary actions on white, with a pale grey
+ * canvas for alternating panels and pencil yellow #F2D14B as the one accent. Size stages keep faint tints so a
+ * size is still recognisable. Components never use these directly; they use the semantic colours below.
  */
 export const palette = {
   /** Sage: primary actions, headings, navigation, solid bands (800) and section tints (50). */
   brand: {
-    50: '#f7f5e8',
-    100: '#ece9d8',
-    200: '#d6d3c4',
-    300: '#b3b0a6',
-    400: '#888888',
-    500: '#6b6868',
-    600: '#4d4a4b',
-    700: '#373334',
-    800: '#231f20',
-    900: '#000000',
+    50: '#eef2f8',
+    100: '#dce4f0',
+    200: '#bccbe2',
+    300: '#93a9cb',
+    400: '#6a85b0',
+    500: '#4a6a98',
+    600: '#385582',
+    700: '#2a4168',
+    800: '#1d2f52',
+    900: '#16213a',
   },
   /** Pencil yellow: highlights and secondary calls to action (400 as a fill), emphasis text (700). */
   accent: {
-    50: '#fbefec',
-    100: '#f5d9d3',
-    200: '#ebb5a9',
-    300: '#d98b79',
-    400: '#b94e3a',
-    500: '#a14331',
-    600: '#8a3829',
-    700: '#7a3122',
-    800: '#5f2518',
-    900: '#43190f',
+    50: '#fffbe6',
+    100: '#fef3b8',
+    200: '#fae885',
+    300: '#f6dc65',
+    400: '#f2d14b',
+    500: '#d9b52a',
+    600: '#a98712',
+    700: '#7d6208',
+    800: '#5d4a08',
+    900: '#403206',
   },
   /** Cool canvas greys: 0 is white (cards), 50 the page canvas, 100 to 200 quiet surfaces and hairlines. */
   sand: {
     0: '#ffffff',
     50: '#ffffff',
-    100: '#f7f5e8',
-    200: '#e4e1d1',
-    300: '#cfccbd',
-    400: '#a8a59a',
-    500: '#888888',
-    600: '#5c5857',
-    700: '#3d3839',
-    800: '#231f20',
-    900: '#000000',
+    100: '#f2f4f5',
+    200: '#e1e4e6',
+    300: '#c9cfd3',
+    400: '#9aa1a6',
+    500: '#6f777d',
+    600: '#4f565b',
+    700: '#3a4045',
+    800: '#262b2f',
+    900: '#171b1e',
   },
   /**
    * Size stages: the colour of a size follows the baby through the site (tags, plans, boxes). All are light fills
@@ -87,8 +87,8 @@ export const colors = {
   'primary-soft-foreground': palette.brand[800],
   /** Clay is a fill colour (buttons, highlights) with near-black text on it; it is too light for text on white. */
   accent: palette.accent[400],
-  'accent-hover': palette.accent[500],
-  'accent-foreground': palette.sand[0],
+  'accent-hover': palette.accent[300],
+  'accent-foreground': palette.brand[900],
   'stage-newborn': palette.stage.newborn,
   'stage-early': palette.stage.early,
   'stage-mid': palette.stage.mid,
