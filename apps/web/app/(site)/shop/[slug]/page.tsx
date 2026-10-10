@@ -59,7 +59,7 @@ export default async function ProductPage({ params }: { params: Params }) {
       </nav>
 
       <div className="grid gap-10 md:grid-cols-2">
-        <div className="overflow-hidden rounded-2xl border border-border">
+        <div className="self-start overflow-hidden rounded-2xl border border-border">
           {image ? (
             // Plain img: product photos come from object storage, and next/image needs its domain configured first.
             <img src={image.url} alt={image.altText} className="aspect-square w-full object-cover" />

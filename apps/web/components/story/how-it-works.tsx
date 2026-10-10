@@ -114,14 +114,14 @@ export function HowItWorksStory() {
               transition={{ duration: DURATION.normal, ease: EASE }}
             >
               <Image src={stockSrc(step.photo)} alt="" fill sizes={STICKY_SIZES} className="object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-brand-900/80 via-brand-900/10 to-transparent" />
               <div className="absolute inset-x-0 bottom-14 flex items-center gap-4 px-8">
                 <span
                   className={cn('flex size-14 shrink-0 items-center justify-center rounded-2xl', step.tint)}
                 >
                   <Icon aria-hidden="true" className="size-7" strokeWidth={1.75} />
                 </span>
-                <p className="font-display text-2xl font-semibold text-white drop-shadow">{step.title}</p>
+                <p className="font-display text-2xl font-semibold text-primary-foreground drop-shadow">{step.title}</p>
               </div>
             </motion.div>
           </AnimatePresence>
@@ -137,7 +137,7 @@ export function HowItWorksStory() {
                 key={s.title}
                 className={cn(
                   'h-1.5 rounded-full transition-all duration-300 ease-brand',
-                  index === active ? 'w-8 bg-white' : 'w-1.5 bg-white/50',
+                  index === active ? 'w-8 bg-sand-0' : 'w-1.5 bg-sand-0/50',
                 )}
               />
             ))}
