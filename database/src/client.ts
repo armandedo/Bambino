@@ -39,6 +39,12 @@ export const migrationsFolder = fileURLToPath(new URL('../migrations', import.me
 export function connectDatabase(url: string): DatabaseConnection {
   if (url.startsWith('postgres://') || url.startsWith('postgresql://')) {
     const pool = new pg.Pool({ connectionString: url, max: 10 });
+    // An idle connection can be closed by the server (a restart, a scale-to-zero, or a dropped test database).
+    // The pool re-emits that as an 'error' event, and an event with no listener is an uncaught exception that
+    // would crash the process. The pool discards the dead connection and opens a new one on the next query.
+    pool.on('error', (error) => {
+      console.warn(`database pool: an idle connection was closed (${error.message})`);
+    });
     const db = drizzleNodePg(pool, { schema });
     return {
       db: db as unknown as Database,
