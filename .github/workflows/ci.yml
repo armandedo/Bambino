@@ -30,6 +30,12 @@ jobs:
     env:
       # Unit tests create a fresh database per test file on this server (database/src/testing.ts).
       TEST_DATABASE_URL: postgresql://bambino:bambino-ci-only@localhost:5432/bambino
+      # next.config runs the launch check on every command that loads it (typegen, typecheck, build), so a CI run
+      # is a preview build for all of them: mock payments and http URLs are refused otherwise (apps/web/lib/launch-env.ts).
+      NEXT_PUBLIC_API_URL: http://localhost:4000/graphql
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      NEXT_PUBLIC_MOCK_PAYMENTS: 'true'
+      NEXT_PUBLIC_PREVIEW_BANNER: 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
