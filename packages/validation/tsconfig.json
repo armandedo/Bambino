@@ -1,1 +1,6 @@
-﻿{ "extends": "../../tsconfig.base.json", "include": ["src"] }
+{
+  "extends": "../../tsconfig.base.json",
+  // It imports @bambino/utils, whose error reporter uses fetch, URL and crypto (Node and browsers provide them).
+  "compilerOptions": { "lib": ["ES2023", "DOM"] },
+  "include": ["src"]
+}

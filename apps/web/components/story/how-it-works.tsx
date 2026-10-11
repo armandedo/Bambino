@@ -121,7 +121,9 @@ export function HowItWorksStory() {
                 >
                   <Icon aria-hidden="true" className="size-7" strokeWidth={1.75} />
                 </span>
-                <p className="font-display text-2xl font-semibold text-primary-foreground drop-shadow">{step.title}</p>
+                <p className="font-display text-2xl font-semibold text-primary-foreground drop-shadow">
+                  {step.title}
+                </p>
               </div>
             </motion.div>
           </AnimatePresence>
