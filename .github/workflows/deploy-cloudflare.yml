@@ -43,6 +43,8 @@ jobs:
         run: pnpm --filter @bambino/api exec wrangler deploy --env ${{ inputs.environment }}
       - name: Build and deploy website Worker
         run: pnpm --filter @bambino/web cf:build && pnpm --filter @bambino/web exec opennextjs-cloudflare deploy --env ${{ inputs.environment }}
+      - name: Build and deploy admin Worker
+        run: pnpm --filter @bambino/admin cf:build && pnpm --filter @bambino/admin exec opennextjs-cloudflare deploy --env ${{ inputs.environment }}
       - name: Check the API is ready
         if: vars.API_ORIGIN != ''
         run: curl --fail --retry 5 --retry-delay 5 "${{ vars.API_ORIGIN }}/ready"

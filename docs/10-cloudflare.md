@@ -8,7 +8,7 @@ Hyperdrive), the API keeps its code and runs as a Worker, the Next apps run as W
 ```
 Browser ─▶ Cloudflare DNS, TLS, CDN, DDoS/WAF
    ├─▶ www.<domain>     bambino-web    (Worker, OpenNext; static files from the CDN)
-   ├─▶ admin.<domain>   bambino-admin  (not yet ported, see 10.6)
+   ├─▶ admin.<domain>   bambino-admin  (Worker, OpenNext; the dashboard is served under /admin)
    └─▶ api.<domain>     bambino-api    (Worker: GraphQL, webhooks, /health, /ready; Cron Trigger for jobs)
                               │
                               └─▶ Hyperdrive ─▶ managed PostgreSQL 18 (provider and region: open question 12)
@@ -55,6 +55,10 @@ environment's `vars` in `wrangler.jsonc`; every `CHANGE_ME` there must be replac
 3. Website: build **and deploy** on Linux (CI, WSL or Cloudflare Workers Builds; OpenNext does not build on plain
    Windows because it creates symlinks, and the build output holds absolute Linux paths, so deploy from the same
    machine), then `pnpm --filter @bambino/web cf:deploy:preview`.
+   Admin: the same two steps with `pnpm --filter @bambino/admin cf:build` and `cf:deploy:preview`. Build it with
+   `NEXT_PUBLIC_API_URL` set to the API's address, because the dashboard calls the API from the browser. The staff
+   dashboard is then at `https://bambino-admin-preview.<account>.workers.dev/admin`; the API's `ADMIN_ORIGIN` already
+   allows it.
 4. Seeding a new database (roles and permissions are required; sign-up fails without them): run `db:seed` once.
    In PowerShell, `$env:X = ""` **deletes** the variable, so the seed falls back to `.env.local`: unset the seed
    passwords there, or a seed admin with the local password is created.
@@ -90,7 +94,7 @@ records for these names are listed and kept until the new ones are verified.
 | API Worker         | **Preview deployed** (`bambino-api-preview`, Neon PostgreSQL through Hyperdrive). Verified live: health, ready, register, login, authorization, catalogue, rate limits, `no-store`, cron jobs       |
 | Website (OpenNext) | **Preview deployed** (`bambino-web-preview`). Pages, per-request CSP nonce and CORS to the API verified live. The Next 16 `proxy.ts` (Node runtime) is supported by OpenNext only as _experimental_ |
 | Production         | Not deployed: needs the domain, an email provider and a payment decision                                                                                                                            |
-| Admin              | Not ported yet (same OpenNext steps as the website)                                                                                                                                                 |
+| Admin              | Ported (`apps/admin/wrangler.jsonc`, same OpenNext steps as the website); builds in CI. Preview deploy is a manual step from Linux or WSL                                                           |
 | Email              | No production provider (open question 11): production refuses to start                                                                                                                              |
 | Payments           | Mock only; MTN MoMo and Airtel not integrated (open question 10)                                                                                                                                    |
 

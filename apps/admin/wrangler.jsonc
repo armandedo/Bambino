@@ -1,0 +1,27 @@
+// Cloudflare Worker for the staff dashboard, built with OpenNext (`pnpm --filter @bambino/admin cf:build`).
+// See docs/10-cloudflare.md. Secrets are set with `wrangler secret put`, never written here.
+// The app is served under /admin (basePath in next.config.ts), so its address is https://<worker>/admin.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "bambino-admin",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "observability": { "enabled": true },
+  // Static files (/admin/_next/static) are served from Cloudflare's CDN; pages are rendered by the Worker.
+  "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
+  "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "bambino-admin" }],
+  "vars": {
+    // Used by the /ready check. The browser talks to the API directly, with the NEXT_PUBLIC_API_URL baked at build time.
+    "API_URL": "http://localhost:8787/graphql",
+  },
+  "env": {
+    "preview": {
+      "name": "bambino-admin-preview",
+      "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "bambino-admin-preview" }],
+      "vars": {
+        "API_URL": "https://bambino-api-preview.rwanyindoarmand.workers.dev/graphql",
+      },
+    },
+  },
+}

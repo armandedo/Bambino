@@ -72,6 +72,8 @@ jobs:
           NEXT_PUBLIC_MOCK_PAYMENTS: 'true'
           NEXT_PUBLIC_PREVIEW_BANNER: 'true'
         run: pnpm --filter @bambino/web cf:build
+      - name: Cloudflare (OpenNext) build for the admin (no deploy)
+        run: pnpm --filter @bambino/admin cf:build
 
   e2e:
     name: Playwright journeys
