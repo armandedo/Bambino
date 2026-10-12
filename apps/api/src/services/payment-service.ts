@@ -1,6 +1,6 @@
 import { getMarket } from '@bambino/config';
 import { type Database, type Executor, schema } from '@bambino/database';
-import { and, asc, desc, eq, inArray, isNull, lt, sql } from '@bambino/database/orm';
+import { and, asc, desc, eq, inArray, isNull, lt, ne, sql } from '@bambino/database/orm';
 import { PAYMENT_PROVIDERS, type PaymentProviderCode, type PaymentStatus } from '@bambino/types';
 import { phoneSchema } from '@bambino/validation';
 import { money, type CurrencyCode } from '@bambino/utils';
@@ -328,6 +328,8 @@ export class PaymentService {
         and(
           inArray(schema.payments.status, ['INITIATED', 'PENDING']),
           lt(schema.payments.initiatedAt, cutoff),
+          // Cash is collected by the courier at delivery; there is no provider to ask.
+          ne(schema.payments.provider, 'CASH_ON_DELIVERY'),
         ),
       )
       .limit(200);
@@ -530,6 +532,47 @@ export class PaymentService {
       }
       return updated;
     });
+  }
+
+  /**
+   * Runs when an order is delivered: the courier has handed over the goods and taken the cash, so the order's waiting
+   * CASH_ON_DELIVERY payment succeeds. The order is already past payment, so nothing else about it changes
+   * except `paidAt`. A no-op for orders that were paid another way.
+   */
+  async collectCashOnDelivery(tx: Executor, order: { id: string; userId: string }): Promise<void> {
+    const [pending] = await tx
+      .select()
+      .from(schema.payments)
+      .where(
+        and(
+          eq(schema.payments.orderId, order.id),
+          eq(schema.payments.provider, 'CASH_ON_DELIVERY'),
+          eq(schema.payments.status, 'PENDING'),
+        ),
+      )
+      .for('update');
+    if (!pending) return;
+    const now = this.deps.now();
+    await tx
+      .update(schema.payments)
+      .set({ status: 'SUCCEEDED', completedAt: now })
+      .where(eq(schema.payments.id, pending.id));
+    await tx.insert(schema.paymentTransactions).values({
+      paymentId: pending.id,
+      type: 'MANUAL_ADJUSTMENT',
+      resultingStatus: 'SUCCEEDED',
+      amount: pending.amount,
+      currency: pending.currency,
+      payload: { reason: 'cash collected on delivery' },
+    });
+    await tx.update(schema.orders).set({ paidAt: now }).where(eq(schema.orders.id, order.id));
+    await tx.insert(schema.analyticsEvents).values({
+      eventName: 'PAYMENT_COMPLETED',
+      userId: pending.userId,
+      properties: { paymentId: pending.id, provider: pending.provider, amount: pending.amount },
+      occurredAt: now,
+    });
+    await this.deps.notifications.notify(tx, pending.userId, 'PAYMENT_SUCCEEDED', {});
   }
 
   private async onSucceeded(tx: Executor, payment: PaymentRow): Promise<void> {

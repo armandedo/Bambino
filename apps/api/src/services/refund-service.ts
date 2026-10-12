@@ -282,6 +282,13 @@ export class RefundService {
     if (payment.status !== 'SUCCEEDED') {
       throw new AppError('CONFLICT', 'Only a successful payment can be refunded.', 'PAYMENT_NOT_REFUNDABLE');
     }
+    if (payment.provider === 'CASH_ON_DELIVERY' && input.method === 'PROVIDER') {
+      throw new AppError(
+        'CONFLICT',
+        'Cash payments cannot be refunded online. Refund the customer in person and note it on the order.',
+        'CASH_REFUND_MANUAL',
+      );
+    }
     const refundable = payment.amount - (await this.held(tx, payment.id));
     if (input.amount > refundable) {
       throw new AppError(

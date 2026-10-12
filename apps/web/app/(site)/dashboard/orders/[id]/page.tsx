@@ -1,10 +1,10 @@
 'use client';
 
-import { CancelOrderMutation, type OrderDetail } from '@bambino/api-client';
+import { CancelOrderMutation, ConfirmCashOnDeliveryMutation, type OrderDetail } from '@bambino/api-client';
 import { Alert, Button, Card, CardHeader, Modal, MoneyText, StatusBadge, humanizeStatus } from '@bambino/ui';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useSearchParams } from 'next/navigation';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { TotalsTable, formatAddress } from '@/components/checkout-parts';
 import { DeliveryProgress } from '@/components/delivery-progress';
 import { PaymentPanel } from '@/components/payment-panel';
@@ -79,6 +79,20 @@ export default function OrderPage() {
       setConfirmCancel(false);
     },
   });
+  // One key per page visit, so a double click or a retry confirms the order once.
+  const cashKey = useRef<string>(crypto.randomUUID());
+  const payOnDelivery = useMutation({
+    mutationFn: async () =>
+      (
+        await api.request(ConfirmCashOnDeliveryMutation, {
+          input: { orderId: id, idempotencyKey: cashKey.current },
+        })
+      ).confirmCashOnDelivery,
+    onSuccess: (next) => {
+      queryClient.setQueryData(keys.order(id), next);
+      void queryClient.invalidateQueries({ queryKey: keys.orders });
+    },
+  });
   const onPaid = useCallback(() => {
     setJustPaid(true);
     void queryClient.invalidateQueries({ queryKey: keys.order(id) });
@@ -100,7 +114,7 @@ export default function OrderPage() {
               description={`Placed ${formatDate(data.placedAt, true)}`}
               action={<StatusBadge status={data.status} />}
             />
-            {justPaid && data.status !== 'PENDING_PAYMENT' ? (
+            {justPaid && data.status !== 'PENDING_PAYMENT' && data.status !== 'CONFIRMED' ? (
               <Alert tone="success" title="Payment received" live>
                 Thank you. Your order is confirmed and we’ll let you know when it is on its way.
               </Alert>
@@ -118,6 +132,34 @@ export default function OrderPage() {
                   level={2}
                 />
                 <PaymentPanel orderId={data.id} total={data.totals.total} onPaid={onPaid} />
+                {data.cashOnDelivery?.available ? (
+                  <div className="flex flex-col gap-3 border-t border-border pt-4">
+                    <div>
+                      <h3 className="font-display text-lg font-semibold">Or pay when it arrives</h3>
+                      <p className="text-sm text-foreground-muted">
+                        Pay <MoneyText value={data.totals.total} className="font-semibold" /> in cash to the
+                        courier. We prepare your order straight away.
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      className="w-fit"
+                      loading={payOnDelivery.isPending}
+                      onClick={() => payOnDelivery.mutate()}
+                    >
+                      Pay on delivery
+                    </Button>
+                    {payOnDelivery.isError ? (
+                      <Alert tone="danger" title="We could not confirm pay on delivery">
+                        {errorMessage(payOnDelivery.error)}
+                      </Alert>
+                    ) : null}
+                  </div>
+                ) : data.cashOnDelivery ? (
+                  <p className="border-t border-border pt-4 text-sm text-foreground-muted">
+                    {data.cashOnDelivery.message}
+                  </p>
+                ) : null}
                 <Button variant="ghost" size="sm" className="w-fit" onClick={() => setConfirmCancel(true)}>
                   Cancel this order
                 </Button>
@@ -148,7 +190,14 @@ export default function OrderPage() {
               </Card>
             ) : null}
 
-            {data.status === 'PAID' && data.type === 'ONE_TIME' ? (
+            {data.status === 'CONFIRMED' ? (
+              <Alert tone="info" title="Pay on delivery">
+                Please have <MoneyText value={data.totals.total} className="font-semibold" /> in cash ready
+                for the courier. We will let you know when your order is on its way.
+              </Alert>
+            ) : null}
+
+            {(data.status === 'PAID' || data.status === 'CONFIRMED') && data.type === 'ONE_TIME' ? (
               <Button variant="ghost" size="sm" className="w-fit" onClick={() => setConfirmCancel(true)}>
                 Cancel this order
               </Button>
@@ -197,7 +246,7 @@ export default function OrderPage() {
               onClose={() => setConfirmCancel(false)}
               title="Cancel this order?"
               description={
-                data.status === 'PENDING_PAYMENT'
+                data.status === 'PENDING_PAYMENT' || data.status === 'CONFIRMED'
                   ? 'Reserved items go back on sale. Nothing has been charged.'
                   : 'We will ask our team to refund your payment to the wallet that paid. You can follow the refund here.'
               }

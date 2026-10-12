@@ -191,6 +191,7 @@ export function createServices(deps: ServiceDependencies): Services {
       if (garmentId) await garments.markDelivered(tx, garmentId, order.userId, order.id);
     }
   });
+  orders.on('delivered', (tx, order) => payments.collectCashOnDelivery(tx, order));
   orders.on('delivered', (tx, order) => subscriptions.onOrderDelivered(tx, order));
   orders.on('delivered', (tx, order) => exchanges.onOrderDelivered(tx, order));
   orders.on('cancelled', async (tx, order) => {

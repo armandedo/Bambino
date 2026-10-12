@@ -120,6 +120,8 @@ export type OrderType = (typeof ORDER_TYPES)[number];
 
 export const ORDER_STATUSES = [
   'PENDING_PAYMENT',
+  /** Accepted with payment due on delivery (cash). Stock is committed and delivery is created; no money yet. */
+  'CONFIRMED',
   'PAID',
   'PROCESSING',
   'PACKED',
@@ -139,7 +141,8 @@ export const PROMOTION_SCOPES = ['ORDER', 'SUBSCRIPTION'] as const;
 export type PromotionScope = (typeof PROMOTION_SCOPES)[number];
 
 // --- Payments -------------------------------------------------------------------
-export const PAYMENT_PROVIDERS = ['MTN_MOMO', 'AIRTEL_MONEY', 'CARD', 'MOCK'] as const;
+/** CASH_ON_DELIVERY is not a provider call: the courier collects the money and delivery completes the payment. */
+export const PAYMENT_PROVIDERS = ['MTN_MOMO', 'AIRTEL_MONEY', 'CARD', 'MOCK', 'CASH_ON_DELIVERY'] as const;
 export type PaymentProviderCode = (typeof PAYMENT_PROVIDERS)[number];
 
 export const PAYMENT_STATUSES = [

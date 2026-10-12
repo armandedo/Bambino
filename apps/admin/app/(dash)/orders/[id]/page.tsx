@@ -15,6 +15,7 @@ import { api, useStaff } from '@/lib/session';
 /** The warehouse steps staff set by hand; delivery updates move the order on from READY_FOR_DISPATCH. */
 const NEXT_WAREHOUSE_STEP: Partial<Record<OrderStatus, OrderStatus>> = {
   PAID: 'PROCESSING',
+  CONFIRMED: 'PROCESSING',
   PROCESSING: 'PACKED',
   PACKED: 'READY_FOR_DISPATCH',
 };
@@ -50,7 +51,11 @@ function OrderDetail({ id }: { id: string }) {
         const next = NEXT_WAREHOUSE_STEP[order.status];
         const paidCancellable =
           order.type === 'ONE_TIME' &&
-          ['PAID', 'PROCESSING', 'PACKED', 'READY_FOR_DISPATCH'].includes(order.status);
+          ['PAID', 'CONFIRMED', 'PROCESSING', 'PACKED', 'READY_FOR_DISPATCH'].includes(order.status);
+        // Cash on delivery: nothing has been paid yet, so there is nothing to refund if it is cancelled.
+        const cashToCollect = payments.find(
+          (entry) => entry.payment.provider === 'CASH_ON_DELIVERY' && entry.payment.status === 'PENDING',
+        );
         return (
           <div className="flex flex-col gap-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -73,6 +78,14 @@ function OrderDetail({ id }: { id: string }) {
               </div>
               <StatusBadge status={order.status} />
             </div>
+
+            {cashToCollect ? (
+              <Alert tone="info" title="Cash to collect on delivery">
+                The courier collects{' '}
+                <MoneyText value={cashToCollect.payment.amount} className="font-semibold" /> from the
+                customer. The payment is recorded as received when the delivery is marked delivered.
+              </Alert>
+            ) : null}
 
             {can('order:write') ? (
               <div className="flex flex-wrap gap-2">
@@ -202,11 +215,13 @@ function OrderDetail({ id }: { id: string }) {
               open={cancelling}
               onClose={() => setCancelling(false)}
               title={
-                order.status === 'PENDING_PAYMENT' ? 'Cancel this unpaid order?' : 'Cancel this paid order?'
+                order.status === 'PENDING_PAYMENT' || cashToCollect
+                  ? 'Cancel this unpaid order?'
+                  : 'Cancel this paid order?'
               }
               description={
-                order.status === 'PENDING_PAYMENT'
-                  ? 'Reserved stock and garments are released.'
+                order.status === 'PENDING_PAYMENT' || cashToCollect
+                  ? 'Reserved stock and garments are released. Nothing has been paid, so there is nothing to refund.'
                   : 'Stock goes back on hand, and a full refund is requested. The refund needs approval before anything is paid out.'
               }
               footer={

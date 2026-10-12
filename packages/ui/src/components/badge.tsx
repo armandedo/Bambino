@@ -68,6 +68,7 @@ export const STATUS_TONES: Record<DomainStatus, Tone> = {
   INSPECTION: 'warning',
   INSPECTING: 'warning',
   // Moving along
+  CONFIRMED: 'info',
   PROCESSING: 'info',
   PACKED: 'info',
   READY_FOR_DISPATCH: 'info',

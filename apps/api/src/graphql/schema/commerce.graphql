@@ -6,6 +6,8 @@ enum OrderType {
 
 enum OrderStatus {
   PENDING_PAYMENT
+  "Accepted with payment due in cash on delivery. Stock is committed and delivery is created."
+  CONFIRMED
   PAID
   PROCESSING
   PACKED
@@ -66,8 +68,15 @@ type OrderTotals {
   total: Money!
 }
 
+"Whether the cart can be paid in cash on delivery, and why not when it cannot."
+type CashOnDeliveryOption {
+  available: Boolean!
+  message: String
+}
+
 type CheckoutPreview {
   totals: OrderTotals!
+  cashOnDelivery: CashOnDeliveryOption!
   "Set when a promotion code was supplied but could not be applied."
   promotionError: String
   availableCredit: Money!
@@ -78,6 +87,8 @@ type Order {
   orderNumber: String!
   type: OrderType!
   status: OrderStatus!
+  "Whether this order can still be paid in cash on delivery. Null once it is no longer awaiting payment."
+  cashOnDelivery: CashOnDeliveryOption
   items: [OrderItem!]!
   totals: OrderTotals!
   shippingAddress: OrderAddress!
@@ -158,6 +169,12 @@ input CreateOrderInput {
   checkout: CheckoutInput!
 }
 
+input ConfirmCashOnDeliveryInput {
+  orderId: ID!
+  "Client-generated UUID. Re-sending the same key returns the same order."
+  idempotencyKey: String!
+}
+
 extend type Query {
   myCart: Cart @authenticated
   deliveryOptions: [DeliveryOption!]!
@@ -175,6 +192,8 @@ extend type Mutation {
   removeFromCart(itemId: ID!): Cart! @authenticated
   "Turns the caller's cart into an order in PENDING_PAYMENT and reserves stock."
   createOrder(input: CreateOrderInput!): Order! @authenticated
-  "Only while the order is PENDING_PAYMENT."
+  "Accepts a PENDING_PAYMENT shop order as pay on delivery: stock committed, delivery created, cash collected by the courier."
+  confirmCashOnDelivery(input: ConfirmCashOnDeliveryInput!): Order! @authenticated
+  "While the order is PENDING_PAYMENT or CONFIRMED, or paid and not yet being prepared."
   cancelOrder(id: ID!): Order! @authenticated
 }

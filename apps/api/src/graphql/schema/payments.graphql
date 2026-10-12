@@ -4,6 +4,8 @@ enum PaymentProvider {
   CARD
   "Development and test only. Rejected by the server in production."
   MOCK
+  "Cash handed to the courier on delivery. Created by confirmCashOnDelivery, never by initiatePayment."
+  CASH_ON_DELIVERY
 }
 
 enum PaymentStatus {

@@ -91,6 +91,40 @@ that allows charging a wallet silently, so "renewal" means:
 The subscription lifecycle and the renewal job are provider-independent, so a provider offering pre-approved
 debits, or cards, changes only the provider implementation.
 
+## 4.4a Pay on delivery (cash)
+
+Status: implemented. `CASH_ON_DELIVERY` is a payment provider code with **no provider behind it**: the courier collects
+the money, and delivery completes the payment.
+
+```mermaid
+stateDiagram-v2
+  [*] --> PENDING_PAYMENT: createOrder
+  PENDING_PAYMENT --> CONFIRMED: confirmCashOnDelivery
+  PENDING_PAYMENT --> PAID: online payment succeeds
+  CONFIRMED --> PROCESSING: warehouse steps, as for a paid order
+  PROCESSING --> DELIVERED: delivery completes
+  CONFIRMED --> CANCELLED: customer or staff (no refund: nothing was paid)
+```
+
+1. The customer picks "Pay on delivery" on the order page. `confirmCashOnDelivery(orderId, idempotencyKey)` runs in
+   one transaction: the order moves `PENDING_PAYMENT` to `CONFIRMED`, a `CASH_ON_DELIVERY` payment is created
+   `PENDING` for the order's stored total, stock is committed, the delivery is created and the customer is told.
+2. `CONFIRMED` means "accepted, money due on delivery". `PAID` keeps meaning "money received", so revenue figures
+   built on payments stay correct.
+3. When the delivery is marked `DELIVERED`, the `delivered` hook succeeds the payment and sets `orders.paid_at`
+   (`PaymentService.collectCashOnDelivery`). The payment log records it as a `MANUAL_ADJUSTMENT`.
+4. Cancelling a `CONFIRMED` (or later, not yet delivered) cash order restocks it, returns credit and any coupon, and
+   closes the pending payment as `CANCELLED`. No refund is requested, because no money was taken.
+5. Reconciliation ignores cash payments (there is no provider to ask), and the unpaid-order cleanup only looks at
+   `PENDING_PAYMENT`, so a confirmed cash order is never cancelled for being "unpaid".
+6. Eligibility is `CASH_ON_DELIVERY_POLICY` (packages/config): shop orders only, up to a maximum total. Subscription
+   orders keep requiring a wallet that can be charged again. The same rule is shown at checkout
+   (`checkoutPreview.cashOnDelivery`, `Order.cashOnDelivery`) and enforced again on confirmation.
+
+Known limits, listed in open question 15: a refund of cash already collected is done in person and cannot be requested
+online (`CASH_REFUND_MANUAL`); there is no record of the amount the courier handed over, or of change; a failed
+delivery leaves the payment pending for the next attempt.
+
 ## 4.5 Provider notes to verify at integration time
 
 |                          | MTN MoMo (Collections)                                                                           | Airtel Money (Collections)                                              |

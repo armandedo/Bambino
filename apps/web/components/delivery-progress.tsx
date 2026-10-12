@@ -13,6 +13,7 @@ function stageOf(status: OrderStatus): number | null {
   switch (status) {
     case 'PENDING_PAYMENT':
       return -1;
+    case 'CONFIRMED':
     case 'PAID':
       return 0;
     case 'PROCESSING':

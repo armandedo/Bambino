@@ -46,16 +46,34 @@ export const SIZING_POLICY = {
 };
 
 /**
+ * Open question 15. Pay on delivery (cash). PLACEHOLDER values: easy to change, and the services contain no
+ * numbers of their own. Only shop orders qualify: a subscription needs a payment method that can be charged again.
+ */
+export const CASH_ON_DELIVERY_POLICY = {
+  enabled: true,
+  /** Largest order total (in the smallest currency unit) accepted for cash on delivery. */
+  maxOrderAmount: 150_000,
+  /** Order types that can be paid on delivery. */
+  orderTypes: ['ONE_TIME'] as readonly OrderType[],
+};
+
+/**
  * Open question 13. Cancellations and refunds. PLACEHOLDER: the most cautious reading until the business decides.
  * Every refund starts REQUESTED and waits for staff with refund:write to approve it.
  */
 export const REFUND_POLICY = {
   /** Order types a paid order can be cancelled (with a refund) for. Subscription and exchange orders: not yet. */
   cancellableOrderTypes: ['ONE_TIME'] as readonly OrderType[],
-  /** A customer can cancel a paid order only before it is being prepared. */
-  customerCancellableStatuses: ['PAID'] as readonly OrderStatus[],
-  /** Staff can cancel a paid order until it leaves the warehouse. */
-  staffCancellableStatuses: ['PAID', 'PROCESSING', 'PACKED', 'READY_FOR_DISPATCH'] as readonly OrderStatus[],
+  /** A customer can cancel a paid (or confirmed cash) order only before it is being prepared. */
+  customerCancellableStatuses: ['PAID', 'CONFIRMED'] as readonly OrderStatus[],
+  /** Staff can cancel a paid or confirmed order until it leaves the warehouse. */
+  staffCancellableStatuses: [
+    'PAID',
+    'CONFIRMED',
+    'PROCESSING',
+    'PACKED',
+    'READY_FOR_DISPATCH',
+  ] as readonly OrderStatus[],
   /** Whether staff may refund as exchange credit instead of money back to the wallet. */
   allowRefundAsCredit: false,
 };

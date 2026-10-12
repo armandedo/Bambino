@@ -81,17 +81,28 @@ export interface CheckoutInput {
 }
 
 export const CheckoutPreviewQuery = operation<
-  { checkoutPreview: { totals: OrderTotals; promotionError: string | null; availableCredit: Money } },
+  {
+    checkoutPreview: {
+      totals: OrderTotals;
+      promotionError: string | null;
+      availableCredit: Money;
+      cashOnDelivery: CashOnDeliveryOption;
+    };
+  },
   { input: CheckoutInput }
 >(
   'CheckoutPreview',
   `query CheckoutPreview($input: CheckoutInput!) {
-    checkoutPreview(input: $input) { totals { ${TOTALS_FIELDS} } promotionError availableCredit ${MONEY} }
+    checkoutPreview(input: $input) {
+      totals { ${TOTALS_FIELDS} } promotionError availableCredit ${MONEY}
+      cashOnDelivery { available message }
+    }
   }`,
 );
 
 export type OrderStatus =
   | 'PENDING_PAYMENT'
+  | 'CONFIRMED'
   | 'PAID'
   | 'PROCESSING'
   | 'PACKED'
@@ -105,7 +116,13 @@ export type PaymentStatus =
   'INITIATED' | 'PENDING' | 'SUCCEEDED' | 'FAILED' | 'CANCELLED' | 'EXPIRED' | 'REFUNDED';
 export type DeliveryStatus =
   'PENDING' | 'ASSIGNED' | 'PICKED_UP' | 'IN_TRANSIT' | 'DELIVERED' | 'FAILED' | 'CANCELLED';
-export type PaymentProvider = 'MTN_MOMO' | 'AIRTEL_MONEY' | 'CARD' | 'MOCK';
+export type PaymentProvider = 'MTN_MOMO' | 'AIRTEL_MONEY' | 'CARD' | 'MOCK' | 'CASH_ON_DELIVERY';
+
+/** Whether a cart or order can be paid in cash on delivery; `message` says why not when it cannot. */
+export interface CashOnDeliveryOption {
+  available: boolean;
+  message: string | null;
+}
 
 export interface Payment {
   id: string;
@@ -159,6 +176,8 @@ const DELIVERY_FIELDS =
 
 export interface OrderDetail extends Omit<OrderSummary, 'totals' | 'items'> {
   paidAt: string | null;
+  /** Null once the order is no longer awaiting payment. */
+  cashOnDelivery: CashOnDeliveryOption | null;
   totals: OrderTotals;
   items: {
     id: string;
@@ -190,6 +209,7 @@ export interface OrderDetail extends Omit<OrderSummary, 'totals' | 'items'> {
 
 const ORDER_DETAIL_FIELDS = `
   id orderNumber type status placedAt paidAt
+  cashOnDelivery { available message }
   totals { ${TOTALS_FIELDS} }
   items { id productName sku sizeCode color unitPrice ${MONEY} quantity lineTotal ${MONEY} product { slug } }
   shippingAddress { recipientName phone countryCode region district sector street directions }
@@ -206,6 +226,16 @@ export const CreateOrderMutation = operation<
 >(
   'CreateOrder',
   `mutation CreateOrder($input: CreateOrderInput!) { createOrder(input: $input) { ${ORDER_DETAIL_FIELDS} } }`,
+);
+
+export const ConfirmCashOnDeliveryMutation = operation<
+  { confirmCashOnDelivery: OrderDetail },
+  { input: { orderId: string; idempotencyKey: string } }
+>(
+  'ConfirmCashOnDelivery',
+  `mutation ConfirmCashOnDelivery($input: ConfirmCashOnDeliveryInput!) {
+    confirmCashOnDelivery(input: $input) { ${ORDER_DETAIL_FIELDS} }
+  }`,
 );
 
 export const MyOrdersQuery = operation<

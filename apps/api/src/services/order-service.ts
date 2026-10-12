@@ -4,6 +4,7 @@ import { and, asc, desc, eq, ilike, inArray, isNull, lt, or, sql } from '@bambin
 import type { OrderStatus } from '@bambino/types';
 import { type CurrencyCode, type Money, money, zero } from '@bambino/utils';
 import { z } from 'zod';
+import { cashOnDeliveryAvailability } from '../domain/cash-on-delivery';
 import { orderLifecycle } from '../domain/lifecycles';
 import {
   type OrderTotals,
@@ -46,6 +47,11 @@ const checkoutSchema = z.object({
   applyExchangeCredit: z.boolean().nullish(),
 });
 type CheckoutInput = z.infer<typeof checkoutSchema>;
+
+const confirmCashSchema = z.object({
+  orderId: z.uuid(),
+  idempotencyKey: z.string().trim().min(8).max(100),
+});
 
 const createOrderSchema = z.object({
   idempotencyKey: z.string().trim().min(8).max(100),
@@ -135,6 +141,11 @@ export class OrderService {
       totals: quote.totals,
       promotionError: quote.promotionRejection ? PROMOTION_MESSAGES[quote.promotionRejection] : null,
       availableCredit: quote.availableCredit,
+      // The cart's own total decides it; the same rule is enforced again when the order is confirmed.
+      cashOnDelivery: cashOnDeliveryAvailability({
+        type: 'ONE_TIME',
+        totalAmount: quote.totals.total.amount,
+      }),
     };
   }
 
@@ -251,6 +262,95 @@ export class OrderService {
       if (isUniqueViolation(error, 'orders_user_idempotency_uq')) {
         const winner = await this.findByIdempotencyKey(db, actor.userId, input.idempotencyKey);
         if (winner) return winner;
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Accepts an order that is awaiting payment as pay on delivery: stock committed, delivery created and the
+   * customer told, with a pending CASH_ON_DELIVERY payment for the courier to collect. The amount is the order's
+   * stored total. Re-sending the same key returns the same order.
+   */
+  async confirmCashOnDelivery(context: ServiceContext, rawInput: unknown): Promise<OrderRow> {
+    const actor = requireUser(context);
+    const input = parseInput(confirmCashSchema, rawInput);
+    const { db } = this.deps;
+    try {
+      return await db.transaction(async (tx) => {
+        const order = await this.lockOwnOrder(tx, actor.userId, input.orderId);
+
+        const [sameKey] = await tx
+          .select({ orderId: schema.payments.orderId, userId: schema.payments.userId })
+          .from(schema.payments)
+          .where(eq(schema.payments.idempotencyKey, input.idempotencyKey));
+        if (sameKey) {
+          if (sameKey.userId !== actor.userId || sameKey.orderId !== order.id) {
+            throw new AppError(
+              'CONFLICT',
+              'This request key was already used for something else.',
+              'IDEMPOTENCY_KEY_REUSED',
+            );
+          }
+          return order;
+        }
+
+        if (order.status !== 'PENDING_PAYMENT') {
+          throw new AppError('CONFLICT', 'This order does not need a payment.', 'ORDER_NOT_PAYABLE');
+        }
+        const availability = cashOnDeliveryAvailability(order);
+        if (!availability.available) {
+          throw new AppError(
+            'VALIDATION_FAILED',
+            availability.message,
+            `CASH_ON_DELIVERY_${availability.code}`,
+          );
+        }
+        await this.assertNoPaymentInProgress(tx, order.id);
+
+        const [payment] = await tx
+          .insert(schema.payments)
+          .values({
+            userId: actor.userId,
+            orderId: order.id,
+            subscriptionId: order.subscriptionId,
+            provider: 'CASH_ON_DELIVERY',
+            status: 'PENDING',
+            amount: order.totalAmount,
+            currency: order.currency,
+            idempotencyKey: input.idempotencyKey,
+            initiatedAt: this.deps.now(),
+          })
+          .returning();
+        if (!payment) throw new Error('Payment insert returned no row');
+        await tx.insert(schema.paymentTransactions).values({
+          paymentId: payment.id,
+          type: 'INITIATION',
+          resultingStatus: 'PENDING',
+          amount: payment.amount,
+          currency: payment.currency,
+          payload: { method: 'CASH_ON_DELIVERY' },
+          actorId: actor.userId,
+        });
+
+        const updated = await this.transition(tx, order, 'CONFIRMED', actor.userId, 'Pay on delivery');
+        await this.commitStock(tx, order.id);
+        await this.deps.delivery.createForOrder(tx, updated);
+        await this.deps.notifications.notify(tx, order.userId, 'ORDER_CONFIRMED', {
+          orderNumber: order.orderNumber,
+        });
+        await tx.insert(schema.analyticsEvents).values({
+          eventName: 'ORDER_CONFIRMED_CASH',
+          userId: actor.userId,
+          properties: { orderId: order.id, total: order.totalAmount },
+          occurredAt: this.deps.now(),
+        });
+        return updated;
+      });
+    } catch (error) {
+      if (isUniqueViolation(error, 'payments_idempotency_key_uq')) {
+        const order = await this.getOwn(context, input.orderId);
+        if (order) return order;
       }
       throw error;
     }
@@ -385,20 +485,57 @@ export class OrderService {
   /** Marks an order paid and does everything that follows: stock committed, delivery created, customer told. */
   async markPaid(tx: Executor, order: OrderRow, actorId: string | null): Promise<OrderRow> {
     const updated = await this.transition(tx, order, 'PAID', actorId, null, { paidAt: this.deps.now() });
-    const items = await tx.select().from(schema.orderItems).where(eq(schema.orderItems.orderId, order.id));
-    // Circulating garments are reserved individually; only new stock goes through inventory counters.
-    for (const item of items.filter((line) => line.garmentId === null)) {
-      await this.deps.inventory.commitSale(tx, item.variantId, item.quantity, {
-        type: 'order',
-        id: order.id,
-      });
-    }
+    await this.commitStock(tx, order.id);
     await this.deps.delivery.createForOrder(tx, updated);
     await this.deps.notifications.notify(tx, order.userId, 'ORDER_CONFIRMED', {
       orderNumber: order.orderNumber,
     });
     for (const hook of this.hooks.paid) await hook(tx, updated);
     return updated;
+  }
+
+  /** Takes an order's new stock off hand. Circulating garments are reserved individually, so they are skipped. */
+  private async commitStock(tx: Executor, orderId: string): Promise<void> {
+    const items = await tx.select().from(schema.orderItems).where(eq(schema.orderItems.orderId, orderId));
+    for (const item of items.filter((line) => line.garmentId === null)) {
+      await this.deps.inventory.commitSale(tx, item.variantId, item.quantity, {
+        type: 'order',
+        id: orderId,
+      });
+    }
+  }
+
+  /** Cash is only collected at delivery: a cancelled order's waiting cash payment is closed, not refunded. */
+  private async cancelPendingCashPayment(
+    tx: Executor,
+    orderId: string,
+    actorId: string | null,
+  ): Promise<void> {
+    const [pending] = await tx
+      .select()
+      .from(schema.payments)
+      .where(
+        and(
+          eq(schema.payments.orderId, orderId),
+          eq(schema.payments.provider, 'CASH_ON_DELIVERY'),
+          eq(schema.payments.status, 'PENDING'),
+        ),
+      )
+      .for('update');
+    if (!pending) return;
+    await tx
+      .update(schema.payments)
+      .set({ status: 'CANCELLED', completedAt: this.deps.now() })
+      .where(eq(schema.payments.id, pending.id));
+    await tx.insert(schema.paymentTransactions).values({
+      paymentId: pending.id,
+      type: 'MANUAL_ADJUSTMENT',
+      resultingStatus: 'CANCELLED',
+      amount: pending.amount,
+      currency: pending.currency,
+      payload: { reason: 'order cancelled before delivery' },
+      actorId,
+    });
   }
 
   /** The single place an order's status changes: lifecycle check, update, history row. */
@@ -619,6 +756,7 @@ export class OrderService {
       );
     }
     await tx.delete(schema.discounts).where(eq(schema.discounts.orderId, order.id));
+    await this.cancelPendingCashPayment(tx, order.id, actorId);
     await this.refunds.requestForCancelledOrder(
       tx,
       order,
