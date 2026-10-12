@@ -119,7 +119,19 @@ jobs:
           pnpm --filter @bambino/api start > api.log 2>&1 &
           pnpm --filter @bambino/web start > web.log 2>&1 &
           pnpm --filter @bambino/admin start > admin.log 2>&1 &
-          npx --yes wait-on -t 120000 http://localhost:4000/ready http://localhost:3000/ready http://localhost:3001/admin/ready
+          if ! npx --yes wait-on -t 120000 http://localhost:4000/ready http://localhost:3000/ready http://localhost:3001/admin/ready; then
+            echo '::group::api.log'; cat api.log; echo '::endgroup::'
+            echo '::group::web.log'; cat web.log; echo '::endgroup::'
+            echo '::group::admin.log'; cat admin.log; echo '::endgroup::'
+            echo '::group::direct requests'
+            curl -sS -m 10 -i http://localhost:4000/ready || true
+            echo
+            curl -sS -m 10 -i http://127.0.0.1:4000/health || true
+            echo
+            ps aux | grep -E 'tsx|next|node' | grep -v grep || true
+            echo '::endgroup::'
+            exit 1
+          fi
       - run: pnpm --filter @bambino/e2e exec playwright install --with-deps chromium
       - run: pnpm --filter @bambino/e2e e2e
       - if: failure()
