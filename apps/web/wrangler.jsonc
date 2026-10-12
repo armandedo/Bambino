@@ -23,7 +23,7 @@
       "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "bambino-web-preview" }],
       "vars": {
         "API_URL": "https://bambino-api-preview.rwanyindoarmand.workers.dev/graphql",
-        "STORAGE_PUBLIC_BASE_URL": "https://CHANGE_ME-preview-media.example",
+        "STORAGE_PUBLIC_BASE_URL": "https://pub-5b4610946f0245dfac06c02558e326a2.r2.dev",
         "SITE_INDEXING": "false",
       },
     },
