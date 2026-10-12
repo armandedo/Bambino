@@ -104,6 +104,7 @@ The API refuses to start in production (`NODE_ENV=production`) unless:
 - [ ] `WEB_ORIGIN` and `ADMIN_ORIGIN` use https
 - [ ] `JWT_SECRET` is at least 32 characters
 - [ ] with `STORAGE_PROVIDER=s3`: endpoint, bucket and both keys are set
+- [ ] on Cloudflare R2: `STORAGE_PRIVATE_BUCKET` is set to a bucket that is **not** public (the public bucket holds product photos only)
 
 The website's production build fails unless:
 

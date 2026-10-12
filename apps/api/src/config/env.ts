@@ -51,6 +51,11 @@ const envSchema = z
     STORAGE_ENDPOINT: z.url().optional(),
     STORAGE_REGION: z.string().min(1).default('us-east-1'),
     STORAGE_BUCKET: z.string().optional(),
+    /**
+     * A second, never-public bucket for private files (data exports). Cloudflare R2 can only make a whole bucket
+     * public, not a prefix, so on R2 the public product-image bucket must not hold private files.
+     */
+    STORAGE_PRIVATE_BUCKET: z.string().optional(),
     STORAGE_ACCESS_KEY_ID: z.string().optional(),
     STORAGE_SECRET_ACCESS_KEY: z.string().optional(),
   })

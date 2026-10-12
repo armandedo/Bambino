@@ -32,8 +32,28 @@ npx wrangler login                                     # opens the browser
 # Production database first (open question 12), then:
 npx wrangler hyperdrive create bambino-db --connection-string="postgresql://USER:PASSWORD@HOST:5432/DB"
 # Put the returned id in apps/api/wrangler.jsonc (env.preview / env.production hyperdrive.id).
-npx wrangler r2 bucket create bambino-media           # product images and private exports
+npx wrangler r2 bucket create bambino-media           # public: product images only
+npx wrangler r2 bucket create bambino-private         # never public: data exports
 ```
+
+### R2 (image storage)
+
+R2 can make a **whole bucket** public, not a prefix, so there are two buckets: `bambino-media` (public, product
+photos under `products/`) and `bambino-private` (data exports, reached only through short-lived signed links).
+
+1. Dashboard, R2: create an **API token** (Object Read & Write, limited to the two buckets). Note the account id,
+   the access key id and the secret. The S3 endpoint is `https://<account-id>.r2.cloudflarestorage.com`.
+2. Make `bambino-media` public: R2, `bambino-media`, Settings, Custom domain (production: `media.<domain>`), or
+   the `r2.dev` address for a preview. That address is `STORAGE_PUBLIC_BASE_URL`.
+3. CORS on `bambino-media` (the browser PUTs the file straight to R2): edit `apps/api/r2-cors.json` to the real
+   admin origins, then `npx wrangler r2 bucket cors set bambino-media --file apps/api/r2-cors.json`.
+4. API variables (`wrangler.jsonc`, `env.preview.vars`): `STORAGE_PROVIDER=s3`, `STORAGE_ENDPOINT`,
+   `STORAGE_REGION=auto`, `STORAGE_BUCKET=bambino-media`, `STORAGE_PRIVATE_BUCKET=bambino-private`,
+   `STORAGE_PUBLIC_BASE_URL`. Secrets: `wrangler secret put STORAGE_ACCESS_KEY_ID` and
+   `STORAGE_SECRET_ACCESS_KEY` (`--env preview`).
+5. Website: set the same `STORAGE_PUBLIC_BASE_URL` in `apps/web/wrangler.jsonc` so the Content Security Policy
+   allows the images.
+6. Redeploy the API, then in the admin open a product and upload a photo.
 
 Secrets for the API (`cd apps/api`, add `--env preview` or `--env production`):
 
@@ -44,7 +64,7 @@ wrangler secret put STORAGE_SECRET_ACCESS_KEY
 wrangler secret put SENTRY_DSN            # optional
 ```
 
-Plain settings (origins, `EMAIL_FROM`, `STORAGE_ENDPOINT`, `STORAGE_BUCKET`, `STORAGE_PUBLIC_BASE_URL`) go in the
+Plain settings (origins, `EMAIL_FROM`, `STORAGE_ENDPOINT`, `STORAGE_BUCKET`, `STORAGE_PRIVATE_BUCKET`, `STORAGE_PUBLIC_BASE_URL`) go in the
 environment's `vars` in `wrangler.jsonc`; every `CHANGE_ME` there must be replaced (production refuses it).
 
 ## 10.3 Deploying
@@ -66,13 +86,13 @@ environment's `vars` in `wrangler.jsonc`; every `CHANGE_ME` there must be replac
 
 ## 10.4 DNS (proposed; check before changing anything)
 
-| Name       | Type                 | Target                                           | Proxied |
-| ---------- | -------------------- | ------------------------------------------------ | ------- |
-| `www`      | Worker custom domain | `bambino-web`                                    | yes     |
-| `@` (apex) | redirect rule        | `https://www.<domain>`                           | yes     |
-| `api`      | Worker custom domain | `bambino-api`                                    | yes     |
-| `admin`    | Worker custom domain | `bambino-admin`                                  | yes     |
-| `media`    | R2 custom domain     | `bambino-media` (public prefix `products/` only) | yes     |
+| Name       | Type                 | Target                                        | Proxied |
+| ---------- | -------------------- | --------------------------------------------- | ------- |
+| `www`      | Worker custom domain | `bambino-web`                                 | yes     |
+| `@` (apex) | redirect rule        | `https://www.<domain>`                        | yes     |
+| `api`      | Worker custom domain | `bambino-api`                                 | yes     |
+| `admin`    | Worker custom domain | `bambino-admin`                               | yes     |
+| `media`    | R2 custom domain     | `bambino-media` (public; product photos only) | yes     |
 
 Custom domains are added in the Worker's settings (Cloudflare creates the records and the certificate). Existing
 records for these names are listed and kept until the new ones are verified.

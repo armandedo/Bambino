@@ -22,6 +22,7 @@ export function createS3Provider(env: Env): S3StorageProvider {
     endpoint: env.STORAGE_ENDPOINT,
     region: env.STORAGE_REGION,
     bucket: env.STORAGE_BUCKET,
+    ...(env.STORAGE_PRIVATE_BUCKET ? { privateBucket: env.STORAGE_PRIVATE_BUCKET } : {}),
     accessKeyId: env.STORAGE_ACCESS_KEY_ID,
     secretAccessKey: env.STORAGE_SECRET_ACCESS_KEY,
     publicBaseUrl: env.STORAGE_PUBLIC_BASE_URL,

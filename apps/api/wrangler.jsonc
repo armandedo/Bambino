@@ -44,6 +44,8 @@
         "EMAIL_FROM": "Bambino Preview <no-reply@example.com>",
         "RATE_LIMITER": "postgres",
         "PAYMENT_PROVIDERS_ENABLED": "mock",
+        // Switch to "s3" after the R2 setup in docs/10-cloudflare.md, then add STORAGE_ENDPOINT, STORAGE_REGION (auto),
+        // STORAGE_BUCKET (bambino-media), STORAGE_PRIVATE_BUCKET (bambino-private) and STORAGE_PUBLIC_BASE_URL here.
         "STORAGE_PROVIDER": "local",
       },
       "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "df5cf078370e4c69a806fe8f70c5bef0" }],

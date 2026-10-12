@@ -83,6 +83,12 @@ export interface S3StorageConfig {
   endpoint: string;
   region: string;
   bucket: string;
+  /**
+   * Bucket for private objects (putPrivate, signed downloads, deletes). Defaults to `bucket`, which is fine where a
+   * bucket policy limits public read to a prefix (MinIO, AWS). Cloudflare R2 has no per-prefix public read, so
+   * there it must be a separate bucket that is never made public.
+   */
+  privateBucket?: string;
   accessKeyId: string;
   secretAccessKey: string;
   /** Base URL for public objects, e.g. http://127.0.0.1:9000/bambino-media or a CDN. */
@@ -139,7 +145,9 @@ export class S3StorageProvider implements StorageProvider {
   }
 
   async putPrivate(objectKey: string, body: string, contentType: string): Promise<void> {
-    const response = await this.send('PUT', this.objectUrl(objectKey), body, { 'content-type': contentType });
+    const response = await this.send('PUT', this.privateObjectUrl(objectKey), body, {
+      'content-type': contentType,
+    });
     if (!response.ok) throw new Error(`Storage PUT failed with status ${response.status}`);
   }
 
@@ -148,7 +156,7 @@ export class S3StorageProvider implements StorageProvider {
     return {
       url: presignUrl({
         method: 'GET',
-        url: this.objectUrl(objectKey),
+        url: this.privateObjectUrl(objectKey),
         credentials: this.credentials,
         expiresSeconds,
         now,
@@ -158,14 +166,21 @@ export class S3StorageProvider implements StorageProvider {
   }
 
   async deleteObject(objectKey: string): Promise<void> {
-    const response = await this.send('DELETE', this.objectUrl(objectKey));
+    const response = await this.send('DELETE', this.privateObjectUrl(objectKey));
     if (!response.ok && response.status !== 404)
       throw new Error(`Storage DELETE failed with status ${response.status}`);
   }
 
-  /** Creates the bucket if missing and makes the given key prefixes publicly readable (e.g. product images). */
-  async ensureBucket(publicReadPrefixes: readonly string[]): Promise<{ created: boolean }> {
-    const bucketUrl = new URL(`${this.config.endpoint.replace(/\/$/, '')}/${this.config.bucket}`);
+  /**
+   * Creates the bucket if missing and makes the given key prefixes publicly readable (e.g. product images).
+   * R2 does not implement bucket policies: there, public access is switched on for the whole bucket in the
+   * dashboard (custom domain), so the policy step is skipped.
+   */
+  async ensureBucket(
+    publicReadPrefixes: readonly string[],
+    bucket: string = this.config.bucket,
+  ): Promise<{ created: boolean }> {
+    const bucketUrl = new URL(`${this.config.endpoint.replace(/\/$/, '')}/${bucket}`);
     const head = await this.send('HEAD', bucketUrl);
     let created = false;
     if (head.status === 404) {
@@ -177,7 +192,7 @@ export class S3StorageProvider implements StorageProvider {
       throw new Error(`Bucket check failed with status ${head.status}`);
     }
 
-    if (publicReadPrefixes.length > 0) {
+    if (publicReadPrefixes.length > 0 && !this.isR2()) {
       const policy = JSON.stringify({
         Version: '2012-10-17',
         Statement: [
@@ -185,7 +200,7 @@ export class S3StorageProvider implements StorageProvider {
             Effect: 'Allow',
             Principal: { AWS: ['*'] },
             Action: ['s3:GetObject'],
-            Resource: publicReadPrefixes.map((prefix) => `arn:aws:s3:::${this.config.bucket}/${prefix}*`),
+            Resource: publicReadPrefixes.map((prefix) => `arn:aws:s3:::${bucket}/${prefix}*`),
           },
         ],
       });
@@ -200,10 +215,16 @@ export class S3StorageProvider implements StorageProvider {
     return { created };
   }
 
-  private objectUrl(objectKey: string): URL {
-    return new URL(
-      `${this.config.endpoint.replace(/\/$/, '')}/${this.config.bucket}/${encodeKeyPath(objectKey)}`,
-    );
+  private isR2(): boolean {
+    return new URL(this.config.endpoint).hostname.endsWith('.r2.cloudflarestorage.com');
+  }
+
+  private objectUrl(objectKey: string, bucket: string = this.config.bucket): URL {
+    return new URL(`${this.config.endpoint.replace(/\/$/, '')}/${bucket}/${encodeKeyPath(objectKey)}`);
+  }
+
+  private privateObjectUrl(objectKey: string): URL {
+    return this.objectUrl(objectKey, this.config.privateBucket ?? this.config.bucket);
   }
 
   private send(

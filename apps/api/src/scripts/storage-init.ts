@@ -8,7 +8,14 @@ const env = loadEnv();
 if (env.STORAGE_PROVIDER !== 's3') {
   process.stdout.write('STORAGE_PROVIDER is not s3; nothing to initialise.\n');
 } else {
-  const result = await createS3Provider(env).ensureBucket(PUBLIC_READ_PREFIXES);
+  const storage = createS3Provider(env);
+  const result = await storage.ensureBucket(PUBLIC_READ_PREFIXES);
+  if (env.STORAGE_PRIVATE_BUCKET) {
+    const priv = await storage.ensureBucket([], env.STORAGE_PRIVATE_BUCKET);
+    process.stdout.write(
+      `Private bucket "${env.STORAGE_PRIVATE_BUCKET}" ${priv.created ? 'created' : 'already existed'}\n`,
+    );
+  }
   process.stdout.write(
     `Bucket "${env.STORAGE_BUCKET}" ${result.created ? 'created' : 'already existed'}; public read on: ${PUBLIC_READ_PREFIXES.join(', ')}\n`,
   );
