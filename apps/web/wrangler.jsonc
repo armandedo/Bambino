@@ -21,6 +21,8 @@
     "preview": {
       "name": "bambino-web-preview",
       "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "bambino-web-preview" }],
+      // Environments do not inherit "images", so it is repeated here for next/image resizing.
+      "images": { "binding": "IMAGES" },
       "vars": {
         "API_URL": "https://bambino-api-preview.rwanyindoarmand.workers.dev/graphql",
         "STORAGE_PUBLIC_BASE_URL": "https://pub-5b4610946f0245dfac06c02558e326a2.r2.dev",
