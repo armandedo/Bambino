@@ -74,6 +74,8 @@ jobs:
         run: pnpm --filter @bambino/web cf:build
       - name: Cloudflare (OpenNext) build for the admin (no deploy)
         run: pnpm --filter @bambino/admin cf:build
+      - name: Mobile app bundle (Metro, Android, no store build)
+        run: pnpm --filter @bambino/mobile bundle:check
 
   e2e:
     name: Playwright journeys

@@ -41,6 +41,13 @@ Bottom tabs, each a native stack:
 
 Signed out: welcome, sign in, register, forgot password, then the tabs.
 
+**Built so far (first slice):** sign in, register, then the tabs Shop, Cart, Orders and Account; product,
+checkout (address, delivery, review), order screen with mobile-money payment (polled until the provider answers),
+pay on delivery and cancel. **Not built yet:** Home (overview, notifications, size finder), Subscription tab,
+Exchanges tab, baby profiles and measurements, password reset, address and payment-method management, filter
+sheet, offline query cache and its banner, push notifications. Tokens: refresh token in `expo-secure-store`,
+access token in memory only (`src/lib/session-core.ts`, unit tested).
+
 Offline behaviour: the query cache for catalogue, profile, baby profiles, recent orders and subscription is
 persisted to device storage and shown with an "offline, last updated …" banner. Checkout, payment, return
 requests and every other mutation are disabled offline, never queued.

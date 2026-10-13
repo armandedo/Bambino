@@ -30,3 +30,6 @@ blob-report/
 
 # OpenNext build output
 .open-next/
+
+# Expo (apps/mobile) bundle check output
+.expo-export/
