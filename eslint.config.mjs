@@ -13,6 +13,9 @@ export default tseslint.config(
       '**/.open-next/**',
       '**/*.generated.ts',
       '**/next-env.d.ts',
+      // Metro reads this as plain CommonJS.
+      'apps/mobile/metro.config.js',
+      '**/.expo-export/**',
       'database/migrations/**',
     ],
   },
