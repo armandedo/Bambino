@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { AddToCartMutation, ProductQuery } from '@bambino/api-client';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -65,7 +66,11 @@ export default function ProductScreen() {
             style={{ width: '100%', height: '100%' }}
             resizeMode="cover"
           />
-        ) : null}
+        ) : (
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name="shirt-outline" size={40} color={colors['border-strong']} />
+          </View>
+        )}
       </View>
 
       <View style={{ gap: space.xs }}>

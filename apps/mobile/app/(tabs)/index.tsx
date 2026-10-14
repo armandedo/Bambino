@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { CatalogueFiltersQuery, type ProductCard, ProductsQuery } from '@bambino/api-client';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
@@ -35,7 +36,11 @@ function ProductTile({ product, onPress }: { product: ProductCard; onPress: () =
             style={{ width: '100%', height: '100%' }}
             resizeMode="cover"
           />
-        ) : null}
+        ) : (
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name="shirt-outline" size={40} color={colors['border-strong']} />
+          </View>
+        )}
       </View>
       <Text style={{ fontWeight: '700', color: colors.foreground, fontSize: 15 }} numberOfLines={2}>
         {product.name}
