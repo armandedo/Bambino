@@ -41,11 +41,14 @@ Bottom tabs, each a native stack:
 
 Signed out: welcome, sign in, register, forgot password, then the tabs.
 
-**Built so far (first slice):** sign in, register, then the tabs Shop, Cart, Orders and Account; product,
-checkout (address, delivery, review), order screen with mobile-money payment (polled until the provider answers),
-pay on delivery and cancel. **Not built yet:** Home (overview, notifications, size finder), Subscription tab,
-Exchanges tab, baby profiles and measurements, password reset, address and payment-method management, filter
-sheet, offline query cache and its banner, push notifications. Tokens: refresh token in `expo-secure-store`,
+**Built so far:** sign in and register; tabs Home (babies, subscription, notifications), Shop (cart button in the
+header), Subscription (plans, start, pause, resume, cancel at period end, pay the waiting order), Exchanges (clothes
+held, return request, returns and exchanges status, credit balance) and Account (orders, babies, sign out); product,
+cart, checkout (address, delivery, review), order screen with mobile-money payment (polled until the provider
+answers), pay on delivery and cancel; baby profiles with an optional first measurement.
+**Not built yet:** choosing the next size for an exchange from the app, size finder, password reset, address and
+payment-method management, change plan, item selection for a cycle, filter sheet, offline query cache and its
+banner, push notifications. Tokens: refresh token in `expo-secure-store`,
 access token in memory only (`src/lib/session-core.ts`, unit tested).
 
 Offline behaviour: the query cache for catalogue, profile, baby profiles, recent orders and subscription is

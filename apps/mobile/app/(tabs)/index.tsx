@@ -1,187 +1,122 @@
-import { Ionicons } from '@expo/vector-icons';
-import { CatalogueFiltersQuery, type ProductCard, ProductsQuery } from '@bambino/api-client';
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import {
+  MarkAllNotificationsReadMutation,
+  MyBabyProfilesQuery,
+  MyNotificationsQuery,
+  MySubscriptionsQuery,
+} from '@bambino/api-client';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
-import { FlatList, Image, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
-import { Banner, Button, Empty, Field, Loading } from '@/components/ui';
-import { price } from '@/lib/format';
-import { errorMessage } from '@/lib/messages';
-import { api } from '@/lib/session';
-import { colors, radius, space } from '@/theme';
+import { Text, View } from 'react-native';
+import { Banner, Body, Button, Card, Heading, Screen } from '@/components/ui';
+import { when } from '@/lib/format';
+import { notificationText, subscriptionStatusLabel } from '@/lib/labels';
+import { api, useSession } from '@/lib/session';
+import { colors, space } from '@/theme';
 
-function ProductTile({ product, onPress }: { product: ProductCard; onPress: () => void }) {
-  const image = product.images[0];
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={product.name}
-      onPress={onPress}
-      style={{ flex: 1, gap: space.sm }}
-    >
-      <View
-        style={{
-          aspectRatio: 1,
-          borderRadius: radius.lg,
-          backgroundColor: colors['surface-muted'],
-          overflow: 'hidden',
-          borderWidth: 1,
-          borderColor: colors.border,
-        }}
-      >
-        {image ? (
-          <Image
-            source={{ uri: image.url }}
-            accessibilityLabel={image.altText}
-            style={{ width: '100%', height: '100%' }}
-            resizeMode="cover"
-          />
-        ) : (
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-            <Ionicons name="shirt-outline" size={40} color={colors['border-strong']} />
-          </View>
-        )}
-      </View>
-      <Text style={{ fontWeight: '700', color: colors.foreground, fontSize: 15 }} numberOfLines={2}>
-        {product.name}
-      </Text>
-      <Text style={{ color: colors['foreground-muted'], fontSize: 14 }}>
-        {product.priceFrom ? `From ${price(product.priceFrom)}` : 'Price on request'}
-      </Text>
-    </Pressable>
-  );
-}
-
-export default function Shop() {
+export default function Home() {
   const router = useRouter();
-  const [search, setSearch] = useState('');
-  const [submitted, setSubmitted] = useState('');
-  const [categorySlug, setCategorySlug] = useState<string | undefined>();
+  const queryClient = useQueryClient();
+  const { user } = useSession();
 
-  const filters = useQuery({
-    queryKey: ['catalogue-filters'],
-    queryFn: async () => api.request(CatalogueFiltersQuery),
+  const babies = useQuery({
+    queryKey: ['babies'],
+    queryFn: async () => (await api.request(MyBabyProfilesQuery)).myBabyProfiles,
+  });
+  const subscriptions = useQuery({
+    queryKey: ['subscriptions'],
+    queryFn: async () => (await api.request(MySubscriptionsQuery)).mySubscriptions,
+  });
+  const notifications = useQuery({
+    queryKey: ['notifications'],
+    queryFn: async () => (await api.request(MyNotificationsQuery, { first: 5 })).myNotifications,
+  });
+  const markRead = useMutation({
+    mutationFn: async () => api.request(MarkAllNotificationsReadMutation),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
   });
 
-  const products = useInfiniteQuery({
-    queryKey: ['products', submitted, categorySlug],
-    initialPageParam: undefined as string | undefined,
-    queryFn: async ({ pageParam }) =>
-      (
-        await api.request(ProductsQuery, {
-          filter: {
-            ...(submitted ? { search: submitted } : {}),
-            ...(categorySlug ? { categorySlug } : {}),
-          },
-          sort: 'NEWEST',
-          first: 12,
-          ...(pageParam ? { after: pageParam } : {}),
-        })
-      ).products,
-    getNextPageParam: (last) =>
-      last.pageInfo.hasNextPage ? (last.pageInfo.endCursor ?? undefined) : undefined,
-  });
-
-  const items = useMemo(
-    () => products.data?.pages.flatMap((page) => page.edges.map((edge) => edge.node)) ?? [],
-    [products.data],
-  );
+  const live = subscriptions.data?.find((s) => s.status !== 'CANCELLED' && s.status !== 'EXPIRED');
+  const unread = notifications.data?.unreadCount ?? 0;
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <View style={{ padding: space.lg, gap: space.md }}>
-        <Field
-          label="Search clothes"
-          value={search}
-          onChangeText={setSearch}
-          autoCapitalize="none"
-          placeholder="Bodysuit, sleepsuit, hat…"
-        />
-        <View style={{ flexDirection: 'row', gap: space.sm }}>
-          <View style={{ flex: 1 }}>
-            <Button label="Search" onPress={() => setSubmitted(search.trim())} variant="outline" />
-          </View>
-          {submitted || categorySlug ? (
-            <View style={{ flex: 1 }}>
-              <Button
-                label="Clear"
-                variant="outline"
-                onPress={() => {
-                  setSearch('');
-                  setSubmitted('');
-                  setCategorySlug(undefined);
-                }}
-              />
-            </View>
-          ) : null}
-        </View>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ gap: space.sm }}
-        >
-          {filters.data?.categories.map((category) => {
-            const active = category.slug === categorySlug;
-            return (
-              <Pressable
-                key={category.id}
-                accessibilityRole="button"
-                accessibilityState={{ selected: active }}
-                onPress={() => setCategorySlug(active ? undefined : category.slug)}
-                style={{
-                  paddingHorizontal: space.lg,
-                  minHeight: 40,
-                  justifyContent: 'center',
-                  borderRadius: radius.full,
-                  borderWidth: 1,
-                  borderColor: active ? colors.primary : colors['border-strong'],
-                  backgroundColor: active ? colors.primary : 'transparent',
-                }}
-              >
-                <Text
-                  style={{
-                    fontWeight: '600',
-                    color: active ? colors['primary-foreground'] : colors.foreground,
-                  }}
-                >
-                  {category.name}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      </View>
+    <Screen>
+      <Heading>Hello{user ? `, ${user.firstName}` : ''}</Heading>
 
-      {products.isPending ? (
-        <Loading label="Loading clothes" />
-      ) : products.isError ? (
-        <View style={{ padding: space.lg, gap: space.md }}>
-          <Banner tone="danger">{errorMessage(products.error)}</Banner>
-          <Button label="Try again" onPress={() => products.refetch()} variant="outline" />
-        </View>
-      ) : items.length === 0 ? (
-        <Empty title="No clothes found">Try another search or clear the filters.</Empty>
-      ) : (
-        <FlatList
-          data={items}
-          keyExtractor={(item) => item.id}
-          numColumns={2}
-          columnWrapperStyle={{ gap: space.lg }}
-          contentContainerStyle={{ padding: space.lg, gap: space.xl }}
-          refreshControl={
-            <RefreshControl refreshing={products.isRefetching} onRefresh={() => products.refetch()} />
-          }
-          onEndReached={() =>
-            products.hasNextPage && !products.isFetchingNextPage && products.fetchNextPage()
-          }
-          renderItem={({ item }) => (
-            <ProductTile
-              product={item}
-              onPress={() => router.push({ pathname: '/product/[slug]', params: { slug: item.slug } })}
-            />
-          )}
+      <Card>
+        <Text style={{ fontWeight: '700', fontSize: 16, color: colors.foreground }}>Your little ones</Text>
+        {babies.isPending ? (
+          <Body muted>Loading…</Body>
+        ) : babies.data && babies.data.length > 0 ? (
+          babies.data.map((baby) => (
+            <View key={baby.id} style={{ gap: 2 }}>
+              <Text style={{ fontWeight: '600', color: colors.foreground }}>{baby.nickname}</Text>
+              <Body muted>
+                {baby.currentSize ? `Wears ${baby.currentSize.label}` : 'Size not set'}
+                {baby.latestRecommendation
+                  ? ` · we suggest ${baby.latestRecommendation.recommendedSize.label}`
+                  : ''}
+              </Body>
+            </View>
+          ))
+        ) : (
+          <Body muted>Add your baby so we can suggest the right size.</Body>
+        )}
+        <Button label="Manage babies" variant="outline" onPress={() => router.push('/babies')} />
+      </Card>
+
+      <Card>
+        <Text style={{ fontWeight: '700', fontSize: 16, color: colors.foreground }}>Subscription</Text>
+        {live ? (
+          <>
+            <Body>
+              {live.plan.name} · {subscriptionStatusLabel(live.status)}
+            </Body>
+            {live.nextBillingAt ? <Body muted>Next billing {when(live.nextBillingAt)}</Body> : null}
+          </>
+        ) : (
+          <Body muted>No subscription yet. Rent clothes by the size, swap as your baby grows.</Body>
+        )}
+        <Button
+          label={live ? 'Manage subscription' : 'See plans'}
+          variant="outline"
+          onPress={() => router.push('/subscription')}
         />
-      )}
-    </View>
+      </Card>
+
+      <Card>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text style={{ fontWeight: '700', fontSize: 16, color: colors.foreground }}>
+            Notifications{unread > 0 ? ` (${unread} new)` : ''}
+          </Text>
+        </View>
+        {notifications.data && notifications.data.edges.length > 0 ? (
+          notifications.data.edges.map(({ node }) => (
+            <View key={node.id} style={{ gap: 2, opacity: node.read ? 0.6 : 1 }}>
+              <Text style={{ color: colors.foreground, fontWeight: node.read ? '400' : '600' }}>
+                {notificationText(node.type)}
+              </Text>
+              <Text style={{ color: colors['foreground-muted'], fontSize: 13 }}>{when(node.createdAt)}</Text>
+            </View>
+          ))
+        ) : (
+          <Body muted>Nothing new.</Body>
+        )}
+        {unread > 0 ? (
+          <Button
+            label="Mark all as read"
+            variant="outline"
+            loading={markRead.isPending}
+            onPress={() => markRead.mutate()}
+          />
+        ) : null}
+      </Card>
+
+      {babies.isError || subscriptions.isError ? (
+        <Banner tone="warning">
+          Some information could not be loaded. Pull down on another tab and try again.
+        </Banner>
+      ) : null}
+      <View style={{ height: space.lg }} />
+    </Screen>
   );
 }

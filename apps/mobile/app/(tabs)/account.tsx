@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Text } from 'react-native';
 import { Banner, Body, Button, Card, Heading, Screen } from '@/components/ui';
@@ -6,6 +7,7 @@ import { useSession } from '@/lib/session';
 import { colors } from '@/theme';
 
 export default function AccountScreen() {
+  const router = useRouter();
   const { user, signOut } = useSession();
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
@@ -48,6 +50,8 @@ export default function AccountScreen() {
           <Body muted>You can add one at checkout.</Body>
         )}
       </Card>
+      <Button label="My orders" variant="outline" onPress={() => router.push('/orders')} />
+      <Button label="My babies" variant="outline" onPress={() => router.push('/babies')} />
       <Button label="Sign out" variant="outline" loading={busy} onPress={leave} />
     </Screen>
   );

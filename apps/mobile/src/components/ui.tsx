@@ -182,6 +182,38 @@ export function Card({ children, onPress }: { children: ReactNode; onPress?: () 
   );
 }
 
+/** A selectable pill: filters, choices, sizes. */
+export function Chip({
+  label,
+  selected,
+  onPress,
+}: {
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+      onPress={onPress}
+      style={{
+        minHeight: 44,
+        paddingHorizontal: space.lg,
+        justifyContent: 'center',
+        borderRadius: radius.full,
+        borderWidth: 1,
+        borderColor: selected ? colors.primary : colors['border-strong'],
+        backgroundColor: selected ? colors.primary : 'transparent',
+      }}
+    >
+      <Text style={{ fontWeight: '600', color: selected ? colors['primary-foreground'] : colors.foreground }}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
 export function Loading({ label = 'Loading' }: { label?: string }) {
   return (
     <View style={styles.center} accessibilityLabel={label}>
