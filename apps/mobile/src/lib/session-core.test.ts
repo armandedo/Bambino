@@ -31,7 +31,7 @@ type Variables = Record<string, unknown>;
 function fakeApi(handlers: Record<string, (variables: Variables, headers: Headers) => unknown>) {
   const calls: { op: string; variables: Variables; authorization: string | null }[] = [];
   const fetchImpl = (async (_url: string, init: RequestInit) => {
-    const body = JSON.parse(String(init.body)) as { operationName: string; variables: unknown };
+    const body = JSON.parse(String(init.body)) as { operationName: string; variables: Variables };
     const headers = new Headers(init.headers);
     calls.push({
       op: body.operationName,
