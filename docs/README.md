@@ -12,6 +12,7 @@
 | 8   | [Open questions](08-open-questions.md)         | Business decisions the build depends on                                                                                          |
 | 9   | [Operations](09-operations.md)                 | Deploys, migrations, rollback, backups and restore, secret rotation, launch checklist                                            |
 | 10  | [Cloudflare](10-cloudflare.md)                 | Cloudflare architecture, setup, deploying, DNS, security settings, costs                                                         |
+| 11  | [Verification](11-verification.md)             | Phase 9: dependency audit, API review, accessibility and performance measurements, CI status                                     |
 
 The GraphQL schema (5) is the SDL itself: [`apps/api/src/graphql/schema/`](../apps/api/src/graphql/schema).
 
