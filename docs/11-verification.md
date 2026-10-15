@@ -62,7 +62,20 @@ Findings and changes:
 - Blocking time varied from 0.6 s to 1.9 s between two runs of the same page, so it is noisy on this laptop. Measure
   again from CI or a clean machine before optimising JavaScript.
 
-Open: re-measure after the memo is deployed (needs a WSL build and deploy), configure a real Next.js cache for
+Re-measured after deploying the memo (same method, one run per page):
+
+| Page  | Performance before | After | LCP before / after | Total blocking time before / after |
+| ----- | ------------------ | ----- | ------------------ | ---------------------------------- |
+| Home  | 42 and 61          | 75    | 5.6 s / 4.2 s      | 1.9 s and 0.6 s / 320 ms           |
+| Plans | 64                 | 85    | 4.0 s / 2.7 s      | 970 ms / 430 ms                    |
+| Shop  | 94                 | 95    | 1.7 s / 2.6 s      | 260 ms / 160 ms                    |
+
+Accessibility and best practices stayed at 100. Repeated requests to the home page answered in about 0.4 to 0.5 s once
+warm, but a request that lands on a Worker instance that has not served the page yet still pays for the three API
+calls (1.5 to 5 s was seen on first requests after a deploy). The memo is per instance, so it helps busy pages most.
+A cache shared across instances (Cloudflare Cache API, KV, or the OpenNext R2 incremental cache) would remove that.
+
+Open: configure a real Next.js cache for
 Workers (R2 incremental cache) if the memo is not enough, and measure the mobile app on a mid-range Android phone.
 
 ## 11.5 CI
