@@ -123,17 +123,37 @@ jobs:
           pnpm --filter @bambino/api start > api.log 2>&1 &
           pnpm --filter @bambino/web start > web.log 2>&1 &
           pnpm --filter @bambino/admin start > admin.log 2>&1 &
-          if ! npx --yes wait-on -t 120000 http://localhost:4000/ready http://localhost:3000/ready http://localhost:3001/admin/ready; then
-            echo '::group::api.log'; cat api.log; echo '::endgroup::'
-            echo '::group::web.log'; cat web.log; echo '::endgroup::'
-            echo '::group::admin.log'; cat admin.log; echo '::endgroup::'
-            echo '::group::direct requests'
-            curl -sS -m 10 -i http://localhost:4000/ready || true
-            echo
-            curl -sS -m 10 -i http://127.0.0.1:4000/health || true
-            echo
-            ps aux | grep -E 'tsx|next|node' | grep -v grep || true
-            echo '::endgroup::'
+
+          # Wait on 127.0.0.1: "localhost" can resolve to ::1 first on a runner, and a server bound to IPv4 only
+          # then looks down. The browser tests use localhost, which Chromium resolves with fallback.
+          wait_for() {
+            for _ in $(seq 1 90); do
+              if curl -fsS -m 3 -o /dev/null "$1"; then echo "ready: $1"; return 0; fi
+              sleep 2
+            done
+            echo "NOT READY after 180 s: $1"
+            return 1
+          }
+          failed=0
+          wait_for http://127.0.0.1:4000/ready || failed=1
+          wait_for http://127.0.0.1:3000/ready || failed=1
+          wait_for http://127.0.0.1:3001/admin/ready || failed=1
+
+          if [ "$failed" = 1 ]; then
+            # Plain output (not collapsed groups), so the cause is visible in the job summary at a glance.
+            echo "===== direct requests ====="
+            for url in http://127.0.0.1:4000/ready 'http://[::1]:4000/ready' http://localhost:4000/ready http://127.0.0.1:3000/ready http://127.0.0.1:3001/admin/ready; do
+              echo "--- $url"
+              curl -sS -m 10 -i "$url" || true
+              echo
+            done
+            echo "===== name resolution ====="
+            getent hosts localhost || true
+            echo "===== listening sockets ====="
+            (ss -ltnp 2>/dev/null || netstat -ltnp 2>/dev/null) | grep -E ':(3000|3001|4000|5432)' || true
+            echo "===== api.log ====="; cat api.log
+            echo "===== web.log ====="; cat web.log
+            echo "===== admin.log ====="; cat admin.log
             exit 1
           fi
       - run: pnpm --filter @bambino/e2e exec playwright install --with-deps chromium
