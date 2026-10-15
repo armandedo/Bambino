@@ -5,14 +5,16 @@ Smart, Sustainable Babywear — Hassle-Free, Every Month.
 A subscription and circular-commerce platform for baby clothing, launching in Kigali, Rwanda: subscribe, get
 the right size, wear, return, exchange, reuse.
 
-**Current state: Phases 1 to 6 and 8 of 10 are done.** The API covers accounts, staff roles, the catalogue, cart,
-checkout, orders, delivery, payments against a mock provider, baby profiles, rules-based sizing, subscriptions with renewal,
-the garment lifecycle, returns, inspection, exchange credit and exchanges. The design system (`packages/ui`) and the
-customer website (`apps/web`) are built: public pages, sign-in, cart, checkout with mobile-money payment, size finder and
-the account area. Journeys A and B pass in Playwright. The admin dashboard (`apps/admin`, http://localhost:3001/admin) is built and journey C passes. The mobile app
-(Phase 7) is not built yet; payments use test wallets only.
-See [docs/README.md](docs/README.md) for the
-full status and the architecture documents.
+**Current state: Phases 1 to 6 and 8 are done, Phase 7 (mobile) has its core slice, and Phase 9 (verification) is in
+progress.** The API covers accounts, staff roles, the catalogue, cart, checkout, orders, delivery, payments against a mock
+provider, pay on delivery (cash), baby profiles, rules-based sizing, subscriptions with renewal, the garment lifecycle,
+returns, inspection, exchange credit and exchanges. The design system (`packages/ui`), the customer website
+(`apps/web`), the admin dashboard (`apps/admin`) and the Expo mobile app (`apps/mobile`: sign in, shop, cart, checkout,
+payment, orders, subscription, exchanges, babies) are built. The website, admin and API run on Cloudflare previews;
+product photos are stored in Cloudflare R2. Payments use test wallets only, and email is logged rather than sent: a real
+mobile-money provider, an email provider and a domain are still needed for production. See
+[docs/README.md](docs/README.md) for the full status, [docs/11-verification.md](docs/11-verification.md) for the
+latest checks, and the architecture documents.
 
 ## Requirements
 
