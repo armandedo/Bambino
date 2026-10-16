@@ -150,7 +150,7 @@ jobs:
             echo "===== name resolution ====="
             getent hosts localhost || true
             echo "===== listening sockets ====="
-            (ss -ltnp 2>/dev/null || netstat -ltnp 2>/dev/null) | grep -E ':(3000|3001|4000|5432)' || true
+            (ss -ltnp 2>/dev/null || netstat -ltnp 2>/dev/null) | grep -E ':(3000|3001|4000|5432)' || true
             echo "===== api.log ====="; cat api.log
             echo "===== web.log ====="; cat web.log
             echo "===== admin.log ====="; cat admin.log
