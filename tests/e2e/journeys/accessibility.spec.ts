@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { expectNoA11yViolations } from '../support/a11y';
+import { trackRequests } from '../support/settle';
 
 const PUBLIC_PAGES = [
   '/',
@@ -18,9 +19,10 @@ const PUBLIC_PAGES = [
 
 for (const path of PUBLIC_PAGES) {
   test(`${path} has no WCAG A/AA violations @mobile`, async ({ page }) => {
+    const network = trackRequests(page);
     await page.goto(path);
     await expect(page.getByRole('main')).toBeVisible();
-    await page.waitForLoadState('networkidle');
+    await network.settle();
     await expectNoA11yViolations(page);
   });
 }
