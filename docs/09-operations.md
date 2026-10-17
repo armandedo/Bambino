@@ -100,7 +100,7 @@ The API refuses to start in production (`NODE_ENV=production`) unless:
 - [ ] `PAYMENT_PROVIDERS_ENABLED` does not include `mock`
 - [ ] no setting still contains `CHANGE_ME`
 - [ ] `DATABASE_URL` is a PostgreSQL server (not the in-process PGlite)
-- [ ] `EMAIL_PROVIDER` is not `console` (no real provider is integrated yet: open question 11, so launch is blocked)
+- [ ] `EMAIL_PROVIDER=resend` with `RESEND_API_KEY` set, and the sending domain verified in Resend (SPF, DKIM and a DMARC record), with `EMAIL_FROM` on that domain; send a test verification email to a real inbox and check it is not in spam
 - [ ] `WEB_ORIGIN` and `ADMIN_ORIGIN` use https
 - [ ] `JWT_SECRET` is at least 32 characters
 - [ ] with `STORAGE_PROVIDER=s3`: endpoint, bucket and both keys are set

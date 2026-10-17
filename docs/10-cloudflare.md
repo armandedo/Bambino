@@ -61,6 +61,7 @@ Secrets for the API (`cd apps/api`, add `--env preview` or `--env production`):
 wrangler secret put JWT_SECRET            # 48+ random characters
 wrangler secret put STORAGE_ACCESS_KEY_ID  # R2 API token (S3 compatible)
 wrangler secret put STORAGE_SECRET_ACCESS_KEY
+wrangler secret put RESEND_API_KEY        # email: needs EMAIL_PROVIDER=resend and a verified sending domain
 wrangler secret put SENTRY_DSN            # optional
 ```
 
@@ -115,7 +116,7 @@ records for these names are listed and kept until the new ones are verified.
 | Website (OpenNext) | **Preview deployed** (`bambino-web-preview`). Pages, per-request CSP nonce and CORS to the API verified live. The Next 16 `proxy.ts` (Node runtime) is supported by OpenNext only as _experimental_ |
 | Production         | Not deployed: needs the domain, an email provider and a payment decision                                                                                                                            |
 | Admin              | Ported (`apps/admin/wrangler.jsonc`, same OpenNext steps as the website); builds in CI. Preview deploy is a manual step from Linux or WSL                                                           |
-| Email              | No production provider (open question 11): production refuses to start                                                                                                                              |
+| Email              | Resend provider and templates built and tested; needs a domain, `EMAIL_PROVIDER=resend` and `RESEND_API_KEY` (open question 11). Production refuses the console provider                            |
 | Payments           | Mock only; MTN MoMo and Airtel not integrated (open question 10)                                                                                                                                    |
 
 Costs beyond the free tier: Workers Paid plan (USD 5/month base, then per request and CPU time; needed for

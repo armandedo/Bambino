@@ -5,7 +5,7 @@ import { createArgon2Hasher } from '../auth/passwords';
 import { loadEnv } from '../config/env';
 import { createLogger } from '../infra/logger';
 import { MemoryRateLimiter, PostgresRateLimiter } from '../infra/rate-limiter';
-import { ConsoleEmailProvider } from '../providers/email';
+import { createEmailProvider } from '../providers/email-factory';
 import { MockPaymentProvider, type PaymentProvider } from '../providers/payments';
 import { createStorageProvider } from '../providers/storage-factory';
 import { createApp } from './app';
@@ -34,7 +34,7 @@ async function main() {
     },
     db: connection.db,
     logger,
-    email: new ConsoleEmailProvider(logger),
+    email: createEmailProvider(env, logger),
     hasher: createArgon2Hasher(),
     rateLimiter:
       env.RATE_LIMITER === 'postgres' ? new PostgresRateLimiter(connection.db) : new MemoryRateLimiter(),

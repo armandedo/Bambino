@@ -15,7 +15,7 @@ import { createPortableArgon2Hasher } from './auth/passwords-portable';
 import { type Env, loadEnv } from './config/env';
 import { createLogger } from './infra/logger';
 import { MemoryRateLimiter, PostgresRateLimiter } from './infra/rate-limiter';
-import { ConsoleEmailProvider } from './providers/email';
+import { createEmailProvider } from './providers/email-factory';
 import { MockPaymentProvider, type PaymentProvider } from './providers/payments';
 import { createStorageProvider } from './providers/storage-factory';
 import { SCHEMA_SDL } from './graphql/schema-sdl.generated';
@@ -68,7 +68,7 @@ function build(bindings: WorkerBindings) {
     db: requestDatabase,
     typeDefs: SCHEMA_SDL,
     logger,
-    email: new ConsoleEmailProvider(logger),
+    email: createEmailProvider(env, logger),
     hasher: createPortableArgon2Hasher(),
     // Isolates do not share memory: limits must live in the database to mean anything.
     rateLimiter:

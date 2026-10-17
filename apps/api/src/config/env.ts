@@ -17,7 +17,9 @@ const envSchema = z
     JWT_SECRET: z.string().min(32, 'must be at least 32 characters'),
     ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().min(60).max(3600).default(900),
     REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().min(1).max(90).default(30),
-    EMAIL_PROVIDER: z.enum(['console']).default('console'),
+    /** `console` only logs (development); `resend` sends through Resend and needs RESEND_API_KEY. */
+    EMAIL_PROVIDER: z.enum(['console', 'resend']).default('console'),
+    RESEND_API_KEY: z.string().min(10).optional(),
     EMAIL_FROM: z.string().min(3),
     TRUST_PROXY: booleanString.default(false),
     /** `memory` for one API instance (development, tests); `postgres` when several instances share limits. */
@@ -62,6 +64,9 @@ const envSchema = z
   .superRefine((env, context) => {
     const fail = (path: string, message: string) =>
       context.addIssue({ code: 'custom', path: [path], message });
+    if (env.EMAIL_PROVIDER === 'resend' && !env.RESEND_API_KEY) {
+      fail('RESEND_API_KEY', 'is required when EMAIL_PROVIDER=resend');
+    }
     if (env.STORAGE_PROVIDER === 's3') {
       for (const key of [
         'STORAGE_ENDPOINT',
