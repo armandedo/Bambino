@@ -6,7 +6,7 @@ import { RouterLink } from '@/components/router-link';
 import { Logo } from '@/components/logo';
 
 const GARMENTS = [
-  { tag: 'SEED-ORGANIC-SAN-03M-G1', product: 'Organic cotton bodysuit', status: 'INSPECTION', cycles: 1 },
+  { tag: 'SEED-ORGANIC-SAN-03M-G1', product: 'Bodysuit', status: 'INSPECTION', cycles: 1 },
   { tag: 'SEED-FOOTEDRO-OAT-36M-G2', product: 'Footed romper', status: 'AVAILABLE_FOR_REUSE', cycles: 2 },
   { tag: 'SEED-SLEEPSUI-CLO-69M-G1', product: 'Two-piece sleep suit', status: 'WITH_CUSTOMER', cycles: 0 },
   { tag: 'SEED-EVERYDAY-CLA-912M-G3', product: 'Everyday trousers', status: 'RECYCLE', cycles: 3 },

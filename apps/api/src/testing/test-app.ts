@@ -61,6 +61,8 @@ export async function createTestApp(
     rateLimiter?: RateLimiter;
     queryLimits?: QueryLimits;
     catalogue?: boolean;
+    /** Runs the app as production, to test the rules that only apply there. */
+    nodeEnv?: 'production';
     errorReporter?: ErrorReporter;
   } = {},
 ) {
@@ -76,7 +78,7 @@ export async function createTestApp(
   const storage = new FakeStorageProvider();
 
   const app = createApp({
-    config: TEST_CONFIG,
+    config: options.nodeEnv ? { ...TEST_CONFIG, nodeEnv: options.nodeEnv } : TEST_CONFIG,
     db,
     logger: silentLogger,
     email,

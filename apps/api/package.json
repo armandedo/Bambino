@@ -8,6 +8,7 @@
     "start": "tsx src/server/main.ts",
     "db:migrate": "tsx src/scripts/migrate.ts",
     "db:seed": "tsx src/scripts/seed.ts",
+    "launch:check": "tsx src/scripts/launch-check.ts",
     "storage:init": "tsx src/scripts/storage-init.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",

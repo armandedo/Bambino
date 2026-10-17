@@ -21,6 +21,7 @@ import type { EmailProvider } from '../providers/email';
 import type { PaymentProviderRegistry } from '../providers/payments';
 import type { StorageProvider } from '../providers/storage';
 import { type Services, createServices } from '../services';
+import { describeFindings, findPlaceholderData } from '../domain/placeholder-data';
 import { ANONYMOUS, type RequestMeta } from '../services/context';
 import { ACCESS_COOKIE, CookieJar, parseCookies } from './cookies';
 
@@ -236,9 +237,30 @@ export function createApp(deps: AppDependencies) {
   };
 
   /** Readiness: the process is up and the database answers. Load balancers send traffic only when this is 200. */
+  const PLACEHOLDER_CHECK_TTL_MS = 60_000;
+  let placeholderCheck: { at: number; found: string } | null = null;
+
+  /**
+   * In production only: demo rows (database/seeds) in the database mean customers would see placeholder names,
+   * prices and claims, so the API says it is not ready. Checked at most once a minute.
+   */
+  const placeholderDataInProduction = async (): Promise<string> => {
+    if (config.nodeEnv !== 'production') return '';
+    const at = now().getTime();
+    if (!placeholderCheck || at - placeholderCheck.at > PLACEHOLDER_CHECK_TTL_MS) {
+      placeholderCheck = { at, found: describeFindings(await findPlaceholderData(deps.db)) };
+    }
+    return placeholderCheck.found;
+  };
+
   const checkReady = async (): Promise<{ status: number; body: Record<string, unknown> }> => {
     try {
       await deps.db.execute(sql`SELECT 1`);
+      const placeholders = await placeholderDataInProduction();
+      if (placeholders) {
+        logger.error('production database holds development placeholder data', { found: placeholders });
+        return { status: 503, body: { status: 'unavailable', reason: 'placeholder_data' } };
+      }
       return { status: 200, body: { status: 'ready', database: 'ok' } };
     } catch (error) {
       logger.error('readiness check failed', { error });

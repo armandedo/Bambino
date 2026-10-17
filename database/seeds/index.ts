@@ -260,7 +260,7 @@ export async function seedDevelopmentCatalogue(db: Executor): Promise<void> {
   const products = [
     {
       slug: 'seed-organic-cotton-bodysuit',
-      name: 'Organic cotton bodysuit (seed)',
+      name: 'Bodysuit (seed)',
       category: 'bodysuits',
       price: 8_500,
       colors: ['Sand', 'Sage'],
@@ -298,7 +298,8 @@ export async function seedDevelopmentCatalogue(db: Executor): Promise<void> {
         description: `${SEED_MARKER} product for development. Placeholder description and price.`,
         brand: 'Bambino',
         categoryId: categoryId(seed.category),
-        material: '100% organic cotton (seed data)',
+        // Deliberately makes no material claim: demo products must not assert anything nobody has verified.
+        material: 'Not specified (seed data)',
         sustainabilityInfo: 'Seed data: real sustainability details to be supplied.',
         careInstructions: 'Machine wash cold (seed data).',
       })

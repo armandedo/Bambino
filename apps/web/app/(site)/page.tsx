@@ -1,4 +1,9 @@
-import { CatalogueFiltersQuery, ProductsQuery, SubscriptionPlansQuery } from '@bambino/api-client';
+import {
+  CatalogueFiltersQuery,
+  DeliveryOptionsQuery,
+  ProductsQuery,
+  SubscriptionPlansQuery,
+} from '@bambino/api-client';
 import { EmptyState, buttonClasses } from '@bambino/ui';
 import { ArrowRight, Check, RefreshCw, Smartphone, Truck } from 'lucide-react';
 import Image from 'next/image';
@@ -10,16 +15,14 @@ import { PlanCard } from '@/components/plan-card';
 import { ProductCard } from '@/components/product-card';
 import { SectionHeading } from '@/components/sections';
 import { load } from '@/lib/api';
+import { buildHighlights, parsePaymentMethods } from '@/lib/highlights';
+import { PREVIEW_BUILD } from '@/lib/preview';
 import { PHOTOS, stockSrc } from '@/lib/stock-photos';
 
 export const revalidate = 60;
 
-/** Three short facts in the band under the hero. */
-const HIGHLIGHTS = [
-  { icon: Truck, title: 'Delivered in Kigali', body: 'Standard or same-day delivery' },
-  { icon: Smartphone, title: 'Pay by mobile money', body: 'MTN MoMo and Airtel Money' },
-  { icon: RefreshCw, title: 'Swap as they grow', body: 'The next size, whenever you need it' },
-];
+/** Icons for the three facts in the band under the hero; the words come from lib/highlights.ts. */
+const HIGHLIGHT_ICONS = { delivery: Truck, payment: Smartphone, swap: RefreshCw } as const;
 
 const STEPS = [
   {
@@ -42,11 +45,19 @@ const SWAP_POINTS = [
 const SECTION = 'mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:py-24';
 
 export default async function HomePage() {
-  const [plans, products, filters] = await Promise.all([
+  const [plans, products, filters, delivery] = await Promise.all([
     load(SubscriptionPlansQuery),
     load(ProductsQuery, { first: 4, sort: 'NEWEST' }),
     load(CatalogueFiltersQuery),
+    load(DeliveryOptionsQuery),
   ]);
+  const highlights = buildHighlights({
+    delivery: delivery.ok ? delivery.data.deliveryOptions : null,
+    plans: plans.ok ? plans.data.subscriptionPlans : null,
+    // Set PAYMENT_METHODS ("MTN MoMo,Airtel Money") only once those providers are integrated and live.
+    paymentMethods: parsePaymentMethods(process.env.PAYMENT_METHODS),
+    mockPayments: process.env.NEXT_PUBLIC_MOCK_PAYMENTS === 'true',
+  });
   const categories = filters.ok ? filters.data.categories : [];
   const productList = products.ok ? products.data.products.edges.map((edge) => edge.node) : [];
 
@@ -57,15 +68,19 @@ export default async function HomePage() {
       {/* Highlights: a quiet strip of the three facts a parent asks first. */}
       <section aria-label="Why Bambino" className="bg-primary text-primary-foreground">
         <ul className="mx-auto grid max-w-6xl divide-y divide-brand-800 px-4 sm:grid-cols-3 sm:divide-x sm:divide-y-0 sm:px-6">
-          {HIGHLIGHTS.map((item) => (
-            <li key={item.title} className="flex items-center gap-4 py-5 sm:px-6 sm:first:pl-0 sm:last:pr-0">
-              <item.icon aria-hidden="true" className="size-7 shrink-0" strokeWidth={1.4} />
-              <span className="flex flex-col">
-                <span className="text-sm font-medium tracking-[0.06em] uppercase">{item.title}</span>
-                <span className="text-sm text-brand-300">{item.body}</span>
-              </span>
-            </li>
-          ))}
+          {highlights.map((item) => {
+            const Icon = HIGHLIGHT_ICONS[item.id];
+            return (
+              <li key={item.id} className="flex items-start gap-4 py-5 sm:px-6 sm:first:pl-0 sm:last:pr-0">
+                <Icon aria-hidden="true" className="mt-0.5 size-7 shrink-0" strokeWidth={1.4} />
+                <span className="flex flex-col gap-0.5">
+                  <span className="text-sm font-medium tracking-[0.06em] uppercase">{item.title}</span>
+                  <span className="text-sm text-brand-300">{item.body}</span>
+                  <span className="text-xs text-brand-300">{item.note}</span>
+                </span>
+              </li>
+            );
+          })}
         </ul>
       </section>
 
@@ -147,7 +162,11 @@ export default async function HomePage() {
           <SectionHeading
             id="plans"
             title="One plan per baby"
-            intro="Change or pause your plan whenever you need to. Prices are placeholders until launch."
+            intro={
+              PREVIEW_BUILD
+                ? 'Change or pause your plan from your dashboard. Prices are placeholders until launch.'
+                : 'Change or pause your plan from your dashboard.'
+            }
           />
           {!plans.ok ? (
             <ApiErrorState error={plans.error} what="plans" />

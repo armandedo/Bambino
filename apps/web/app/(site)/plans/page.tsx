@@ -8,6 +8,8 @@ import { PageHero } from '@/components/page-hero';
 import { PlanCard } from '@/components/plan-card';
 import { SectionHeading } from '@/components/sections';
 import { load } from '@/lib/api';
+import { paymentAnswer, parsePaymentMethods } from '@/lib/highlights';
+import { PREVIEW_BUILD } from '@/lib/preview';
 
 export const revalidate = 60;
 export const metadata: Metadata = {
@@ -26,11 +28,20 @@ const FAQ = [
     q: 'What happens when my baby outgrows a piece?',
     a: 'Book a return from your dashboard. Pieces that pass inspection earn exchange credit towards the next size.',
   },
-  { q: 'How do I pay?', a: 'With mobile money, approved on your phone. This preview uses test wallets.' },
 ];
 
 export default async function PlansPage() {
   const plans = await load(SubscriptionPlansQuery);
+  const faq = [
+    ...FAQ,
+    {
+      q: 'How do I pay?',
+      a: paymentAnswer({
+        paymentMethods: parsePaymentMethods(process.env.PAYMENT_METHODS),
+        mockPayments: process.env.NEXT_PUBLIC_MOCK_PAYMENTS === 'true',
+      }),
+    },
+  ];
   return (
     <>
       <PageHero
@@ -45,10 +56,12 @@ export default async function PlansPage() {
         <h2 id="choose" className="sr-only">
           Choose a plan
         </h2>
-        <Alert tone="warning" title="Placeholder prices">
-          These are development prices. The real price list and the rules for changing plans are still being
-          decided.
-        </Alert>
+        {PREVIEW_BUILD ? (
+          <Alert tone="warning" title="Placeholder prices">
+            These are development prices. The real price list and the rules for changing plans are still being
+            decided.
+          </Alert>
+        ) : null}
         {!plans.ok ? (
           <ApiErrorState error={plans.error} what="plans" />
         ) : plans.data.subscriptionPlans.length === 0 ? (
@@ -85,7 +98,7 @@ export default async function PlansPage() {
           Questions
         </h2>
         <div className="flex flex-col divide-y divide-border rounded-2xl border border-border bg-surface">
-          {FAQ.map((item) => (
+          {faq.map((item) => (
             <details key={item.q} className="group px-5 py-4">
               <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 font-semibold text-primary">
                 {item.q}

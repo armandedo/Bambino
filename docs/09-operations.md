@@ -93,7 +93,36 @@ monthly against a recent backup:
 SOURCE_DATABASE_URL=postgresql://user:pass@host:5432/bambino scripts/test-restore.sh [backup.dump]
 ```
 
-## 9.5 Launch checklist
+## 9.5 Staging and production
+
+Staging (the Cloudflare previews today) and production are separate environments with separate databases. Test
+content belongs in staging; production shows only verified products, real prices, accurate promises and payment
+methods that really work. This is enforced in code, so it does not depend on remembering a setting.
+
+| What                                    | Staging                                                                    | Production                                                                                                                   |
+| --------------------------------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Preview banner and "placeholder" text   | Shown (`NEXT_PUBLIC_PREVIEW_BANNER=true`)                                  | Not built in. A production build without the preview flag fails unless it is launch-ready (`launch-env.ts`)                  |
+| Demo catalogue (labelled `SEED`)        | Present, so the shop has something to show                                 | `db:seed` refuses to add it. If it is ever found, the API reports not ready (`/ready` 503, `placeholder_data`)               |
+| `/design` and `/preview/admin-shell`    | Visible                                                                    | Return 404                                                                                                                   |
+| Test wallets                            | Offered (`NEXT_PUBLIC_MOCK_PAYMENTS=true`)                                 | The build fails if on; the API refuses `mock` in production                                                                  |
+| Payment names on the home page          | Test wallets and cash on delivery                                          | Mobile-money brands appear only when `PAYMENT_METHODS` lists them (set it only when they are really live)                    |
+| Delivery and swap promises              | Built from the delivery options and plans in the database, with conditions | Same: the page cannot promise a delivery option or swap allowance the data does not contain                                  |
+| Product claims (material, certificates) | Demo products make no claim ("Not specified")                              | Whatever staff enter in the admin: **verify every material and sustainability claim against the supplier's documents first** |
+| Legal documents                         | `draft` versions allowed                                                   | `launch:check` fails while any version is still `draft`                                                                      |
+
+Run `NODE_ENV=production DATABASE_URL=... pnpm --filter @bambino/api launch:check` against the production database
+before the first customer. It fails on any demo row (products, variants, categories, sizes, delivery options, plans,
+promotions, `@seed.test` accounts) and on draft legal documents.
+
+To clean an existing staging database of the old unverified demo claims (the seed script never overwrites rows that
+exist), run this once in the Neon SQL editor:
+
+```sql
+update products set name = 'Bodysuit (seed)' where slug = 'seed-organic-cotton-bodysuit';
+update products set material = 'Not specified (seed data)' where slug like 'seed-%';
+```
+
+## 9.6 Launch checklist
 
 The API refuses to start in production (`NODE_ENV=production`) unless:
 
@@ -121,6 +150,9 @@ Also before launch:
 - [ ] `SITE_INDEXING=true` and `NEXT_PUBLIC_PREVIEW_BANNER` unset for the launch build
 - [ ] `RATE_LIMITER=postgres` if more than one API instance runs; `TRUST_PROXY=true` behind the proxy
 - [ ] `SENTRY_DSN` (and `NEXT_PUBLIC_SENTRY_DSN`) set so errors are seen
+- [ ] `pnpm --filter @bambino/api launch:check` passes against the production database (no demo rows, legal documents published)
+- [ ] Every product's material and sustainability text checked against the supplier's documents (no unverified "organic" or certificate claims)
+- [ ] `PAYMENT_METHODS` lists only the mobile-money brands that are live; the home page and plans FAQ read it
 - [ ] The seed admin's password changed, and staff accounts created with the least role they need
 - [ ] `pnpm --filter @bambino/api storage:init` run once against the production bucket (product images public,
       everything else private)

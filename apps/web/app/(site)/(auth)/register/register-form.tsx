@@ -6,6 +6,7 @@ import { registerSchema } from '@bambino/validation';
 import { useRouter } from 'next/navigation';
 import { type FormEvent, useState } from 'react';
 import { errorMessage, fieldErrors, validationMessage } from '@/lib/messages';
+import { PREVIEW_BUILD } from '@/lib/preview';
 import { useSession } from '@/lib/session';
 
 type Errors = Partial<Record<'email' | 'password' | 'firstName' | 'lastName' | 'phone' | 'consents', string>>;
@@ -113,12 +114,12 @@ export function RegisterForm({ next }: { next: string }) {
         <Checkbox
           name="TERMS_OF_SERVICE"
           label="I accept the terms of service."
-          hint="Draft text, not yet published."
+          {...(PREVIEW_BUILD ? { hint: 'Draft text, not yet published.' } : {})}
         />
         <Checkbox
           name="PRIVACY_POLICY"
           label="I accept the privacy policy."
-          hint="Draft text, not yet published."
+          {...(PREVIEW_BUILD ? { hint: 'Draft text, not yet published.' } : {})}
         />
         <Checkbox
           name="CHILD_DATA_PROCESSING"
