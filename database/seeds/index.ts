@@ -163,20 +163,13 @@ export async function seedDevelopmentReference(db: Executor): Promise<void> {
   await db
     .insert(schema.deliveryOptions)
     .values([
+      // The only delivery option: same day, RF 2,000, Kigali. The code keeps its historical name because the
+      // tests and existing databases refer to it.
       {
         code: `${SEED_MARKER}-STANDARD`,
-        name: 'Standard delivery, Kigali (seed fee)',
-        marketCode: 'RW',
-        feeAmount: 2_000,
-        currency: 'RWF',
-        estimatedDaysMin: 1,
-        estimatedDaysMax: 3,
-      },
-      {
-        code: `${SEED_MARKER}-EXPRESS`,
         name: 'Same-day delivery, Kigali (seed fee)',
         marketCode: 'RW',
-        feeAmount: 4_000,
+        feeAmount: 2_000,
         currency: 'RWF',
         estimatedDaysMin: 0,
         estimatedDaysMax: 0,

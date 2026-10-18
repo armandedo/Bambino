@@ -185,10 +185,8 @@ describe('catalogue', () => {
     );
     expect((response.data?.categories as unknown[]).length).toBe(9);
     expect((response.data?.sizes as { code: string }[])[0]?.code).toBe('NB');
-    expect(response.data?.deliveryOptions).toEqual([
-      { code: 'SEED-STANDARD', fee: { amount: 2_000 } },
-      { code: 'SEED-EXPRESS', fee: { amount: 4_000 } },
-    ]);
+    // One option only: same day, RF 2,000.
+    expect(response.data?.deliveryOptions).toEqual([{ code: 'SEED-STANDARD', fee: { amount: 2_000 } }]);
   });
 });
 
