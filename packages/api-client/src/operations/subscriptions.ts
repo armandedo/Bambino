@@ -13,6 +13,7 @@ export interface Subscription {
     name: string;
     billingInterval: BillingInterval;
     itemsPerCycle: number;
+    exchangesPerCycle: number | null;
     price: Money;
   };
   pendingPlan: { id: string; name: string } | null;
@@ -42,6 +43,16 @@ export interface Subscription {
   canPause: boolean;
   canResume: boolean;
   canCancel: boolean;
+  /** Swaps in the current billing period: one swap is one garment returned and one received. */
+  exchangeAllowance: {
+    /** Swaps the plan includes per period; null means unlimited. */
+    limit: number | null;
+    used: number;
+    /** Null when unlimited. */
+    remaining: number | null;
+    /** When the count restarts: the end of the current period. */
+    resetsAt: string | null;
+  };
   createdAt: string;
 }
 
@@ -49,7 +60,8 @@ const MONEY = '{ amount currency }';
 const SUBSCRIPTION_FIELDS = `
   id status price ${MONEY} currentPeriodStart currentPeriodEnd nextBillingAt cancelAtPeriodEnd pausedAt resumeAt
   canPause canResume canCancel createdAt
-  plan { id code name billingInterval itemsPerCycle price ${MONEY} }
+  exchangeAllowance { limit used remaining resetsAt }
+  plan { id code name billingInterval itemsPerCycle exchangesPerCycle price ${MONEY} }
   pendingPlan { id name }
   babyProfile { id nickname }
   items { id cycleNumber status garmentTagCode variant { id color size { code label sortOrder } } product { id slug name } }

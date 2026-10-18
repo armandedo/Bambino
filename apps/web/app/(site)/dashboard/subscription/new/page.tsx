@@ -1,6 +1,6 @@
 'use client';
 
-import { CreateSubscriptionMutation, type Subscription } from '@bambino/api-client';
+import { CreateSubscriptionMutation, type PlanSummary, type Subscription } from '@bambino/api-client';
 import { Alert, Button, Card, RadioGroup, buttonClasses } from '@bambino/ui';
 import { formatMoney, isCurrencyCode } from '@bambino/utils';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -10,6 +10,7 @@ import { useCallback, useState } from 'react';
 import { AddressPicker, DeliveryPicker } from '@/components/checkout-parts';
 import { ItemPicker } from '@/components/item-picker';
 import { PaymentPanel } from '@/components/payment-panel';
+import { PlanTermsList } from '@/components/plan-terms';
 import { QueryState } from '@/components/query-state';
 import { api, newIdempotencyKey } from '@/lib/browser-api';
 import { errorMessage } from '@/lib/messages';
@@ -23,6 +24,12 @@ function priceText(price: { amount: number; currency: string }): string {
   return isCurrencyCode(price.currency)
     ? formatMoney({ amount: price.amount, currency: price.currency }, 'en-RW')
     : `${price.currency} ${price.amount}`;
+}
+
+/** The terms of the plan being chosen, shown before the customer pays. */
+function SelectedPlanTerms({ plans, selectedId }: { plans: PlanSummary[]; selectedId: string | null }) {
+  const plan = plans.find((candidate) => candidate.id === selectedId);
+  return plan ? <PlanTermsList plan={plan} open /> : null;
 }
 
 export default function NewSubscriptionPage() {
@@ -132,17 +139,20 @@ export default function NewSubscriptionPage() {
         </h2>
         <QueryState query={plans} what="plans">
           {(list) => (
-            <RadioGroup
-              legend="Choose a plan"
-              name="plan"
-              value={selectedPlanId ?? ''}
-              onChange={setPlanId}
-              options={list.map((plan) => ({
-                value: plan.id,
-                label: plan.name,
-                description: `${plan.itemsPerCycle} pieces per cycle · ${priceText(plan.price)}`,
-              }))}
-            />
+            <>
+              <RadioGroup
+                legend="Choose a plan"
+                name="plan"
+                value={selectedPlanId ?? ''}
+                onChange={setPlanId}
+                options={list.map((plan) => ({
+                  value: plan.id,
+                  label: plan.name,
+                  description: `Up to ${plan.itemsPerCycle} garments at a time · ${priceText(plan.price)}`,
+                }))}
+              />
+              <SelectedPlanTerms plans={list} selectedId={selectedPlanId} />
+            </>
           )}
         </QueryState>
       </Card>

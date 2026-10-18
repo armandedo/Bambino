@@ -1,9 +1,15 @@
-import { getMarket } from '@bambino/config';
+import { PLAN_ENTITLEMENT_POLICY, getMarket } from '@bambino/config';
 import { type Database, type Executor, schema } from '@bambino/database';
-import { and, asc, desc, eq, inArray, isNull, sql } from '@bambino/database/orm';
+import { and, asc, desc, eq, gte, inArray, isNull, notInArray, sql } from '@bambino/database/orm';
 import type { ExchangeStatus } from '@bambino/types';
 import { type CurrencyCode, money } from '@bambino/utils';
 import { z } from 'zod';
+import {
+  type SwapAllowance,
+  allowanceExceededMessage,
+  exceedsAllowance,
+  swapAllowance,
+} from '../domain/entitlements';
 import { exchangeLifecycle } from '../domain/lifecycles';
 import { calculateTotals } from '../domain/pricing';
 import { generateReference } from '../domain/references';
@@ -160,11 +166,18 @@ export class ExchangeService {
             throw new AppError('NOT_FOUND', 'A requested item is not available.');
         }
 
+        // Garments returned from a subscription use its swap allowance, and are included in the plan (policy).
+        const entitlement = await this.resolveEntitlement(tx, actor.userId, input.items);
+        const priceOf = (item: { requestedVariantId: string; returnItemId?: string | null | undefined }) =>
+          entitlement && item.returnItemId && PLAN_ENTITLEMENT_POLICY.replacementPrice === 'INCLUDED_IN_PLAN'
+            ? 0
+            : (byId.get(item.requestedVariantId)?.variant.priceAmount ?? 0);
+
         const balance = await this.deps.credit.balance(tx, actor.userId);
         const totals = calculateTotals({
           currency,
           lines: input.items.map((item) => ({
-            unitPrice: money(byId.get(item.requestedVariantId)?.variant.priceAmount ?? 0, currency),
+            unitPrice: money(priceOf(item), currency),
             quantity: 1,
           })),
           shipping: money(option.feeAmount, currency),
@@ -207,6 +220,7 @@ export class ExchangeService {
         const exchange = await this.insertWithUniqueNumber(tx, {
           userId: actor.userId,
           returnRequestId: input.returnRequestId ?? null,
+          subscriptionId: entitlement?.subscriptionId ?? null,
           replacementOrderId: order.id,
         });
         for (const item of input.items) {
@@ -224,9 +238,9 @@ export class ExchangeService {
             sku: row.variant.sku,
             sizeCode: row.variant.sizeCode,
             color: row.variant.color,
-            unitPriceAmount: row.variant.priceAmount,
+            unitPriceAmount: priceOf(item),
             quantity: 1,
-            lineTotalAmount: row.variant.priceAmount,
+            lineTotalAmount: priceOf(item),
           });
           await tx.insert(schema.exchangeItems).values({
             exchangeId: exchange.id,
@@ -311,6 +325,7 @@ export class ExchangeService {
     const actor = requirePermission(context, 'exchange:write');
     return this.deps.db.transaction(async (tx) => {
       const exchange = await this.lock(tx, rawId);
+      await this.assertReturnsAccepted(tx, exchange.id);
       let updated = await this.transition(tx, exchange, 'APPROVED', {
         decidedBy: actor.userId,
         decidedAt: this.deps.now(),
@@ -427,7 +442,122 @@ export class ExchangeService {
     };
   }
 
+  /** Swaps this subscription has left in the current billing period (shown to the customer and checked on request). */
+  async allowanceFor(subscription: typeof schema.subscriptions.$inferSelect): Promise<SwapAllowance> {
+    const [plan] = await this.deps.db
+      .select({ exchangePolicy: schema.subscriptionPlans.exchangePolicy })
+      .from(schema.subscriptionPlans)
+      .where(eq(schema.subscriptionPlans.id, subscription.planId));
+    const used = await this.swapsUsed(this.deps.db, subscription.id, this.periodStart(subscription));
+    return swapAllowance(plan?.exchangePolicy.exchangesPerCycle ?? null, used, subscription.currentPeriodEnd);
+  }
+
   // --- internals ----------------------------------------------------------------------
+
+  private periodStart(subscription: typeof schema.subscriptions.$inferSelect): Date {
+    return subscription.currentPeriodStart ?? subscription.startedAt ?? subscription.createdAt;
+  }
+
+  /** Garments swapped in the period. Rejected and cancelled exchanges give their swaps back. */
+  private async swapsUsed(db: Executor, subscriptionId: string, since: Date): Promise<number> {
+    const [row] = await db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(schema.exchangeItems)
+      .innerJoin(schema.exchanges, eq(schema.exchanges.id, schema.exchangeItems.exchangeId))
+      .where(
+        and(
+          eq(schema.exchanges.subscriptionId, subscriptionId),
+          gte(schema.exchanges.createdAt, since),
+          notInArray(schema.exchanges.status, ['REJECTED', 'CANCELLED']),
+        ),
+      );
+    return row?.n ?? 0;
+  }
+
+  /**
+   * Finds the subscription whose garments are being returned and checks it may swap now: it must be active and
+   * have swaps left in this billing period. The customer row is already locked by the caller, so two requests
+   * cannot both spend the last swap. Garments that were bought, not rented, use no allowance.
+   */
+  private async resolveEntitlement(
+    tx: Executor,
+    userId: string,
+    items: { returnItemId?: string | null | undefined }[],
+  ): Promise<{ subscriptionId: string } | null> {
+    const linked = items.map((item) => item.returnItemId).filter((id): id is string => Boolean(id));
+    if (linked.length === 0) return null;
+
+    const rows = await tx
+      .select({
+        returnItemId: schema.returnItems.id,
+        subscriptionId: schema.subscriptionItems.subscriptionId,
+      })
+      .from(schema.returnItems)
+      .innerJoin(
+        schema.subscriptionItems,
+        eq(schema.subscriptionItems.garmentId, schema.returnItems.garmentId),
+      )
+      .innerJoin(schema.subscriptions, eq(schema.subscriptions.id, schema.subscriptionItems.subscriptionId))
+      .where(and(inArray(schema.returnItems.id, linked), eq(schema.subscriptions.userId, userId)));
+    const subscriptionIds = new Set(rows.map((row) => row.subscriptionId));
+    if (subscriptionIds.size === 0) return null;
+    if (subscriptionIds.size > 1 || new Set(rows.map((row) => row.returnItemId)).size !== linked.length) {
+      throw new AppError(
+        'CONFLICT',
+        'Swap garments from one subscription at a time, and do not mix them with garments you bought.',
+        'MIXED_EXCHANGE',
+      );
+    }
+
+    const subscriptionId = [...subscriptionIds][0] ?? '';
+    const [subscription] = await tx
+      .select()
+      .from(schema.subscriptions)
+      .where(eq(schema.subscriptions.id, subscriptionId))
+      .for('update');
+    if (!subscription || !PLAN_ENTITLEMENT_POLICY.swapsRequireStatus.includes(subscription.status)) {
+      throw new AppError(
+        'CONFLICT',
+        'Swaps are available while your subscription is active.',
+        'SUBSCRIPTION_NOT_ACTIVE',
+      );
+    }
+    const [plan] = await tx
+      .select({ exchangePolicy: schema.subscriptionPlans.exchangePolicy })
+      .from(schema.subscriptionPlans)
+      .where(eq(schema.subscriptionPlans.id, subscription.planId));
+    // Counted inside this transaction, so the check sees every swap already recorded.
+    const used = await this.swapsUsed(tx, subscription.id, this.periodStart(subscription));
+    const allowance = swapAllowance(
+      plan?.exchangePolicy.exchangesPerCycle ?? null,
+      used,
+      subscription.currentPeriodEnd,
+    );
+    if (exceedsAllowance(allowance, linked.length)) {
+      throw new AppError(
+        'CONFLICT',
+        allowanceExceededMessage(allowance, linked.length),
+        'EXCHANGE_ALLOWANCE_EXCEEDED',
+      );
+    }
+    return { subscriptionId };
+  }
+
+  /** A replacement is allocated and shipped only for garments that came back and passed inspection. */
+  private async assertReturnsAccepted(tx: Executor, exchangeId: string): Promise<void> {
+    const rows = await tx
+      .select({ outcome: schema.returnItems.outcome })
+      .from(schema.exchangeItems)
+      .innerJoin(schema.returnItems, eq(schema.returnItems.id, schema.exchangeItems.returnItemId))
+      .where(eq(schema.exchangeItems.exchangeId, exchangeId));
+    if (rows.some((row) => row.outcome !== 'ACCEPTED')) {
+      throw new AppError(
+        'CONFLICT',
+        'The returned garments must be received and accepted at inspection before the replacement is approved.',
+        'RETURN_NOT_ACCEPTED',
+      );
+    }
+  }
 
   private async forOrder(tx: Executor, order: OrderRow): Promise<ExchangeRow | null> {
     if (order.type !== 'EXCHANGE_REPLACEMENT') return null;

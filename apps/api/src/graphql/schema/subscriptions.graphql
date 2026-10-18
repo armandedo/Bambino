@@ -50,6 +50,19 @@ type SubscriptionPlan {
   isActive: Boolean!
 }
 
+"""
+Swaps (garments exchanged) in the current billing period. One swap is one garment returned and one other
+garment received; the count restarts at each renewal and unused swaps do not carry over.
+"""
+type SwapAllowance {
+  "Swaps the plan includes per billing period; null means unlimited."
+  limit: Int
+  used: Int!
+  "Swaps left; null when unlimited."
+  remaining: Int
+  resetsAt: DateTime
+}
+
 type Subscription {
   id: ID!
   status: SubscriptionStatus!
@@ -73,6 +86,7 @@ type Subscription {
   canPause: Boolean!
   canResume: Boolean!
   canCancel: Boolean!
+  exchangeAllowance: SwapAllowance!
   createdAt: DateTime!
 }
 

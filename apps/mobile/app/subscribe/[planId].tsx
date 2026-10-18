@@ -8,6 +8,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import { PlanTermsCard, INTERVAL_WORD, planSummary } from '@/components/plan-terms';
 import { Banner, Body, Button, Card, Empty, Heading, Loading, Screen } from '@/components/ui';
 import { price } from '@/lib/format';
 import { errorMessage, newIdempotencyKey } from '@/lib/messages';
@@ -125,9 +126,9 @@ export default function Subscribe() {
     <Screen>
       <Heading>{plan.name}</Heading>
       <Body muted>
-        {price(plan.price)} per {plan.billingInterval.toLowerCase().replace('ly', '')} · {plan.itemsPerCycle}{' '}
-        items per cycle
+        {price(plan.price)} per {INTERVAL_WORD[plan.billingInterval]}. {planSummary(plan)}
       </Body>
+      <PlanTermsCard plan={plan} open />
 
       <View style={{ gap: space.sm }}>
         <Text style={{ fontWeight: '700', fontSize: 16, color: colors.foreground }}>Who is it for?</Text>

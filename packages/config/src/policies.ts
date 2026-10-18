@@ -1,4 +1,4 @@
-import type { GarmentCondition, OrderStatus, OrderType } from '@bambino/types';
+import type { GarmentCondition, OrderStatus, OrderType, SubscriptionStatus } from '@bambino/types';
 
 /**
  * Business policies the code depends on but the business has not decided yet
@@ -33,6 +33,32 @@ export const SUBSCRIPTION_POLICY = {
   reminderDaysBeforeRenewal: 3,
   /** Longest pause a customer can choose. */
   maxPauseDays: 90,
+};
+
+/**
+ * Open question 16. What a plan entitles the customer to. PLACEHOLDER definitions, chosen so that no promise is
+ * ambiguous; the business must confirm them (docs/12-plans-and-exchanges.md). The services and the terms shown to
+ * customers both read this object, so the wording and the behaviour cannot drift apart.
+ */
+export const PLAN_ENTITLEMENT_POLICY = {
+  /**
+   * `itemsPerCycle` is the box size: the most garments a customer holds at one time, chosen at the start of each
+   * billing period. It is not a number of garments "per year" or "per delivery".
+   */
+  boxMeaning: 'GARMENTS_HELD_AT_ONCE' as const,
+  /** One exchange (a swap) is one garment returned and one other garment received. The allowance counts garments. */
+  exchangeUnit: 'GARMENT' as const,
+  /** The allowance starts again at each renewal, and unused swaps do not carry over. */
+  allowanceResets: 'EACH_BILLING_PERIOD' as const,
+  carryOverUnused: false,
+  /**
+   * Within the allowance the replacement garment costs nothing extra (the delivery fee still applies).
+   * CATALOGUE_LESS_CREDIT keeps the earlier behaviour: the replacement is priced at the catalogue price and the
+   * customer's exchange credit is applied.
+   */
+  replacementPrice: 'INCLUDED_IN_PLAN' as 'INCLUDED_IN_PLAN' | 'CATALOGUE_LESS_CREDIT',
+  /** Swaps are available only while the subscription is in one of these states. */
+  swapsRequireStatus: ['ACTIVE'] as readonly SubscriptionStatus[],
 };
 
 /** Sizing engine thresholds (see apps/api/src/domain/sizing.ts). */

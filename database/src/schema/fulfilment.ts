@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { bigint, check, date, index, jsonb, pgTable, text, uuid } from 'drizzle-orm/pg-core';
+import { bigint, check, date, index, jsonb, pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import { mediaAssets } from './catalogue';
 import { createdAt, id, tstz, updatedAt } from './columns';
 import { type AddressSnapshot, orders } from './commerce';
@@ -31,6 +31,11 @@ export const deliveries = pgTable(
     index('deliveries_return_request_idx').on(t.returnRequestId),
     index('deliveries_status_idx').on(t.status),
     index('deliveries_tracking_idx').on(t.deliveryProvider, t.trackingNumber),
+    // One open pickup per return: a repeated request cannot book the courier twice. A failed or cancelled run
+    // does not count, so a new one can be arranged.
+    uniqueIndex('deliveries_one_open_pickup_per_return_uq')
+      .on(t.returnRequestId)
+      .where(sql`${t.direction} = 'RETURN_PICKUP' AND ${t.status} NOT IN ('FAILED', 'CANCELLED')`),
     check(
       'deliveries_target_matches_direction',
       sql`(${t.direction} = 'OUTBOUND' AND ${t.orderId} IS NOT NULL)

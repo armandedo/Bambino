@@ -9,6 +9,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { Alert, Text, View } from 'react-native';
+import { PlanTermsCard, INTERVAL_WORD, planSummary } from '@/components/plan-terms';
 import { Banner, Body, Button, Card, Heading, Loading, Screen } from '@/components/ui';
 import { price, when } from '@/lib/format';
 import { subscriptionStatusLabel } from '@/lib/labels';
@@ -62,6 +63,15 @@ function SubscriptionCard({ subscription }: { subscription: Subscription }) {
       {subscription.nextBillingAt && !subscription.cancelAtPeriodEnd ? (
         <Body muted>Next billing {when(subscription.nextBillingAt)}</Body>
       ) : null}
+      <Body muted>
+        Swaps this period:{' '}
+        {subscription.exchangeAllowance.limit === null
+          ? `${subscription.exchangeAllowance.used} used, unlimited`
+          : `${subscription.exchangeAllowance.used} of ${subscription.exchangeAllowance.limit} used`}
+        {subscription.exchangeAllowance.resetsAt
+          ? `, restarts ${when(subscription.exchangeAllowance.resetsAt)}`
+          : ''}
+      </Body>
       {subscription.cancelAtPeriodEnd && subscription.currentPeriodEnd ? (
         <Banner tone="warning">
           Ends on {when(subscription.currentPeriodEnd)}. You will not be charged again.
@@ -166,12 +176,10 @@ export default function SubscriptionScreen() {
           <Text style={{ fontWeight: '700', fontSize: 18, color: colors.foreground }}>{plan.name}</Text>
           <Body muted>{plan.description}</Body>
           <Text style={{ fontWeight: '700', color: colors.foreground }}>
-            {price(plan.price)} per {plan.billingInterval.toLowerCase().replace('ly', '')}
+            {price(plan.price)} per {INTERVAL_WORD[plan.billingInterval]}
           </Text>
-          <Body muted>
-            {plan.itemsPerCycle} items per cycle
-            {plan.exchangesPerCycle !== null ? ` · ${plan.exchangesPerCycle} exchanges` : ''}
-          </Body>
+          <Body muted>{planSummary(plan)}</Body>
+          <PlanTermsCard plan={plan} />
           <Button
             label="Choose this plan"
             variant="accent"

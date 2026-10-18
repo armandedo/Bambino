@@ -92,7 +92,7 @@ function SubscriptionCard({ subscription }: { subscription: Subscription }) {
         <Alert tone="info">Changes to {subscription.pendingPlan.name} at the next renewal.</Alert>
       ) : null}
 
-      <dl className="grid gap-3 text-sm sm:grid-cols-3">
+      <dl className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
         <div>
           <dt className="text-foreground-muted">Current period</dt>
           <dd className="font-medium">
@@ -106,8 +106,19 @@ function SubscriptionCard({ subscription }: { subscription: Subscription }) {
           <dd className="font-medium">{formatDate(subscription.nextBillingAt)}</dd>
         </div>
         <div>
-          <dt className="text-foreground-muted">Pieces per cycle</dt>
-          <dd className="font-medium">{subscription.plan.itemsPerCycle}</dd>
+          <dt className="text-foreground-muted">Garments at a time</dt>
+          <dd className="font-medium">Up to {subscription.plan.itemsPerCycle}</dd>
+        </div>
+        <div>
+          <dt className="text-foreground-muted">Swaps this period</dt>
+          <dd className="font-medium">
+            {subscription.exchangeAllowance.limit === null
+              ? `${subscription.exchangeAllowance.used} used, unlimited`
+              : `${subscription.exchangeAllowance.used} of ${subscription.exchangeAllowance.limit} used`}
+            {subscription.exchangeAllowance.resetsAt
+              ? ` · restarts ${formatDate(subscription.exchangeAllowance.resetsAt)}`
+              : ''}
+          </dd>
         </div>
       </dl>
 

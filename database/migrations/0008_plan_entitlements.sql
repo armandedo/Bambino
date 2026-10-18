@@ -1,0 +1,4 @@
+ALTER TABLE "exchanges" ADD COLUMN "subscription_id" uuid;--> statement-breakpoint
+ALTER TABLE "exchanges" ADD CONSTRAINT "exchanges_subscription_id_subscriptions_id_fk" FOREIGN KEY ("subscription_id") REFERENCES "public"."subscriptions"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "exchanges_subscription_idx" ON "exchanges" USING btree ("subscription_id","created_at");--> statement-breakpoint
+CREATE UNIQUE INDEX "deliveries_one_open_pickup_per_return_uq" ON "deliveries" USING btree ("return_request_id") WHERE "deliveries"."direction" = 'RETURN_PICKUP' AND "deliveries"."status" NOT IN ('FAILED', 'CANCELLED');

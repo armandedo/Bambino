@@ -1,8 +1,14 @@
 import type { BillingInterval, PlanSummary } from '@bambino/api-client';
 import { MoneyText, buttonClasses, cn } from '@bambino/ui';
 import NextLink from 'next/link';
+import { PlanTermsList } from './plan-terms';
 
 const PER: Record<BillingInterval, string> = { MONTHLY: 'month', QUARTERLY: '3 months', ANNUAL: 'year' };
+const PERIOD: Record<BillingInterval, string> = {
+  MONTHLY: 'month',
+  QUARTERLY: '3-month period',
+  ANNUAL: 'year',
+};
 
 /**
  * One plan, as a row of a wide card, like the care label on a garment: name and what is included on the left, price
@@ -19,10 +25,11 @@ export function PlanCard({
   level?: 2 | 3;
 }) {
   const Heading = `h${level}` as const;
-  const exchanges =
+  // One swap is one garment sent back and one other garment sent to you; the allowance restarts at each renewal.
+  const swaps =
     plan.exchangesPerCycle === null
-      ? 'unlimited size exchanges'
-      : `${plan.exchangesPerCycle} size ${plan.exchangesPerCycle === 1 ? 'exchange' : 'exchanges'} per cycle`;
+      ? 'unlimited swaps'
+      : `${plan.exchangesPerCycle} ${plan.exchangesPerCycle === 1 ? 'swap' : 'swaps'} per ${PERIOD[plan.billingInterval]}`;
   return (
     <article
       className={cn(
@@ -41,9 +48,10 @@ export function PlanCard({
         </Heading>
         <p className="max-w-[56ch] text-foreground-muted">{plan.description}</p>
         <p className="text-foreground">
-          {plan.itemsPerCycle} {plan.itemsPerCycle === 1 ? 'piece' : 'pieces'} each cycle in your baby&rsquo;s
-          size, {exchanges}. Pause or cancel from your account.
+          Up to {plan.itemsPerCycle} {plan.itemsPerCycle === 1 ? 'garment' : 'garments'} at a time in your
+          baby&rsquo;s size, with {swaps}. A swap is one garment sent back and one other sent to you.
         </p>
+        <PlanTermsList plan={plan} />
       </div>
       <div className="flex items-center justify-between gap-6 md:flex-col md:items-end md:gap-3">
         <p className="whitespace-nowrap">

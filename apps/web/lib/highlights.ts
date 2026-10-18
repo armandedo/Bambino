@@ -28,7 +28,7 @@ export interface HighlightInput {
   mockPayments: boolean;
 }
 
-function plain(value: Money): string {
+export function plainPrice(value: Money): string {
   if (!isCurrencyCode(value.currency)) return `${value.currency} ${value.amount}`;
   try {
     return formatMoney(money(value.amount, value.currency), 'en-RW');
@@ -64,7 +64,7 @@ export function paymentAnswer(input: Pick<HighlightInput, 'paymentMethods' | 'mo
   }
   if (CASH_ON_DELIVERY_POLICY.enabled) {
     parts.push(
-      `Shop orders (not plans) up to ${plain(money(CASH_ON_DELIVERY_POLICY.maxOrderAmount, 'RWF'))} can be paid in cash on delivery.`,
+      `Shop orders (not plans) up to ${plainPrice(money(CASH_ON_DELIVERY_POLICY.maxOrderAmount, 'RWF'))} can be paid in cash on delivery.`,
     );
   }
   if (input.mockPayments) parts.push('This preview uses test wallets.');
@@ -78,7 +78,7 @@ export function buildHighlights(input: HighlightInput): Highlight[] {
     title: 'Delivered in Kigali',
     body:
       options.length > 0
-        ? options.map((o) => `${o.name}: ${plain(o.fee)}, ${deliveryDays(o)}`).join(' · ')
+        ? options.map((o) => `${o.name}: ${plainPrice(o.fee)}, ${deliveryDays(o)}`).join(' · ')
         : 'Delivery options and fees are shown at checkout.',
     note: 'Kigali only for now. The fee and day for your address are confirmed at checkout.',
   };
@@ -88,7 +88,7 @@ export function buildHighlights(input: HighlightInput): Highlight[] {
   if (input.paymentMethods.length > 0) paymentParts.push(input.paymentMethods.join(', '));
   if (CASH_ON_DELIVERY_POLICY.enabled) {
     paymentParts.push(
-      `Cash on delivery up to ${plain(money(CASH_ON_DELIVERY_POLICY.maxOrderAmount, 'RWF'))}`,
+      `Cash on delivery up to ${plainPrice(money(CASH_ON_DELIVERY_POLICY.maxOrderAmount, 'RWF'))}`,
     );
   }
   const payment: Highlight = {

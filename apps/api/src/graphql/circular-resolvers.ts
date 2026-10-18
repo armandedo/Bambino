@@ -233,6 +233,8 @@ export const circularResolvers = {
     babyProfile: (parent: SubscriptionRow, _: unknown, context: Ctx) =>
       context.loaders.baby.load(parent.babyProfileId),
     price: (parent: SubscriptionRow) => asMoney(parent.priceAmount, parent.currency),
+    exchangeAllowance: (parent: SubscriptionRow, _: unknown, context: Ctx) =>
+      context.services.exchanges.allowanceFor(parent),
     items: async (parent: SubscriptionRow, _: unknown, context: Ctx) =>
       (await context.loaders.subscriptionItems.load(parent.id)) ?? [],
     orderAwaitingPayment: (parent: SubscriptionRow, _: unknown, context: Ctx) =>

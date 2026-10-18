@@ -99,6 +99,11 @@ export const exchanges = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'restrict' }),
     returnRequestId: uuid('return_request_id').references(() => returnRequests.id, { onDelete: 'restrict' }),
+    /**
+     * The subscription whose swap allowance this exchange uses (found from the returned garments). Null for an
+     * exchange of garments that were bought, which no allowance limits.
+     */
+    subscriptionId: uuid('subscription_id').references(() => subscriptions.id, { onDelete: 'restrict' }),
     status: exchangeStatus('status').notNull().default('REQUESTED'),
     /** The order that ships the replacement garments. */
     replacementOrderId: uuid('replacement_order_id').references(() => orders.id, { onDelete: 'restrict' }),
@@ -113,6 +118,8 @@ export const exchanges = pgTable(
     uniqueIndex('exchanges_replacement_order_uq').on(t.replacementOrderId),
     index('exchanges_user_idx').on(t.userId, t.createdAt),
     index('exchanges_status_idx').on(t.status),
+    // Counting the swaps used in a billing period.
+    index('exchanges_subscription_idx').on(t.subscriptionId, t.createdAt),
   ],
 );
 
