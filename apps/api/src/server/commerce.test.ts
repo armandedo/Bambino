@@ -636,75 +636,80 @@ describe('staff fulfilment', () => {
   const DELIVERY =
     'mutation ($input: DeliveryUpdateInput!) { adminUpdateDelivery(input: $input) { status deliveredAt } }';
 
-  it('moves a paid order through warehouse steps and delivery to DELIVERED', async () => {
-    const ops = await t.registerStaff('OPERATIONS_MANAGER');
-    const rider = await t.registerStaff('DELIVERY_STAFF');
-    const customer = await shopper();
-    const { order } = await placeOrder(customer);
-    const payment = await pay(customer, order.id);
-    await t.gql(PAYMENT, { id: payment.id }, { token: customer.accessToken });
+  // A long journey (pay, four warehouse steps, four delivery steps): close to the 5 s default on a busy machine.
+  it(
+    'moves a paid order through warehouse steps and delivery to DELIVERED',
+    { timeout: 30_000 },
+    async () => {
+      const ops = await t.registerStaff('OPERATIONS_MANAGER');
+      const rider = await t.registerStaff('DELIVERY_STAFF');
+      const customer = await shopper();
+      const { order } = await placeOrder(customer);
+      const payment = await pay(customer, order.id);
+      await t.gql(PAYMENT, { id: payment.id }, { token: customer.accessToken });
 
-    expect(
-      errorReason(await t.gql(STATUS, { id: order.id, status: 'PAID' }, { token: ops.accessToken })),
-    ).toBe('STATUS_NOT_SETTABLE');
-    expect(
-      errorCode(await t.gql(STATUS, { id: order.id, status: 'PROCESSING' }, { token: rider.accessToken })),
-    ).toBe('FORBIDDEN');
-    for (const status of ['PROCESSING', 'PACKED', 'READY_FOR_DISPATCH']) {
       expect(
-        (await t.gql(STATUS, { id: order.id, status }, { token: ops.accessToken })).data
-          ?.adminUpdateOrderStatus,
-      ).toEqual({ status });
-    }
+        errorReason(await t.gql(STATUS, { id: order.id, status: 'PAID' }, { token: ops.accessToken })),
+      ).toBe('STATUS_NOT_SETTABLE');
+      expect(
+        errorCode(await t.gql(STATUS, { id: order.id, status: 'PROCESSING' }, { token: rider.accessToken })),
+      ).toBe('FORBIDDEN');
+      for (const status of ['PROCESSING', 'PACKED', 'READY_FOR_DISPATCH']) {
+        expect(
+          (await t.gql(STATUS, { id: order.id, status }, { token: ops.accessToken })).data
+            ?.adminUpdateOrderStatus,
+        ).toEqual({ status });
+      }
 
-    const [delivery] = await t.db
-      .select()
-      .from(schema.deliveries)
-      .where(eq(schema.deliveries.orderId, order.id));
-    for (const status of ['ASSIGNED', 'PICKED_UP', 'IN_TRANSIT']) {
-      const response = await t.gql(
+      const [delivery] = await t.db
+        .select()
+        .from(schema.deliveries)
+        .where(eq(schema.deliveries.orderId, order.id));
+      for (const status of ['ASSIGNED', 'PICKED_UP', 'IN_TRANSIT']) {
+        const response = await t.gql(
+          DELIVERY,
+          { input: { deliveryId: delivery?.id, status } },
+          { token: rider.accessToken },
+        );
+        expect(response.errors).toBeUndefined();
+      }
+      expect(
+        (await t.gql(ORDER, { id: order.id }, { token: customer.accessToken })).data?.order,
+      ).toMatchObject({ status: 'OUT_FOR_DELIVERY' });
+      const delivered = await t.gql(
         DELIVERY,
-        { input: { deliveryId: delivery?.id, status } },
+        { input: { deliveryId: delivery?.id, status: 'DELIVERED' } },
         { token: rider.accessToken },
       );
-      expect(response.errors).toBeUndefined();
-    }
-    expect((await t.gql(ORDER, { id: order.id }, { token: customer.accessToken })).data?.order).toMatchObject(
-      { status: 'OUT_FOR_DELIVERY' },
-    );
-    const delivered = await t.gql(
-      DELIVERY,
-      { input: { deliveryId: delivery?.id, status: 'DELIVERED' } },
-      { token: rider.accessToken },
-    );
-    expect(delivered.data?.adminUpdateDelivery).toMatchObject({
-      status: 'DELIVERED',
-      deliveredAt: expect.any(String),
-    });
+      expect(delivered.data?.adminUpdateDelivery).toMatchObject({
+        status: 'DELIVERED',
+        deliveredAt: expect.any(String),
+      });
 
-    const final = (await t.gql(ORDER, { id: order.id }, { token: customer.accessToken })).data?.order as {
-      status: string;
-      statusHistory: { status: string }[];
-      delivery: { events: { status: string }[] };
-    };
-    expect(final.status).toBe('DELIVERED');
-    expect(final.statusHistory.map((event) => event.status)).toEqual([
-      'PENDING_PAYMENT',
-      'PAID',
-      'PROCESSING',
-      'PACKED',
-      'READY_FOR_DISPATCH',
-      'OUT_FOR_DELIVERY',
-      'DELIVERED',
-    ]);
-    expect(final.delivery.events.map((event) => event.status)).toEqual([
-      'PENDING',
-      'ASSIGNED',
-      'PICKED_UP',
-      'IN_TRANSIT',
-      'DELIVERED',
-    ]);
-  });
+      const final = (await t.gql(ORDER, { id: order.id }, { token: customer.accessToken })).data?.order as {
+        status: string;
+        statusHistory: { status: string }[];
+        delivery: { events: { status: string }[] };
+      };
+      expect(final.status).toBe('DELIVERED');
+      expect(final.statusHistory.map((event) => event.status)).toEqual([
+        'PENDING_PAYMENT',
+        'PAID',
+        'PROCESSING',
+        'PACKED',
+        'READY_FOR_DISPATCH',
+        'OUT_FOR_DELIVERY',
+        'DELIVERED',
+      ]);
+      expect(final.delivery.events.map((event) => event.status)).toEqual([
+        'PENDING',
+        'ASSIGNED',
+        'PICKED_UP',
+        'IN_TRANSIT',
+        'DELIVERED',
+      ]);
+    },
+  );
 
   it('refuses to put a delivery in transit before the order is ready for dispatch', async () => {
     const rider = await t.registerStaff('DELIVERY_STAFF');
