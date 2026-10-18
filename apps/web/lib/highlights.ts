@@ -63,8 +63,11 @@ export function paymentAnswer(input: Pick<HighlightInput, 'paymentMethods' | 'mo
     parts.push('Plans are paid with mobile money, which is not switched on yet.');
   }
   if (CASH_ON_DELIVERY_POLICY.enabled) {
+    const limit = CASH_ON_DELIVERY_POLICY.maxOrderAmount;
     parts.push(
-      `Shop orders (not plans) up to ${plainPrice(money(CASH_ON_DELIVERY_POLICY.maxOrderAmount, 'RWF'))} can be paid in cash on delivery.`,
+      limit === null
+        ? 'Shop orders (not plans) can be paid in cash on delivery.'
+        : `Shop orders (not plans) up to ${plainPrice(money(limit, 'RWF'))} can be paid in cash on delivery.`,
     );
   }
   if (input.mockPayments) parts.push('This preview uses test wallets.');
@@ -87,18 +90,22 @@ export function buildHighlights(input: HighlightInput): Highlight[] {
   if (input.mockPayments) paymentParts.push('Test wallets (preview only)');
   if (input.paymentMethods.length > 0) paymentParts.push(input.paymentMethods.join(', '));
   if (CASH_ON_DELIVERY_POLICY.enabled) {
+    const limit = CASH_ON_DELIVERY_POLICY.maxOrderAmount;
     paymentParts.push(
-      `Cash on delivery up to ${plainPrice(money(CASH_ON_DELIVERY_POLICY.maxOrderAmount, 'RWF'))}`,
+      limit === null ? 'Cash on delivery' : `Cash on delivery up to ${plainPrice(money(limit, 'RWF'))}`,
     );
   }
+  const mobileMoneyLive = input.paymentMethods.length > 0;
   const payment: Highlight = {
     id: 'payment',
-    title: 'Pay your way',
+    // "Pay your way" only once there is more than one real way to pay.
+    title: mobileMoneyLive ? 'Pay your way' : 'Pay when it arrives',
     body: paymentParts.length > 0 ? paymentParts.join(' · ') : 'Payment options are shown at checkout.',
-    note:
-      input.paymentMethods.length > 0
-        ? 'Mobile money is approved on your phone with your PIN.'
-        : 'More payment options are coming.',
+    note: mobileMoneyLive
+      ? 'Mobile money is approved on your phone with your PIN.'
+      : CASH_ON_DELIVERY_POLICY.enabled
+        ? 'Pay the courier in cash when your order arrives.'
+        : 'Payment options are shown at checkout.',
   };
 
   const allowances = (input.plans ?? []).map((plan) => plan.exchangesPerCycle);

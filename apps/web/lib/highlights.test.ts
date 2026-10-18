@@ -60,13 +60,19 @@ describe('payment highlight', () => {
   it('names no mobile-money brand until one is switched on', () => {
     const h = get(buildHighlights(base), 'payment');
     expect(h?.body).not.toMatch(/MTN|Airtel|MoMo/i);
-    expect(h?.body).toMatch(/Cash on delivery up to/);
-    expect(h?.note).toBe('More payment options are coming.');
+    expect(h?.body).toMatch(/Cash on delivery/);
+    expect(h?.body).not.toMatch(/up to|RF/);
+    expect(h?.note).toBe('Pay the courier in cash when your order arrives.');
+  });
+
+  it('is titled for what is real: pay when it arrives, until there is more than one way to pay', () => {
+    expect(get(buildHighlights(base), 'payment')?.title).toBe('Pay when it arrives');
   });
 
   it('names the mobile-money brands that are live', () => {
     const h = get(buildHighlights({ ...base, paymentMethods: ['MTN MoMo', 'Airtel Money'] }), 'payment');
     expect(h?.body).toContain('MTN MoMo, Airtel Money');
+    expect(h?.title).toBe('Pay your way');
     expect(h?.note).toMatch(/PIN/);
   });
 
@@ -104,7 +110,8 @@ describe('plans FAQ payment answer', () => {
   it('names the live mobile-money brands, says cash is for shop orders only, and has no test wording', () => {
     const answer = paymentAnswer({ paymentMethods: ['MTN MoMo'], mockPayments: false });
     expect(answer).toContain('mobile money (MTN MoMo)');
-    expect(answer).toMatch(/Shop orders \(not plans\) up to .* cash on delivery/);
+    expect(answer).toContain('Shop orders (not plans) can be paid in cash on delivery.');
+    expect(answer).not.toMatch(/up to|RF/);
     expect(answer).not.toMatch(/preview|test/i);
   });
 

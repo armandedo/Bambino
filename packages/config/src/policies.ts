@@ -77,8 +77,11 @@ export const SIZING_POLICY = {
  */
 export const CASH_ON_DELIVERY_POLICY = {
   enabled: true,
-  /** Largest order total (in the smallest currency unit) accepted for cash on delivery. */
-  maxOrderAmount: 150_000,
+  /**
+   * Largest order total (in the smallest currency unit) accepted for cash on delivery. null means no limit, which is
+   * the current choice. A limit can be set again here; the checkout, the rule and the wording all follow it.
+   */
+  maxOrderAmount: null as number | null,
   /** Order types that can be paid on delivery. */
   orderTypes: ['ONE_TIME'] as readonly OrderType[],
 };

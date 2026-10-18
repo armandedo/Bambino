@@ -117,7 +117,8 @@ stateDiagram-v2
    closes the pending payment as `CANCELLED`. No refund is requested, because no money was taken.
 5. Reconciliation ignores cash payments (there is no provider to ask), and the unpaid-order cleanup only looks at
    `PENDING_PAYMENT`, so a confirmed cash order is never cancelled for being "unpaid".
-6. Eligibility is `CASH_ON_DELIVERY_POLICY` (packages/config): shop orders only, up to a maximum total. Subscription
+6. Eligibility is `CASH_ON_DELIVERY_POLICY` (packages/config): shop orders only, with no limit on the total at present (a limit can be set in the policy; the checkout, the
+   rule and the wording follow it). Subscription
    orders keep requiring a wallet that can be charged again. The same rule is shown at checkout
    (`checkoutPreview.cashOnDelivery`, `Order.cashOnDelivery`) and enforced again on confirmation.
 

@@ -120,6 +120,13 @@ describe('the rule', () => {
     });
   });
 
+  it('has no limit when the policy sets none', () => {
+    const unlimited = { ...policy, maxOrderAmount: null };
+    expect(cashOnDeliveryAvailability({ type: 'ONE_TIME', totalAmount: 5_000_000 }, unlimited)).toEqual({
+      available: true,
+    });
+  });
+
   it('can be switched off', () => {
     expect(
       cashOnDeliveryAvailability({ type: 'ONE_TIME', totalAmount: 5_000 }, { ...policy, enabled: false }),

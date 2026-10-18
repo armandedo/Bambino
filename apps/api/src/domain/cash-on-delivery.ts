@@ -30,7 +30,7 @@ export function cashOnDeliveryAvailability(
   if (order.totalAmount <= 0) {
     return { available: false, code: 'NOTHING_TO_PAY', message: 'There is nothing to pay on delivery.' };
   }
-  if (order.totalAmount > policy.maxOrderAmount) {
+  if (policy.maxOrderAmount !== null && order.totalAmount > policy.maxOrderAmount) {
     return {
       available: false,
       code: 'OVER_LIMIT',
