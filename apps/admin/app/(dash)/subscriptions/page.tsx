@@ -299,6 +299,15 @@ function Subscriptions() {
                     cell: (row) => formatDate(row.subscription.nextBillingAt),
                   },
                   {
+                    key: 'swaps',
+                    header: 'Swaps this period',
+                    align: 'end',
+                    cell: (row) =>
+                      row.subscription.exchangeAllowance.limit === null
+                        ? `${row.subscription.exchangeAllowance.used} (unlimited)`
+                        : `${row.subscription.exchangeAllowance.used} of ${row.subscription.exchangeAllowance.limit}`,
+                  },
+                  {
                     key: 'attempts',
                     header: 'Renewal attempts',
                     align: 'end',

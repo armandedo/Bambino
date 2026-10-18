@@ -360,6 +360,26 @@ describe('exchange workflow guards', () => {
     expect((await s.allowance()).exchangeAllowance.used).toBe(1);
   });
 
+  it('lets only one of two simultaneous requests spend the last swap', async () => {
+    // The customer and subscription rows are locked for the whole request, so the second waits for the first and
+    // then finds the allowance used. With the in-process test database queries are serialised, so this guards the
+    // outcome (exactly one wins, one swap is recorded); run against PostgreSQL (TEST_DATABASE_URL) it also
+    // exercises the locks across real connections.
+    const s = await scenario({ limit: 1, garments: 4 });
+    const results = await Promise.all([s.swap([0]), s.swap([1]), s.swap([2]), s.swap([3])]);
+
+    const won = results.filter((response) => response.data?.createExchange);
+    const refused = results.filter((response) => errorReason(response) === 'EXCHANGE_ALLOWANCE_EXCEEDED');
+    expect(won).toHaveLength(1);
+    expect(refused).toHaveLength(3);
+    expect((await s.allowance()).exchangeAllowance).toMatchObject({ used: 1, remaining: 0 });
+    const exchanges = await t.db
+      .select()
+      .from(schema.exchanges)
+      .where(eq(schema.exchanges.userId, s.parent.userId));
+    expect(exchanges).toHaveLength(1);
+  });
+
   it('will not put one returned garment in two exchanges', async () => {
     const s = await scenario({ limit: 5, garments: 1 });
     expect(created(await s.swap([0])).status).toBe('REQUESTED');

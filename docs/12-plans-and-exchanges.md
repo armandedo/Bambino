@@ -114,4 +114,4 @@ pressure makes this wrong, the reservation can move to approval; the checks are 
 4. Whether a cancelled subscription is refunded for the unused part of a period (open question 13).
 5. What exchange credit is for once swaps are included: today it offsets the delivery fee and shop purchases.
 6. Real prices, and the real allowance for each plan (open questions 1, 5 and 9).
-7. Concurrency was reasoned about and relies on row locks; a load test with simultaneous swaps has not been run.
+7. Concurrency relies on row locks. `plan-entitlements.test.ts` fires four simultaneous requests at the last swap and checks that exactly one wins; with the in-process test database queries are serialised, so the locks across real connections have not been exercised yet. Run it once against PostgreSQL (`TEST_DATABASE_URL=... pnpm --filter @bambino/api test plan-entitlements`) before launch.

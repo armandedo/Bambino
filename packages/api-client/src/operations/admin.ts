@@ -604,7 +604,14 @@ export const AdminSubscriptionsQuery = operation<
       customer: CustomerRef;
       subscription: Pick<
         Subscription,
-        'id' | 'status' | 'price' | 'currentPeriodEnd' | 'nextBillingAt' | 'cancelAtPeriodEnd' | 'createdAt'
+        | 'id'
+        | 'status'
+        | 'price'
+        | 'currentPeriodEnd'
+        | 'nextBillingAt'
+        | 'cancelAtPeriodEnd'
+        | 'createdAt'
+        | 'exchangeAllowance'
       > & {
         plan: { name: string };
         babyProfile: { nickname: string };
@@ -618,7 +625,7 @@ export const AdminSubscriptionsQuery = operation<
     adminSubscriptions(status: $status, page: $page) {
       totalCount ${PAGE_INFO}
       items { renewalAttempts ${CUSTOMER_REF}
-        subscription { id status price ${MONEY} currentPeriodEnd nextBillingAt cancelAtPeriodEnd createdAt plan { name } babyProfile { nickname } } }
+        subscription { id status price ${MONEY} currentPeriodEnd nextBillingAt cancelAtPeriodEnd createdAt exchangeAllowance { limit used remaining resetsAt } plan { name } babyProfile { nickname } } }
     }
   }`,
 );
