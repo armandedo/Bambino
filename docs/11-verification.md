@@ -26,7 +26,7 @@ Checked by reading the code and its tests:
 - Auth: short access token, rotating refresh token with reuse detection, per-IP and per-account limits, lockout.
   Mobile keeps the refresh token in the device keystore and the access token in memory (unit tested).
 - Pay on delivery: ownership check, idempotency key, eligibility re-checked on confirmation, no refund path for
-  cash (tests in `cash-on-delivery.test.ts`).
+  mobile money at the door (tests in `pay-on-delivery.test.ts`).
 - Object storage: product photos in a public bucket; data exports in a **separate private bucket**, served only
   through short-lived signed links.
 

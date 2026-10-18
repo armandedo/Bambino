@@ -112,7 +112,7 @@ export function createServices(deps: ServiceDependencies): Services {
     notifications,
     now,
   );
-  const orders = new OrderService({
+  const orders: OrderService = new OrderService({
     db,
     cart,
     inventory,
@@ -123,9 +123,11 @@ export function createServices(deps: ServiceDependencies): Services {
     marketCode,
     currency,
     now,
+    // Resolved when asked, after the payment service exists.
+    doorProviders: () => payments.doorProviders(),
   });
   delivery.attachOrders(orders);
-  const payments = new PaymentService({
+  const payments: PaymentService = new PaymentService({
     db,
     providers: deps.payments?.providers ?? new Map(),
     orders,
@@ -191,7 +193,6 @@ export function createServices(deps: ServiceDependencies): Services {
       if (garmentId) await garments.markDelivered(tx, garmentId, order.userId, order.id);
     }
   });
-  orders.on('delivered', (tx, order) => payments.collectCashOnDelivery(tx, order));
   orders.on('delivered', (tx, order) => subscriptions.onOrderDelivered(tx, order));
   orders.on('delivered', (tx, order) => exchanges.onOrderDelivered(tx, order));
   orders.on('cancelled', async (tx, order) => {

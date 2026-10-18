@@ -91,40 +91,42 @@ that allows charging a wallet silently, so "renewal" means:
 The subscription lifecycle and the renewal job are provider-independent, so a provider offering pre-approved
 debits, or cards, changes only the provider implementation.
 
-## 4.4a Pay on delivery (cash)
+## 4.4a Pay on delivery (mobile money at the door, no cash)
 
-Status: implemented. `CASH_ON_DELIVERY` is a payment provider code with **no provider behind it**: the courier collects
-the money, and delivery completes the payment.
+Status: implemented. The customer chooses a wallet when confirming; nothing is charged then. When the order is out for
+delivery and the courier is at the door, staff ask for payment and the customer approves a mobile-money request on their
+phone. There is **no cash** anywhere in the flow. The retired provider code `CASH_ON_DELIVERY` is refused.
 
 ```mermaid
 stateDiagram-v2
   [*] --> PENDING_PAYMENT: createOrder
-  PENDING_PAYMENT --> CONFIRMED: confirmCashOnDelivery
+  PENDING_PAYMENT --> CONFIRMED: confirmPayOnDelivery (provider, msisdn)
   PENDING_PAYMENT --> PAID: online payment succeeds
   CONFIRMED --> PROCESSING: warehouse steps, as for a paid order
-  PROCESSING --> DELIVERED: delivery completes
+  PROCESSING --> OUT_FOR_DELIVERY: courier leaves
+  OUT_FOR_DELIVERY --> OUT_FOR_DELIVERY: adminRequestDoorPayment, customer approves (paid_at set)
+  OUT_FOR_DELIVERY --> DELIVERED: only once paid_at is set
   CONFIRMED --> CANCELLED: customer or staff (no refund: nothing was paid)
 ```
 
-1. The customer picks "Pay on delivery" on the order page. `confirmCashOnDelivery(orderId, idempotencyKey)` runs in
-   one transaction: the order moves `PENDING_PAYMENT` to `CONFIRMED`, a `CASH_ON_DELIVERY` payment is created
-   `PENDING` for the order's stored total, stock is committed, the delivery is created and the customer is told.
-2. `CONFIRMED` means "accepted, money due on delivery". `PAID` keeps meaning "money received", so revenue figures
-   built on payments stay correct.
-3. When the delivery is marked `DELIVERED`, the `delivered` hook succeeds the payment and sets `orders.paid_at`
-   (`PaymentService.collectCashOnDelivery`). The payment log records it as a `MANUAL_ADJUSTMENT`.
-4. Cancelling a `CONFIRMED` (or later, not yet delivered) cash order restocks it, returns credit and any coupon, and
-   closes the pending payment as `CANCELLED`. No refund is requested, because no money was taken.
-5. Reconciliation ignores cash payments (there is no provider to ask), and the unpaid-order cleanup only looks at
-   `PENDING_PAYMENT`, so a confirmed cash order is never cancelled for being "unpaid".
-6. Eligibility is `CASH_ON_DELIVERY_POLICY` (packages/config): shop orders only, with no limit on the total at present (a limit can be set in the policy; the checkout, the
-   rule and the wording follow it). Subscription
-   orders keep requiring a wallet that can be charged again. The same rule is shown at checkout
-   (`checkoutPreview.cashOnDelivery`, `Order.cashOnDelivery`) and enforced again on confirmation.
+1. `confirmPayOnDelivery(orderId, provider, msisdn)` runs in one transaction: the order moves `PENDING_PAYMENT` to
+   `CONFIRMED` and stores the wallet (`pay_on_delivery_provider`, `pay_on_delivery_msisdn`), stock is committed, the
+   delivery is created and the customer is told. No payment row exists yet. It is idempotent by state. The provider
+   must be integrated and offered (`PaymentService.doorProviders`).
+2. `CONFIRMED` means "accepted, money due at the door". `PAID` keeps meaning "money received".
+3. `adminRequestDoorPayment(orderId)` (permission `order:write`, order `OUT_FOR_DELIVERY`) creates a normal payment
+   for the order total and asks the stored wallet. Repeating it returns the open request; after a decline a new
+   request can be made. The customer's screen polls and shows an "approve on your phone" prompt.
+4. When the payment succeeds, only `orders.paid_at` is set; the status stays `OUT_FOR_DELIVERY`. Moving to `DELIVERED`
+   without payment fails with `DOOR_PAYMENT_NOT_COLLECTED`.
+5. Cancelling before delivery restocks, returns credit and any coupon, and closes open payments. No refund is needed
+   because nothing was taken. A confirmed door order is never cancelled by the unpaid-order cleanup.
+6. Eligibility is `PAY_ON_DELIVERY_POLICY` (packages/config): shop orders only, no limit at present. Subscription
+   orders keep requiring a wallet that can be charged again. The rule is shown at checkout and enforced again on
+   confirmation.
 
-Known limits, listed in open question 15: a refund of cash already collected is done in person and cannot be requested
-online (`CASH_REFUND_MANUAL`); there is no record of the amount the courier handed over, or of change; a failed
-delivery leaves the payment pending for the next attempt.
+Known limits, listed in open question 15: a customer whose phone is off or who declines at the door leaves the order
+undelivered (the courier brings it back); there is no deposit for first-time customers.
 
 ## 4.5 Provider notes to verify at integration time
 

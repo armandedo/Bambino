@@ -24,7 +24,7 @@ export const subscriptionLifecycle = defineStateMachine<SubscriptionStatus>('Sub
 });
 
 export const orderLifecycle = defineStateMachine<OrderStatus>('Order', 'PENDING_PAYMENT', {
-  // CONFIRMED = accepted with cash to be collected on delivery; it is prepared like a paid order.
+  // CONFIRMED = accepted with mobile money to be approved at the door; it is prepared like a paid order.
   PENDING_PAYMENT: ['PAID', 'CONFIRMED', 'CANCELLED'],
   CONFIRMED: ['PROCESSING', 'CANCELLED'],
   PAID: ['PROCESSING', 'CANCELLED'],

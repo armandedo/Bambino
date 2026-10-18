@@ -1,6 +1,11 @@
 'use client';
 
-import { AdminOrderQuery, AdminUpdateOrderStatusMutation, type OrderStatus } from '@bambino/api-client';
+import {
+  AdminOrderQuery,
+  AdminRequestDoorPaymentMutation,
+  AdminUpdateOrderStatusMutation,
+  type OrderStatus,
+} from '@bambino/api-client';
 import { Alert, Button, Card, CardHeader, Modal, MoneyText, StatusBadge, humanizeStatus } from '@bambino/ui';
 import { useQuery } from '@tanstack/react-query';
 import NextLink from 'next/link';
@@ -43,6 +48,11 @@ function OrderDetail({ id }: { id: string }) {
     },
   );
 
+  const askAtDoor = useAction(() => api.request(AdminRequestDoorPaymentMutation, { orderId: id }), {
+    success: 'Payment requested. The customer approves it on their phone.',
+    invalidate,
+  });
+
   return (
     <QueryState query={query} what="this order">
       {(data) => {
@@ -52,9 +62,13 @@ function OrderDetail({ id }: { id: string }) {
         const paidCancellable =
           order.type === 'ONE_TIME' &&
           ['PAID', 'CONFIRMED', 'PROCESSING', 'PACKED', 'READY_FOR_DISPATCH'].includes(order.status);
-        // Cash on delivery: nothing has been paid yet, so there is nothing to refund if it is cancelled.
-        const cashToCollect = payments.find(
-          (entry) => entry.payment.provider === 'CASH_ON_DELIVERY' && entry.payment.status === 'PENDING',
+        // Pay on delivery: nothing is charged until the courier is at the door, so there is nothing to refund
+        // if the order is cancelled before then.
+        const door = order.doorPayment;
+        const unpaidDoor = door !== null && !door.paid && !['DELIVERED', 'CANCELLED'].includes(order.status);
+        const atDoor = unpaidDoor && order.status === 'OUT_FOR_DELIVERY';
+        const requestWaiting = payments.some(
+          (entry) => entry.payment.status === 'INITIATED' || entry.payment.status === 'PENDING',
         );
         return (
           <div className="flex flex-col gap-6">
@@ -79,11 +93,33 @@ function OrderDetail({ id }: { id: string }) {
               <StatusBadge status={order.status} />
             </div>
 
-            {cashToCollect ? (
-              <Alert tone="info" title="Cash to collect on delivery">
-                The courier collects{' '}
-                <MoneyText value={cashToCollect.payment.amount} className="font-semibold" /> from the
-                customer. The payment is recorded as received when the delivery is marked delivered.
+            {unpaidDoor && door ? (
+              <Alert tone="info" title="Pay on delivery, by mobile money">
+                The customer pays <MoneyText value={order.totals.total} className="font-semibold" /> from
+                their {humanizeStatus(door.provider)} wallet ({door.maskedMsisdn}) when the order arrives.
+                There is no cash. Once the order is out for delivery and the courier is at the door, ask for
+                payment. The delivery can be completed only after the customer approves it on their phone.
+                {atDoor && can('order:write') ? (
+                  <div className="mt-3">
+                    {requestWaiting ? (
+                      <p className="font-medium">Waiting for the customer to approve on their phone.</p>
+                    ) : null}
+                    <Button
+                      className="mt-2"
+                      loading={askAtDoor.isPending}
+                      onClick={() => askAtDoor.mutate(undefined)}
+                      variant={requestWaiting ? 'outline' : 'primary'}
+                    >
+                      {requestWaiting ? 'Check again' : 'Ask for payment now'}
+                    </Button>
+                  </div>
+                ) : null}
+              </Alert>
+            ) : null}
+            {door?.paid ? (
+              <Alert tone="success" title="Paid at the door">
+                The customer approved the payment from their {humanizeStatus(door.provider)} wallet (
+                {door.maskedMsisdn}).
               </Alert>
             ) : null}
 
@@ -215,12 +251,12 @@ function OrderDetail({ id }: { id: string }) {
               open={cancelling}
               onClose={() => setCancelling(false)}
               title={
-                order.status === 'PENDING_PAYMENT' || cashToCollect
+                order.status === 'PENDING_PAYMENT' || unpaidDoor
                   ? 'Cancel this unpaid order?'
                   : 'Cancel this paid order?'
               }
               description={
-                order.status === 'PENDING_PAYMENT' || cashToCollect
+                order.status === 'PENDING_PAYMENT' || unpaidDoor
                   ? 'Reserved stock and garments are released. Nothing has been paid, so there is nothing to refund.'
                   : 'Stock goes back on hand, and a full refund is requested. The refund needs approval before anything is paid out.'
               }

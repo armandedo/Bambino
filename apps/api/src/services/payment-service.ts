@@ -1,6 +1,6 @@
 import { getMarket } from '@bambino/config';
 import { type Database, type Executor, schema } from '@bambino/database';
-import { and, asc, desc, eq, inArray, isNull, lt, ne, sql } from '@bambino/database/orm';
+import { and, asc, desc, eq, inArray, isNull, lt, sql } from '@bambino/database/orm';
 import { PAYMENT_PROVIDERS, type PaymentProviderCode, type PaymentStatus } from '@bambino/types';
 import { phoneSchema } from '@bambino/validation';
 import { money, type CurrencyCode } from '@bambino/utils';
@@ -111,7 +111,7 @@ export class PaymentService {
     idempotencyKey: string;
   }): Promise<PaymentRow> {
     const { db, now } = this.deps;
-    const provider = this.providerFor(input.provider);
+    this.providerFor(input.provider); // refuses a provider that is not integrated or offered
 
     const [existing] = await db
       .select()
@@ -201,11 +201,21 @@ export class PaymentService {
     }
 
     // The provider call happens outside the transaction; its outcome is recorded either way.
+    return this.collectFromProvider(payment, input.provider, input.msisdn);
+  }
+
+  /** Asks the wallet for the payment and records the outcome, success or failure, in the payment's history. */
+  private async collectFromProvider(
+    payment: PaymentRow,
+    providerCode: PaymentProviderCode,
+    msisdn: string,
+  ): Promise<PaymentRow> {
+    const provider = this.providerFor(providerCode);
     try {
       const result = await provider.initiate({
         reference: payment.idempotencyKey,
         amount: money(payment.amount, this.deps.currency),
-        payerMsisdn: input.msisdn,
+        payerMsisdn: msisdn,
         description: 'Bambino order',
       });
       return await this.applyTransition(payment.id, 'PENDING', 'INITIATION', {
@@ -216,12 +226,113 @@ export class PaymentService {
       if (error instanceof AppError) throw error;
       this.deps.logger.error('payment initiation failed at provider', {
         paymentId: payment.id,
-        provider: input.provider,
+        provider: providerCode,
         error,
       });
       return this.applyTransition(payment.id, 'FAILED', 'INITIATION', { failureCode: 'PROVIDER_ERROR' });
     }
   }
+
+  /**
+   * Pay on delivery: the courier is at the door, so staff ask the customer's chosen wallet for the order's total.
+   * The customer approves with their PIN; the result arrives like any other payment (webhook, polling, reconciliation)
+   * and sets `paidAt` without changing the order's status. Asking again while a request is waiting returns it; after a
+   * failed or expired request a new one can be sent. There is no cash.
+   */
+  async requestAtDoor(context: ServiceContext, rawOrderId: unknown): Promise<PaymentRow> {
+    requirePermission(context, 'order:write');
+    const orderId = parseInput(z.uuid(), rawOrderId);
+    const { db, now } = this.deps;
+
+    const prepared = await db
+      .transaction(async (tx) => {
+        const order = await this.deps.orders.lockOrder(tx, orderId);
+        if (!order) throw new AppError('NOT_FOUND', 'Order not found.');
+        if (!order.payOnDeliveryProvider || !order.payOnDeliveryMsisdn) {
+          throw new AppError('CONFLICT', 'This order is not paid on delivery.', 'NOT_PAY_ON_DELIVERY');
+        }
+        if (order.paidAt) throw new AppError('CONFLICT', 'This order is already paid.', 'ALREADY_PAID');
+        if (order.status !== 'OUT_FOR_DELIVERY') {
+          throw new AppError(
+            'CONFLICT',
+            'Ask for payment once the order is out for delivery and the courier is at the door.',
+            'ORDER_NOT_AT_DOOR',
+          );
+        }
+        this.providerFor(order.payOnDeliveryProvider);
+
+        const [open] = await tx
+          .select()
+          .from(schema.payments)
+          .where(
+            and(
+              eq(schema.payments.orderId, order.id),
+              inArray(schema.payments.status, ['INITIATED', 'PENDING']),
+            ),
+          );
+        if (open) return { existing: open } as const;
+
+        const [attempts] = await tx
+          .select({ n: sql<number>`count(*)::int` })
+          .from(schema.payments)
+          .where(eq(schema.payments.orderId, order.id));
+        const [created] = await tx
+          .insert(schema.payments)
+          .values({
+            userId: order.userId,
+            orderId: order.id,
+            subscriptionId: order.subscriptionId,
+            provider: order.payOnDeliveryProvider,
+            status: 'INITIATED',
+            amount: order.totalAmount,
+            currency: order.currency,
+            idempotencyKey: `door:${order.id}:${(attempts?.n ?? 0) + 1}`,
+            payerMsisdn: order.payOnDeliveryMsisdn,
+            initiatedAt: now(),
+          })
+          .returning();
+        if (!created) throw new Error('Payment insert returned no row');
+        await tx.insert(schema.analyticsEvents).values({
+          eventName: 'DOOR_PAYMENT_REQUESTED',
+          userId: order.userId,
+          properties: { paymentId: created.id, provider: created.provider },
+          occurredAt: now(),
+        });
+        await recordAudit(tx, context, {
+          action: 'payment.door_requested',
+          entityType: 'order',
+          entityId: order.id,
+          newValue: { paymentId: created.id },
+        });
+        return { created, provider: order.payOnDeliveryProvider, msisdn: order.payOnDeliveryMsisdn } as const;
+      })
+      .catch(async (error: unknown) => {
+        if (isUniqueViolation(error, 'payments_idempotency_key_uq')) {
+          const [winner] = await db
+            .select()
+            .from(schema.payments)
+            .where(
+              and(
+                eq(schema.payments.orderId, orderId),
+                inArray(schema.payments.status, ['INITIATED', 'PENDING']),
+              ),
+            );
+          if (winner) return { existing: winner } as const;
+        }
+        throw error;
+      });
+
+    if ('existing' in prepared) return prepared.existing;
+    return this.collectFromProvider(prepared.created, prepared.provider, prepared.msisdn);
+  }
+
+  /** The wallets a customer can choose for pay on delivery: offered here and really integrated. */
+  doorProviders(): PaymentProviderCode[] {
+    return (['MTN_MOMO', 'AIRTEL_MONEY', 'MOCK'] as const).filter(
+      (code) => this.deps.providers.has(code) && this.isOffered(code),
+    );
+  }
+
   /** Customer view of a payment. While pending, asks the provider (throttled) so polling clients see the outcome. */
   async getOwn(context: ServiceContext, rawId: unknown): Promise<PaymentRow | null> {
     const actor = requireUser(context);
@@ -328,8 +439,6 @@ export class PaymentService {
         and(
           inArray(schema.payments.status, ['INITIATED', 'PENDING']),
           lt(schema.payments.initiatedAt, cutoff),
-          // Cash is collected by the courier at delivery; there is no provider to ask.
-          ne(schema.payments.provider, 'CASH_ON_DELIVERY'),
         ),
       )
       .limit(200);
@@ -534,47 +643,6 @@ export class PaymentService {
     });
   }
 
-  /**
-   * Runs when an order is delivered: the courier has handed over the goods and taken the cash, so the order's waiting
-   * CASH_ON_DELIVERY payment succeeds. The order is already past payment, so nothing else about it changes
-   * except `paidAt`. A no-op for orders that were paid another way.
-   */
-  async collectCashOnDelivery(tx: Executor, order: { id: string; userId: string }): Promise<void> {
-    const [pending] = await tx
-      .select()
-      .from(schema.payments)
-      .where(
-        and(
-          eq(schema.payments.orderId, order.id),
-          eq(schema.payments.provider, 'CASH_ON_DELIVERY'),
-          eq(schema.payments.status, 'PENDING'),
-        ),
-      )
-      .for('update');
-    if (!pending) return;
-    const now = this.deps.now();
-    await tx
-      .update(schema.payments)
-      .set({ status: 'SUCCEEDED', completedAt: now })
-      .where(eq(schema.payments.id, pending.id));
-    await tx.insert(schema.paymentTransactions).values({
-      paymentId: pending.id,
-      type: 'MANUAL_ADJUSTMENT',
-      resultingStatus: 'SUCCEEDED',
-      amount: pending.amount,
-      currency: pending.currency,
-      payload: { reason: 'cash collected on delivery' },
-    });
-    await tx.update(schema.orders).set({ paidAt: now }).where(eq(schema.orders.id, order.id));
-    await tx.insert(schema.analyticsEvents).values({
-      eventName: 'PAYMENT_COMPLETED',
-      userId: pending.userId,
-      properties: { paymentId: pending.id, provider: pending.provider, amount: pending.amount },
-      occurredAt: now,
-    });
-    await this.deps.notifications.notify(tx, pending.userId, 'PAYMENT_SUCCEEDED', {});
-  }
-
   private async onSucceeded(tx: Executor, payment: PaymentRow): Promise<void> {
     await tx.insert(schema.analyticsEvents).values({
       eventName: 'PAYMENT_COMPLETED',
@@ -587,6 +655,9 @@ export class PaymentService {
     const order = await this.deps.orders.lockOrder(tx, payment.orderId);
     if (order?.status === 'PENDING_PAYMENT') {
       await this.deps.orders.markPaid(tx, order, null);
+    } else if (order && order.payOnDeliveryProvider && !order.paidAt && order.status === 'OUT_FOR_DELIVERY') {
+      // Paid at the door: the order is already on its way, so only the paid time is recorded.
+      await tx.update(schema.orders).set({ paidAt: this.deps.now() }).where(eq(schema.orders.id, order.id));
     } else {
       // Money arrived for an order that can no longer take it. Recorded for staff to refund.
       this.deps.logger.error('payment succeeded for an order that is not awaiting payment; refund needed', {
@@ -610,12 +681,14 @@ export class PaymentService {
     return provider;
   }
 
+  private isOffered(code: PaymentProviderCode): boolean {
+    return code === 'MOCK'
+      ? this.deps.allowMockProvider
+      : getMarket(this.deps.marketCode).paymentProviders.includes(code);
+  }
+
   private assertProviderOffered(code: PaymentProviderCode): void {
-    const offered =
-      code === 'MOCK'
-        ? this.deps.allowMockProvider
-        : getMarket(this.deps.marketCode).paymentProviders.includes(code);
-    if (!offered)
+    if (!this.isOffered(code))
       throw new AppError(
         'VALIDATION_FAILED',
         'This payment method is not offered here.',

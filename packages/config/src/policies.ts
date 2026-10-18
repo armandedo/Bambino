@@ -72,13 +72,13 @@ export const SIZING_POLICY = {
 };
 
 /**
- * Open question 15. Pay on delivery (cash). PLACEHOLDER values: easy to change, and the services contain no
+ * Open question 15. Pay on delivery, by mobile money approved at the door (no cash). PLACEHOLDER values: easy to change, and the services contain no
  * numbers of their own. Only shop orders qualify: a subscription needs a payment method that can be charged again.
  */
-export const CASH_ON_DELIVERY_POLICY = {
+export const PAY_ON_DELIVERY_POLICY = {
   enabled: true,
   /**
-   * Largest order total (in the smallest currency unit) accepted for cash on delivery. null means no limit, which is
+   * Largest order total (in the smallest currency unit) accepted for pay on delivery. null means no limit, which is
    * the current choice. A limit can be set again here; the checkout, the rule and the wording all follow it.
    */
   maxOrderAmount: null as number | null,
@@ -93,7 +93,7 @@ export const CASH_ON_DELIVERY_POLICY = {
 export const REFUND_POLICY = {
   /** Order types a paid order can be cancelled (with a refund) for. Subscription and exchange orders: not yet. */
   cancellableOrderTypes: ['ONE_TIME'] as readonly OrderType[],
-  /** A customer can cancel a paid (or confirmed cash) order only before it is being prepared. */
+  /** A customer can cancel a paid (or confirmed pay-on-delivery) order only before it is being prepared. */
   customerCancellableStatuses: ['PAID', 'CONFIRMED'] as readonly OrderStatus[],
   /** Staff can cancel a paid or confirmed order until it leaves the warehouse. */
   staffCancellableStatuses: [

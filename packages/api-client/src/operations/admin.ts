@@ -424,6 +424,7 @@ export const AdminTransitionGarmentMutation = operation<
 
 const ORDER_FIELDS = `
   id orderNumber type status placedAt paidAt
+  doorPayment { provider maskedMsisdn paid }
   totals { subtotal ${MONEY} discount ${MONEY} creditApplied ${MONEY} shipping ${MONEY} tax ${MONEY} total ${MONEY} }
   items { id productName sku sizeCode color unitPrice ${MONEY} quantity lineTotal ${MONEY} product { slug } }
   shippingAddress { recipientName phone countryCode region district sector street directions }
@@ -886,6 +887,15 @@ export const AdminReturnQuery = operation<
 >(
   'AdminReturn',
   `query AdminReturn($id: ID!) { adminReturn(id: $id) { returnRequest { ${RETURN_FIELDS} } ${CUSTOMER_REF} } }`,
+);
+
+/** Pay on delivery: the courier is at the door, so ask the customer's chosen wallet for the order's total. */
+export const AdminRequestDoorPaymentMutation = operation<
+  { adminRequestDoorPayment: Pick<Payment, 'id' | 'status' | 'provider' | 'amount'> },
+  { orderId: string }
+>(
+  'AdminRequestDoorPayment',
+  `mutation AdminRequestDoorPayment($orderId: ID!) { adminRequestDoorPayment(orderId: $orderId) { id status provider amount ${MONEY} } }`,
 );
 
 export const AdminOrderQuery = operation<

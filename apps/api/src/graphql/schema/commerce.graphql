@@ -6,7 +6,7 @@ enum OrderType {
 
 enum OrderStatus {
   PENDING_PAYMENT
-  "Accepted with payment due in cash on delivery. Stock is committed and delivery is created."
+  "Accepted, to be paid by mobile money when the order arrives. Stock is committed and delivery is created."
   CONFIRMED
   PAID
   PROCESSING
@@ -68,15 +68,28 @@ type OrderTotals {
   total: Money!
 }
 
-"Whether the cart can be paid in cash on delivery, and why not when it cannot."
-type CashOnDeliveryOption {
+"""
+Whether the cart can be paid on delivery, and why not when it cannot. Pay on delivery is by mobile money, approved
+on the customer's phone at the door; there is no cash.
+"""
+type PayOnDeliveryOption {
   available: Boolean!
   message: String
+  "The wallets the customer can choose from."
+  providers: [PaymentProvider!]!
+}
+
+"The wallet an order will be paid from at the door."
+type DoorPayment {
+  provider: PaymentProvider!
+  maskedMsisdn: String!
+  "True once the customer approved the payment at the door."
+  paid: Boolean!
 }
 
 type CheckoutPreview {
   totals: OrderTotals!
-  cashOnDelivery: CashOnDeliveryOption!
+  payOnDelivery: PayOnDeliveryOption!
   "Set when a promotion code was supplied but could not be applied."
   promotionError: String
   availableCredit: Money!
@@ -87,8 +100,10 @@ type Order {
   orderNumber: String!
   type: OrderType!
   status: OrderStatus!
-  "Whether this order can still be paid in cash on delivery. Null once it is no longer awaiting payment."
-  cashOnDelivery: CashOnDeliveryOption
+  "Whether this order can still be paid on delivery. Null once it is no longer awaiting payment."
+  payOnDelivery: PayOnDeliveryOption
+  "Set when the order is paid on delivery: the wallet chosen, and whether it has paid."
+  doorPayment: DoorPayment
   items: [OrderItem!]!
   totals: OrderTotals!
   shippingAddress: OrderAddress!
@@ -169,10 +184,11 @@ input CreateOrderInput {
   checkout: CheckoutInput!
 }
 
-input ConfirmCashOnDeliveryInput {
+input ConfirmPayOnDeliveryInput {
   orderId: ID!
-  "Client-generated UUID. Re-sending the same key returns the same order."
-  idempotencyKey: String!
+  "The mobile-money wallet to ask for payment when the order arrives."
+  provider: PaymentProvider!
+  msisdn: String!
 }
 
 extend type Query {
@@ -192,8 +208,8 @@ extend type Mutation {
   removeFromCart(itemId: ID!): Cart! @authenticated
   "Turns the caller's cart into an order in PENDING_PAYMENT and reserves stock."
   createOrder(input: CreateOrderInput!): Order! @authenticated
-  "Accepts a PENDING_PAYMENT shop order as pay on delivery: stock committed, delivery created, cash collected by the courier."
-  confirmCashOnDelivery(input: ConfirmCashOnDeliveryInput!): Order! @authenticated
+  "Accepts a PENDING_PAYMENT shop order as pay on delivery: stock committed, delivery created, the chosen wallet asked for payment at the door. Repeating it returns the confirmed order."
+  confirmPayOnDelivery(input: ConfirmPayOnDeliveryInput!): Order! @authenticated
   "While the order is PENDING_PAYMENT or CONFIRMED, or paid and not yet being prepared."
   cancelOrder(id: ID!): Order! @authenticated
 }

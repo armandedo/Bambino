@@ -490,6 +490,9 @@ extend type Mutation {
   adminRecordInspection(input: InspectionInput!): ReturnRequest! @requires(permission: "return:write")
   adminCompleteReturn(id: ID!): ReturnRequest! @requires(permission: "return:write")
 
+  "Pay on delivery: the courier is at the door, so ask the customer's chosen wallet for the order's total. The delivery cannot be completed until it is approved."
+  adminRequestDoorPayment(orderId: ID!): Payment! @requires(permission: "order:write")
+
   adminApproveExchange(id: ID!): Exchange! @requires(permission: "exchange:write")
   adminRejectExchange(id: ID!, reason: String!): Exchange! @requires(permission: "exchange:write")
   "Signed manual correction to a customer's credit, recorded in the ledger and the audit log."

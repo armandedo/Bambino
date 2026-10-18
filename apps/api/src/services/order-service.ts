@@ -1,10 +1,11 @@
 import { getMarket, REFUND_POLICY } from '@bambino/config';
 import { type AddressSnapshot, type Database, type Executor, schema } from '@bambino/database';
 import { and, asc, desc, eq, ilike, inArray, isNull, lt, or, sql } from '@bambino/database/orm';
-import type { OrderStatus } from '@bambino/types';
+import type { OrderStatus, OrderType, PaymentProviderCode } from '@bambino/types';
 import { type CurrencyCode, type Money, money, zero } from '@bambino/utils';
+import { phoneSchema } from '@bambino/validation';
 import { z } from 'zod';
-import { cashOnDeliveryAvailability } from '../domain/cash-on-delivery';
+import { payOnDeliveryAvailability } from '../domain/pay-on-delivery';
 import { orderLifecycle } from '../domain/lifecycles';
 import {
   type OrderTotals,
@@ -48,9 +49,11 @@ const checkoutSchema = z.object({
 });
 type CheckoutInput = z.infer<typeof checkoutSchema>;
 
-const confirmCashSchema = z.object({
+/** The wallet to ask for payment when the order arrives. There is no cash: only mobile money is accepted at the door. */
+const confirmPayOnDeliverySchema = z.object({
   orderId: z.uuid(),
-  idempotencyKey: z.string().trim().min(8).max(100),
+  provider: z.enum(['MTN_MOMO', 'AIRTEL_MONEY', 'MOCK']),
+  msisdn: phoneSchema,
 });
 
 const createOrderSchema = z.object({
@@ -95,6 +98,8 @@ export interface OrderServiceDependencies {
   marketCode: string;
   currency: CurrencyCode;
   now: () => Date;
+  /** Mobile-money providers that are offered here and really integrated; decides whether pay on delivery exists. */
+  doorProviders: () => PaymentProviderCode[];
 }
 
 /** Checkout, orders and their status, apart from payment (PaymentService) and shipping (DeliveryService). */
@@ -142,10 +147,7 @@ export class OrderService {
       promotionError: quote.promotionRejection ? PROMOTION_MESSAGES[quote.promotionRejection] : null,
       availableCredit: quote.availableCredit,
       // The cart's own total decides it; the same rule is enforced again when the order is confirmed.
-      cashOnDelivery: cashOnDeliveryAvailability({
-        type: 'ONE_TIME',
-        totalAmount: quote.totals.total.amount,
-      }),
+      payOnDelivery: this.payOnDeliveryOption({ type: 'ONE_TIME', totalAmount: quote.totals.total.amount }),
     };
   }
 
@@ -268,92 +270,74 @@ export class OrderService {
   }
 
   /**
-   * Accepts an order that is awaiting payment as pay on delivery: stock committed, delivery created and the
-   * customer told, with a pending CASH_ON_DELIVERY payment for the courier to collect. The amount is the order's
-   * stored total. Re-sending the same key returns the same order.
+   * Pay on delivery, by mobile money. The customer picks the wallet (provider and number) now; the order is
+   * confirmed, stock committed and the delivery created, but nothing is charged yet. When the order is out for
+   * delivery, staff ask the wallet for payment at the door (PaymentService.requestAtDoor) and the customer approves
+   * it with their PIN. The delivery cannot be completed until that payment succeeded. There is no cash.
+   * Repeating the request returns the confirmed order.
    */
-  async confirmCashOnDelivery(context: ServiceContext, rawInput: unknown): Promise<OrderRow> {
+  async confirmPayOnDelivery(context: ServiceContext, rawInput: unknown): Promise<OrderRow> {
     const actor = requireUser(context);
-    const input = parseInput(confirmCashSchema, rawInput);
-    const { db } = this.deps;
-    try {
-      return await db.transaction(async (tx) => {
-        const order = await this.lockOwnOrder(tx, actor.userId, input.orderId);
-
-        const [sameKey] = await tx
-          .select({ orderId: schema.payments.orderId, userId: schema.payments.userId })
-          .from(schema.payments)
-          .where(eq(schema.payments.idempotencyKey, input.idempotencyKey));
-        if (sameKey) {
-          if (sameKey.userId !== actor.userId || sameKey.orderId !== order.id) {
-            throw new AppError(
-              'CONFLICT',
-              'This request key was already used for something else.',
-              'IDEMPOTENCY_KEY_REUSED',
-            );
-          }
-          return order;
-        }
-
-        if (order.status !== 'PENDING_PAYMENT') {
-          throw new AppError('CONFLICT', 'This order does not need a payment.', 'ORDER_NOT_PAYABLE');
-        }
-        const availability = cashOnDeliveryAvailability(order);
-        if (!availability.available) {
-          throw new AppError(
-            'VALIDATION_FAILED',
-            availability.message,
-            `CASH_ON_DELIVERY_${availability.code}`,
-          );
-        }
-        await this.assertNoPaymentInProgress(tx, order.id);
-
-        const [payment] = await tx
-          .insert(schema.payments)
-          .values({
-            userId: actor.userId,
-            orderId: order.id,
-            subscriptionId: order.subscriptionId,
-            provider: 'CASH_ON_DELIVERY',
-            status: 'PENDING',
-            amount: order.totalAmount,
-            currency: order.currency,
-            idempotencyKey: input.idempotencyKey,
-            initiatedAt: this.deps.now(),
-          })
-          .returning();
-        if (!payment) throw new Error('Payment insert returned no row');
-        await tx.insert(schema.paymentTransactions).values({
-          paymentId: payment.id,
-          type: 'INITIATION',
-          resultingStatus: 'PENDING',
-          amount: payment.amount,
-          currency: payment.currency,
-          payload: { method: 'CASH_ON_DELIVERY' },
-          actorId: actor.userId,
-        });
-
-        const updated = await this.transition(tx, order, 'CONFIRMED', actor.userId, 'Pay on delivery');
-        await this.commitStock(tx, order.id);
-        await this.deps.delivery.createForOrder(tx, updated);
-        await this.deps.notifications.notify(tx, order.userId, 'ORDER_CONFIRMED', {
-          orderNumber: order.orderNumber,
-        });
-        await tx.insert(schema.analyticsEvents).values({
-          eventName: 'ORDER_CONFIRMED_CASH',
-          userId: actor.userId,
-          properties: { orderId: order.id, total: order.totalAmount },
-          occurredAt: this.deps.now(),
-        });
-        return updated;
-      });
-    } catch (error) {
-      if (isUniqueViolation(error, 'payments_idempotency_key_uq')) {
-        const order = await this.getOwn(context, input.orderId);
-        if (order) return order;
+    const input = parseInput(confirmPayOnDeliverySchema, rawInput);
+    return this.deps.db.transaction(async (tx) => {
+      const order = await this.lockOwnOrder(tx, actor.userId, input.orderId);
+      if (order.status === 'CONFIRMED' && order.payOnDeliveryProvider) return order;
+      if (order.status !== 'PENDING_PAYMENT') {
+        throw new AppError('CONFLICT', 'This order does not need a payment.', 'ORDER_NOT_PAYABLE');
       }
-      throw error;
+      const option = this.payOnDeliveryOption(order);
+      if (!option.available) {
+        throw new AppError(
+          'VALIDATION_FAILED',
+          option.message ?? 'Pay on delivery is not available.',
+          'PAY_ON_DELIVERY_UNAVAILABLE',
+        );
+      }
+      if (!option.providers.includes(input.provider)) {
+        throw new AppError(
+          'VALIDATION_FAILED',
+          'This payment method is not available.',
+          'PROVIDER_NOT_OFFERED',
+        );
+      }
+      await this.assertNoPaymentInProgress(tx, order.id);
+
+      const updated = await this.transition(tx, order, 'CONFIRMED', actor.userId, 'Pay on delivery', {
+        payOnDeliveryProvider: input.provider,
+        payOnDeliveryMsisdn: input.msisdn,
+      });
+      await this.commitStock(tx, order.id);
+      await this.deps.delivery.createForOrder(tx, updated);
+      await this.deps.notifications.notify(tx, order.userId, 'ORDER_CONFIRMED', {
+        orderNumber: order.orderNumber,
+      });
+      await tx.insert(schema.analyticsEvents).values({
+        eventName: 'ORDER_CONFIRMED_PAY_ON_DELIVERY',
+        userId: actor.userId,
+        properties: { orderId: order.id, total: order.totalAmount, provider: input.provider },
+        occurredAt: this.deps.now(),
+      });
+      return updated;
+    });
+  }
+
+  /**
+   * Whether pay on delivery is open for an order of this type and total, and with which wallets. It needs at least
+   * one real mobile-money provider: without one there would be no way to collect at the door.
+   */
+  payOnDeliveryOption(order: { type: OrderType; totalAmount: number }) {
+    const rule = payOnDeliveryAvailability(order);
+    const providers = this.deps.doorProviders();
+    if (rule.available && providers.length === 0) {
+      return {
+        available: false as const,
+        message: 'Pay on delivery needs a mobile-money method, which is not available yet.',
+        providers,
+      };
     }
+    return rule.available
+      ? { available: true as const, message: null, providers }
+      : { available: false as const, message: rule.message, providers };
   }
 
   /**
@@ -505,37 +489,33 @@ export class OrderService {
     }
   }
 
-  /** Cash is only collected at delivery: a cancelled order's waiting cash payment is closed, not refunded. */
-  private async cancelPendingCashPayment(
-    tx: Executor,
-    orderId: string,
-    actorId: string | null,
-  ): Promise<void> {
-    const [pending] = await tx
+  /**
+   * A cancelled order's waiting payment request is closed. If the customer still approves it on their phone, the
+   * payment reports as arriving for an order that cannot take it, and staff refund it (PaymentService.onSucceeded).
+   */
+  private async closeOpenPayments(tx: Executor, orderId: string, actorId: string | null): Promise<void> {
+    const open = await tx
       .select()
       .from(schema.payments)
       .where(
-        and(
-          eq(schema.payments.orderId, orderId),
-          eq(schema.payments.provider, 'CASH_ON_DELIVERY'),
-          eq(schema.payments.status, 'PENDING'),
-        ),
+        and(eq(schema.payments.orderId, orderId), inArray(schema.payments.status, ['INITIATED', 'PENDING'])),
       )
       .for('update');
-    if (!pending) return;
-    await tx
-      .update(schema.payments)
-      .set({ status: 'CANCELLED', completedAt: this.deps.now() })
-      .where(eq(schema.payments.id, pending.id));
-    await tx.insert(schema.paymentTransactions).values({
-      paymentId: pending.id,
-      type: 'MANUAL_ADJUSTMENT',
-      resultingStatus: 'CANCELLED',
-      amount: pending.amount,
-      currency: pending.currency,
-      payload: { reason: 'order cancelled before delivery' },
-      actorId,
-    });
+    for (const payment of open) {
+      await tx
+        .update(schema.payments)
+        .set({ status: 'CANCELLED', completedAt: this.deps.now() })
+        .where(eq(schema.payments.id, payment.id));
+      await tx.insert(schema.paymentTransactions).values({
+        paymentId: payment.id,
+        type: 'MANUAL_ADJUSTMENT',
+        resultingStatus: 'CANCELLED',
+        amount: payment.amount,
+        currency: payment.currency,
+        payload: { reason: 'order cancelled before delivery' },
+        actorId,
+      });
+    }
   }
 
   /** The single place an order's status changes: lifecycle check, update, history row. */
@@ -548,6 +528,14 @@ export class OrderService {
     extra: Partial<typeof schema.orders.$inferInsert> = {},
   ): Promise<OrderRow> {
     orderLifecycle.assertTransition(order.status, to);
+    // Pay on delivery: the goods are handed over only after the customer's wallet approved the payment.
+    if (to === 'DELIVERED' && order.payOnDeliveryProvider && !order.paidAt) {
+      throw new AppError(
+        'CONFLICT',
+        'The payment has not been collected yet. Ask the customer to approve the payment request first.',
+        'DOOR_PAYMENT_NOT_COLLECTED',
+      );
+    }
     const [updated] = await tx
       .update(schema.orders)
       .set({ status: to, ...extra })
@@ -756,7 +744,7 @@ export class OrderService {
       );
     }
     await tx.delete(schema.discounts).where(eq(schema.discounts.orderId, order.id));
-    await this.cancelPendingCashPayment(tx, order.id, actorId);
+    await this.closeOpenPayments(tx, order.id, actorId);
     await this.refunds.requestForCancelledOrder(
       tx,
       order,

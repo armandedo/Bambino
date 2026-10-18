@@ -1,7 +1,6 @@
 import type { schema } from '@bambino/database';
 import type { DeliveryStatus, OrderStatus, PaymentStatus } from '@bambino/types';
 import type { Money } from '@bambino/utils';
-import { cashOnDeliveryAvailability } from '../domain/cash-on-delivery';
 import type { CartLine, CartView } from '../services/cart-service';
 import type {
   CategoryRow,
@@ -219,8 +218,10 @@ export const commerceResolvers = {
       context.services.cart.removeFromCart(context, args.itemId),
     createOrder: (_: unknown, args: { input: unknown }, context: Ctx) =>
       context.services.orders.createOrder(context, args.input),
-    confirmCashOnDelivery: (_: unknown, args: { input: unknown }, context: Ctx) =>
-      context.services.orders.confirmCashOnDelivery(context, args.input),
+    confirmPayOnDelivery: (_: unknown, args: { input: unknown }, context: Ctx) =>
+      context.services.orders.confirmPayOnDelivery(context, args.input),
+    adminRequestDoorPayment: (_: unknown, args: { orderId: string }, context: Ctx) =>
+      context.services.payments.requestAtDoor(context, args.orderId),
     cancelOrder: (_: unknown, args: { id: string }, context: Ctx) =>
       context.services.orders.cancelOrder(context, args.id),
     applyExchangeCredit: (_: unknown, args: { orderId: string }, context: Ctx) =>
@@ -339,8 +340,16 @@ export const commerceResolvers = {
   },
 
   Order: {
-    cashOnDelivery: (parent: OrderRow) =>
-      parent.status === 'PENDING_PAYMENT' ? cashOnDeliveryAvailability(parent) : null,
+    payOnDelivery: (parent: OrderRow, _: unknown, context: Ctx) =>
+      parent.status === 'PENDING_PAYMENT' ? context.services.orders.payOnDeliveryOption(parent) : null,
+    doorPayment: (parent: OrderRow) =>
+      parent.payOnDeliveryProvider
+        ? {
+            provider: parent.payOnDeliveryProvider,
+            maskedMsisdn: maskMsisdn(parent.payOnDeliveryMsisdn) ?? '',
+            paid: parent.paidAt !== null,
+          }
+        : null,
     items: async (parent: OrderRow, _: unknown, context: Ctx) =>
       (await context.loaders.orderItems.load(parent.id)) ?? [],
     totals: (parent: OrderRow) => ({

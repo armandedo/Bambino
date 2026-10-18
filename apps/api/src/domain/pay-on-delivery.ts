@@ -1,4 +1,4 @@
-import { CASH_ON_DELIVERY_POLICY } from '@bambino/config';
+import { PAY_ON_DELIVERY_POLICY } from '@bambino/config';
 import type { OrderType } from '@bambino/types';
 
 export type CashOnDeliveryAvailability =
@@ -10,12 +10,12 @@ export type CashOnDeliveryAvailability =
     };
 
 /**
- * Whether an order of this type and total can be paid in cash on delivery. A pure rule over CASH_ON_DELIVERY_POLICY,
+ * Whether an order of this type and total can be paid on delivery. A pure rule over PAY_ON_DELIVERY_POLICY,
  * used both to quote it at checkout and to enforce it when the order is confirmed.
  */
-export function cashOnDeliveryAvailability(
+export function payOnDeliveryAvailability(
   order: { type: OrderType; totalAmount: number },
-  policy: typeof CASH_ON_DELIVERY_POLICY = CASH_ON_DELIVERY_POLICY,
+  policy: typeof PAY_ON_DELIVERY_POLICY = PAY_ON_DELIVERY_POLICY,
 ): CashOnDeliveryAvailability {
   if (!policy.enabled) {
     return { available: false, code: 'DISABLED', message: 'Pay on delivery is not available right now.' };

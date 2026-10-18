@@ -18,6 +18,7 @@ import {
   discountType,
   orderStatus,
   orderType,
+  paymentProvider,
   promotionScope,
   subscriptionItemStatus,
 } from './enums';
@@ -165,6 +166,13 @@ export const orders = pgTable(
     idempotencyKey: text('idempotency_key').notNull(),
     placedAt: tstz('placed_at').notNull().defaultNow(),
     paidAt: tstz('paid_at'),
+    /**
+     * Pay on delivery: the mobile-money wallet (provider and number) the customer chose, to be asked for
+     * payment when the order arrives. Null for orders paid online. There is no cash: delivery completes only
+     * after this wallet has approved the payment.
+     */
+    payOnDeliveryProvider: paymentProvider('pay_on_delivery_provider'),
+    payOnDeliveryMsisdn: text('pay_on_delivery_msisdn'),
     cancelledAt: tstz('cancelled_at'),
     createdAt: createdAt(),
     updatedAt: updatedAt(),

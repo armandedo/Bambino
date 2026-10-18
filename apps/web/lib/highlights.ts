@@ -1,5 +1,5 @@
 import type { DeliveryOption, Money, PlanSummary } from '@bambino/api-client';
-import { CASH_ON_DELIVERY_POLICY } from '@bambino/config';
+import { PAY_ON_DELIVERY_POLICY } from '@bambino/config';
 import { formatMoney, isCurrencyCode, money } from '@bambino/utils';
 
 /**
@@ -7,7 +7,7 @@ import { formatMoney, isCurrencyCode, money } from '@bambino/utils';
  * says its condition, so the page never promises more than checkout will deliver:
  * - delivery comes from the delivery options in the database (fee and days), not from a fixed sentence;
  * - payment names mobile money only when an operator has switched it on (PAYMENT_METHODS), and always mentions the
- *   cash-on-delivery limit;
+ *   pay-on-delivery limit;
  * - the swap line comes from the plans' own swap allowance.
  */
 export interface Highlight {
@@ -62,12 +62,12 @@ export function paymentAnswer(input: Pick<HighlightInput, 'paymentMethods' | 'mo
   } else if (!input.mockPayments) {
     parts.push('Plans are paid with mobile money, which is not switched on yet.');
   }
-  if (CASH_ON_DELIVERY_POLICY.enabled) {
-    const limit = CASH_ON_DELIVERY_POLICY.maxOrderAmount;
+  if (PAY_ON_DELIVERY_POLICY.enabled) {
+    const limit = PAY_ON_DELIVERY_POLICY.maxOrderAmount;
     parts.push(
       limit === null
-        ? 'Shop orders (not plans) can be paid in cash on delivery.'
-        : `Shop orders (not plans) up to ${plainPrice(money(limit, 'RWF'))} can be paid in cash on delivery.`,
+        ? 'Shop orders (not plans) can be paid by mobile money when they arrive, approved on your phone at the door.'
+        : `Shop orders (not plans) up to ${plainPrice(money(limit, 'RWF'))} can be paid by mobile money when they arrive, approved on your phone at the door.`,
     );
   }
   if (input.mockPayments) parts.push('This preview uses test wallets.');
@@ -89,10 +89,12 @@ export function buildHighlights(input: HighlightInput): Highlight[] {
   const paymentParts: string[] = [];
   if (input.mockPayments) paymentParts.push('Test wallets (preview only)');
   if (input.paymentMethods.length > 0) paymentParts.push(input.paymentMethods.join(', '));
-  if (CASH_ON_DELIVERY_POLICY.enabled) {
-    const limit = CASH_ON_DELIVERY_POLICY.maxOrderAmount;
+  if (PAY_ON_DELIVERY_POLICY.enabled) {
+    const limit = PAY_ON_DELIVERY_POLICY.maxOrderAmount;
     paymentParts.push(
-      limit === null ? 'Cash on delivery' : `Cash on delivery up to ${plainPrice(money(limit, 'RWF'))}`,
+      limit === null
+        ? 'Mobile money on delivery'
+        : `Mobile money on delivery up to ${plainPrice(money(limit, 'RWF'))}`,
     );
   }
   const mobileMoneyLive = input.paymentMethods.length > 0;
@@ -103,8 +105,8 @@ export function buildHighlights(input: HighlightInput): Highlight[] {
     body: paymentParts.length > 0 ? paymentParts.join(' · ') : 'Payment options are shown at checkout.',
     note: mobileMoneyLive
       ? 'Mobile money is approved on your phone with your PIN.'
-      : CASH_ON_DELIVERY_POLICY.enabled
-        ? 'Pay the courier in cash when your order arrives.'
+      : PAY_ON_DELIVERY_POLICY.enabled
+        ? 'Pay when your order arrives: approve the request on your phone at the door. No cash.'
         : 'Payment options are shown at checkout.',
   };
 

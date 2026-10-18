@@ -1,6 +1,6 @@
 import {
   CancelOrderMutation,
-  ConfirmCashOnDeliveryMutation,
+  ConfirmPayOnDeliveryMutation,
   InitiatePaymentMutation,
   type OrderDetail,
   type Payment,
@@ -67,10 +67,10 @@ function Pay({ order, onChanged }: { order: OrderDetail; onChanged: () => void }
   const cod = useMutation({
     mutationFn: async () =>
       (
-        await api.request(ConfirmCashOnDeliveryMutation, {
-          input: { orderId: order.id, idempotencyKey: newIdempotencyKey() },
+        await api.request(ConfirmPayOnDeliveryMutation, {
+          input: { orderId: order.id, provider, msisdn },
         })
-      ).confirmCashOnDelivery,
+      ).confirmPayOnDelivery,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       onChanged();
@@ -86,6 +86,17 @@ function Pay({ order, onChanged }: { order: OrderDetail; onChanged: () => void }
     setPhoneProblem(null);
     setMsisdn(parsed.data);
     initiate.mutate();
+  }
+
+  function payLater() {
+    const parsed = phoneSchema.safeParse(msisdn);
+    if (!parsed.success) {
+      setPhoneProblem('Enter a mobile money number such as +250 78 000 0000.');
+      return;
+    }
+    setPhoneProblem(null);
+    setMsisdn(parsed.data);
+    cod.mutate();
   }
 
   function again() {
@@ -187,23 +198,26 @@ function Pay({ order, onChanged }: { order: OrderDetail; onChanged: () => void }
         />
       </Card>
 
-      {order.cashOnDelivery ? (
+      {order.payOnDelivery ? (
         <Card>
           <Heading level={2}>Or pay when it arrives</Heading>
-          {order.cashOnDelivery.available ? (
+          {order.payOnDelivery.available ? (
             <>
-              <Body muted>The courier collects {price(order.totals.total)} in cash on delivery.</Body>
+              <Body muted>
+                Pay {price(order.totals.total)} from the wallet chosen above when your order arrives. We send a
+                payment request to that number at your door and you approve it with your PIN. No cash is taken.
+              </Body>
               {cod.isError ? <Banner tone="danger">{errorMessage(cod.error)}</Banner> : null}
               <Button
                 label="Pay on delivery"
                 variant="outline"
                 loading={cod.isPending}
-                onPress={() => cod.mutate()}
+                onPress={payLater}
               />
             </>
           ) : (
             <Body muted>
-              {order.cashOnDelivery.message ?? 'Cash on delivery is not available for this order.'}
+              {order.payOnDelivery.message ?? 'Pay on delivery is not available for this order.'}
             </Body>
           )}
         </Card>
@@ -253,7 +267,8 @@ export default function OrderScreen() {
 
       {order.status === 'CONFIRMED' ? (
         <Banner tone="info">
-          Your order is confirmed. Please have {price(order.totals.total)} ready in cash when it arrives.
+          Your order is confirmed. When it arrives you will get a mobile money request for {price(order.totals.total)}.
+          Approve it with your PIN to receive your order. No cash is taken.
         </Banner>
       ) : (
         <Banner

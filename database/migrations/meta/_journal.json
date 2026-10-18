@@ -64,6 +64,13 @@
       "when": 1792236098737,
       "tag": "0008_plan_entitlements",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792323413000,
+      "tag": "0009_pay_on_delivery_mobile_money",
+      "breakpoints": true
     }
   ]
 }

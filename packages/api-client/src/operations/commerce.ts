@@ -86,7 +86,7 @@ export const CheckoutPreviewQuery = operation<
       totals: OrderTotals;
       promotionError: string | null;
       availableCredit: Money;
-      cashOnDelivery: CashOnDeliveryOption;
+      payOnDelivery: PayOnDeliveryOption;
     };
   },
   { input: CheckoutInput }
@@ -95,7 +95,7 @@ export const CheckoutPreviewQuery = operation<
   `query CheckoutPreview($input: CheckoutInput!) {
     checkoutPreview(input: $input) {
       totals { ${TOTALS_FIELDS} } promotionError availableCredit ${MONEY}
-      cashOnDelivery { available message }
+      payOnDelivery { available message providers }
     }
   }`,
 );
@@ -118,10 +118,21 @@ export type DeliveryStatus =
   'PENDING' | 'ASSIGNED' | 'PICKED_UP' | 'IN_TRANSIT' | 'DELIVERED' | 'FAILED' | 'CANCELLED';
 export type PaymentProvider = 'MTN_MOMO' | 'AIRTEL_MONEY' | 'CARD' | 'MOCK' | 'CASH_ON_DELIVERY';
 
-/** Whether a cart or order can be paid in cash on delivery; `message` says why not when it cannot. */
-export interface CashOnDeliveryOption {
+/**
+ * Whether a cart or order can be paid on delivery, and with which wallets. Pay on delivery is by mobile money,
+ * approved on the customer's phone when the order arrives; there is no cash. `message` says why not when it cannot.
+ */
+export interface PayOnDeliveryOption {
   available: boolean;
   message: string | null;
+  providers: PaymentProvider[];
+}
+
+/** The wallet an order will be paid from at the door, and whether it has been paid. */
+export interface DoorPayment {
+  provider: PaymentProvider;
+  maskedMsisdn: string;
+  paid: boolean;
 }
 
 export interface Payment {
@@ -177,7 +188,9 @@ const DELIVERY_FIELDS =
 export interface OrderDetail extends Omit<OrderSummary, 'totals' | 'items'> {
   paidAt: string | null;
   /** Null once the order is no longer awaiting payment. */
-  cashOnDelivery: CashOnDeliveryOption | null;
+  payOnDelivery: PayOnDeliveryOption | null;
+  /** Set when the order is paid on delivery. */
+  doorPayment: DoorPayment | null;
   totals: OrderTotals;
   items: {
     id: string;
@@ -209,7 +222,8 @@ export interface OrderDetail extends Omit<OrderSummary, 'totals' | 'items'> {
 
 const ORDER_DETAIL_FIELDS = `
   id orderNumber type status placedAt paidAt
-  cashOnDelivery { available message }
+  payOnDelivery { available message providers }
+  doorPayment { provider maskedMsisdn paid }
   totals { ${TOTALS_FIELDS} }
   items { id productName sku sizeCode color unitPrice ${MONEY} quantity lineTotal ${MONEY} product { slug } }
   shippingAddress { recipientName phone countryCode region district sector street directions }
@@ -228,13 +242,13 @@ export const CreateOrderMutation = operation<
   `mutation CreateOrder($input: CreateOrderInput!) { createOrder(input: $input) { ${ORDER_DETAIL_FIELDS} } }`,
 );
 
-export const ConfirmCashOnDeliveryMutation = operation<
-  { confirmCashOnDelivery: OrderDetail },
-  { input: { orderId: string; idempotencyKey: string } }
+export const ConfirmPayOnDeliveryMutation = operation<
+  { confirmPayOnDelivery: OrderDetail },
+  { input: { orderId: string; provider: PaymentProvider; msisdn: string } }
 >(
-  'ConfirmCashOnDelivery',
-  `mutation ConfirmCashOnDelivery($input: ConfirmCashOnDeliveryInput!) {
-    confirmCashOnDelivery(input: $input) { ${ORDER_DETAIL_FIELDS} }
+  'ConfirmPayOnDelivery',
+  `mutation ConfirmPayOnDelivery($input: ConfirmPayOnDeliveryInput!) {
+    confirmPayOnDelivery(input: $input) { ${ORDER_DETAIL_FIELDS} }
   }`,
 );
 
