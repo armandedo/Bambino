@@ -10,7 +10,7 @@ import { Alert, Button, Card, Checkbox, MoneyText, Skeleton, TextField, buttonCl
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import NextLink from 'next/link';
 import { useRouter } from 'next/navigation';
-import { type ReactNode, useCallback, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useState } from 'react';
 import { AddressPicker, DeliveryPicker, TotalsTable } from '@/components/checkout-parts';
 import { CART_KEY, useCart } from '@/components/header-actions';
 import { PaymentPanel } from '@/components/payment-panel';
@@ -84,9 +84,16 @@ function Checkout({ viewer }: { viewer: Viewer }) {
     },
   });
 
+  // The server says the cart is empty (for instance after an order was placed in another tab): drop the stale copy.
+  const cartGone = preview.isError && /cart is empty/i.test(errorMessage(preview.error));
+  useEffect(() => {
+    if (cartGone) void queryClient.invalidateQueries({ queryKey: CART_KEY });
+  }, [cartGone, queryClient]);
+
   const onPaid = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: CART_KEY });
     if (order) router.push(`/dashboard/orders/${order.id}?placed=1`);
-  }, [order, router]);
+  }, [order, router, queryClient]);
 
   if (cart.isPending) return <Skeleton className="h-64" />;
   if (!order && (!cart.data || cart.data.items.length === 0)) {
