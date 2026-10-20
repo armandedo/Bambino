@@ -156,3 +156,9 @@ Also before launch:
 - [ ] The seed admin's password changed, and staff accounts created with the least role they need
 - [ ] `pnpm --filter @bambino/api storage:init` run once against the production bucket (product images public,
       everything else private)
+
+### Restore rehearsal log
+
+| Date       | Who    | Method                               | Result                                                                                                                                                                                                                   |
+| ---------- | ------ | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 2026-10-20 | Armand | Neon branch from past data (staging) | Passed: 7 users and 2 orders restored, migrations present. Found migration 0009 applied by hand and missing from `drizzle.__drizzle_migrations`; recorded it (hash `a9b5ea19…`). Free plan keeps only 6 hours of history |
