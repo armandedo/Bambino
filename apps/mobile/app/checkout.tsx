@@ -261,7 +261,9 @@ export default function Checkout() {
       </Card>
 
       {place.isError ? <Banner tone="danger">{errorMessage(place.error)}</Banner> : null}
-      <Body muted>You choose how to pay on the next screen: mobile money now, or mobile money when it arrives.</Body>
+      <Body muted>
+        You choose how to pay on the next screen: mobile money now, or mobile money when it arrives.
+      </Body>
       <Button
         label="Place order"
         variant="accent"

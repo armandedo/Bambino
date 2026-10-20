@@ -204,16 +204,12 @@ function Pay({ order, onChanged }: { order: OrderDetail; onChanged: () => void }
           {order.payOnDelivery.available ? (
             <>
               <Body muted>
-                Pay {price(order.totals.total)} from the wallet chosen above when your order arrives. We send a
-                payment request to that number at your door and you approve it with your PIN. No cash is taken.
+                Pay {price(order.totals.total)} from the wallet chosen above when your order arrives. We send
+                a payment request to that number at your door and you approve it with your PIN. No cash is
+                taken.
               </Body>
               {cod.isError ? <Banner tone="danger">{errorMessage(cod.error)}</Banner> : null}
-              <Button
-                label="Pay on delivery"
-                variant="outline"
-                loading={cod.isPending}
-                onPress={payLater}
-              />
+              <Button label="Pay on delivery" variant="outline" loading={cod.isPending} onPress={payLater} />
             </>
           ) : (
             <Body muted>
@@ -267,8 +263,8 @@ export default function OrderScreen() {
 
       {order.status === 'CONFIRMED' ? (
         <Banner tone="info">
-          Your order is confirmed. When it arrives you will get a mobile money request for {price(order.totals.total)}.
-          Approve it with your PIN to receive your order. No cash is taken.
+          Your order is confirmed. When it arrives you will get a mobile money request for{' '}
+          {price(order.totals.total)}. Approve it with your PIN to receive your order. No cash is taken.
         </Banner>
       ) : (
         <Banner

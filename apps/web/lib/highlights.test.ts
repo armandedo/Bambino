@@ -63,7 +63,9 @@ describe('payment highlight', () => {
     expect(h?.body).toMatch(/Mobile money on delivery/);
     expect(h?.body).not.toMatch(/cash/i);
     expect(h?.body).not.toMatch(/up to|RF/);
-    expect(h?.note).toBe('Pay when your order arrives: approve the request on your phone at the door. No cash.');
+    expect(h?.note).toBe(
+      'Pay when your order arrives: approve the request on your phone at the door. No cash.',
+    );
   });
 
   it('is titled for what is real: pay when it arrives, until there is more than one way to pay', () => {

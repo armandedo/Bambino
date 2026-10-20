@@ -177,8 +177,8 @@ export function DoorPaymentNotice({ order }: { order: OrderDetail & { doorPaymen
   return (
     <Alert tone="info" title="Pay when it arrives">
       You will pay <MoneyText value={order.totals.total} className="font-semibold" /> from {wallet} when your
-      order arrives. When the courier is at your door you will get a payment request on that number: approve it
-      with your PIN to receive your order. No cash is taken.
+      order arrives. When the courier is at your door you will get a payment request on that number: approve
+      it with your PIN to receive your order. No cash is taken.
     </Alert>
   );
 }
