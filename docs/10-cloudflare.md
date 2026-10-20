@@ -31,6 +31,8 @@ Object storage: Cloudflare R2 through its S3 API (STORAGE_PROVIDER=s3).
 npx wrangler login                                     # opens the browser
 # Production database first (open question 12), then:
 npx wrangler hyperdrive create bambino-db --connection-string="postgresql://USER:PASSWORD@HOST:5432/DB"
+# Hyperdrive caches reads by default, which serves stale carts, orders and payments. Always switch it off:
+npx wrangler hyperdrive update <HYPERDRIVE_ID> --caching-disabled=true
 # Put the returned id in apps/api/wrangler.jsonc (env.preview / env.production hyperdrive.id).
 npx wrangler r2 bucket create bambino-media           # public: product images only
 npx wrangler r2 bucket create bambino-private         # never public: data exports
