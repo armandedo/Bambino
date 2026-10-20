@@ -123,3 +123,33 @@ Costs beyond the free tier: Workers Paid plan (USD 5/month base, then per reques
 password hashing), Hyperdrive (included with Workers Paid within limits), R2 (storage and operations above the
 free allowance), Cloudflare Images for `next/image` (beyond the free transformations), and the managed
 PostgreSQL provider, which is billed separately.
+
+## 10.7 Staging runbook (Phase 10 exit checks)
+
+### Restore rehearsal on Neon (do this once, then monthly)
+
+Neon keeps a history of the database, so a restore is a branch, never an overwrite.
+
+1. Neon console, the project, **Branches**, **Create branch**. Parent: `main`. Choose "Past data" and a time a few
+   minutes ago. Name it `restore-test`.
+2. Open the new branch's **SQL Editor** and run:
+   `SELECT count(*) FROM users;`, `SELECT count(*) FROM orders;` and
+   `SELECT count(*) FROM drizzle.__drizzle_migrations;`. The counts must match the main branch at that time, and the
+   migration count must equal the number of files in `database/migrations`.
+3. Optional end-to-end check: create a second Hyperdrive config for the branch's connection string and point a
+   throwaway API deploy at it. `/ready` must return `database: ok` and a sign-in must work.
+4. Delete the `restore-test` branch.
+5. Record the date, who ran it, and the result in the table in 9.6.
+
+A real restore is the same steps, followed by pointing the Hyperdrive config (`wrangler hyperdrive update`) at the
+restored branch.
+
+### Monitoring
+
+- **Uptime.** Create free monitors (UptimeRobot or Better Stack) every minute for the API `/ready`, the website
+  `/ready` and the admin `/admin/ready`, alerting by email and phone.
+- **Errors.** Create a Sentry project, then `wrangler secret put SENTRY_DSN` (API, per environment). The website and
+  admin read `NEXT_PUBLIC_SENTRY_DSN` at build time.
+- **Jobs.** The cron trigger runs every minute. In the Cloudflare dashboard (Workers, `bambino-api-*`, Observability)
+  watch for `background jobs failed`, and add a notification on the error rate.
+- **Cost.** Set a billing alert in the Cloudflare dashboard.
