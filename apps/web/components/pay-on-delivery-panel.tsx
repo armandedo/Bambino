@@ -38,10 +38,13 @@ export function PayOnDeliveryPanel({
   orderId,
   total,
   providers,
+  onConfirmed,
 }: {
   orderId: string;
   total: Money;
   providers: PaymentProvider[];
+  /** Called once the order is confirmed for pay on delivery, e.g. to leave checkout for the order page. */
+  onConfirmed?: (() => void) | undefined;
 }) {
   const queryClient = useQueryClient();
   const [provider, setProvider] = useState<PaymentProvider>(providers[0] ?? 'MOCK');
@@ -55,6 +58,7 @@ export function PayOnDeliveryPanel({
     onSuccess: (next) => {
       queryClient.setQueryData(keys.order(orderId), next);
       void queryClient.invalidateQueries({ queryKey: keys.orders });
+      onConfirmed?.();
     },
   });
 

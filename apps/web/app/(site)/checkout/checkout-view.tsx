@@ -13,6 +13,7 @@ import { useRouter } from 'next/navigation';
 import { type ReactNode, useCallback, useEffect, useState } from 'react';
 import { AddressPicker, DeliveryPicker, TotalsTable } from '@/components/checkout-parts';
 import { CART_KEY, useCart } from '@/components/header-actions';
+import { PayOnDeliveryPanel } from '@/components/pay-on-delivery-panel';
 import { PaymentPanel } from '@/components/payment-panel';
 import { RequireAuth } from '@/components/require-auth';
 import { api, newIdempotencyKey } from '@/lib/browser-api';
@@ -130,7 +131,21 @@ function Checkout({ viewer }: { viewer: Viewer }) {
               <Button onClick={onPaid}>View order</Button>
             </>
           ) : (
-            <PaymentPanel orderId={order.id} total={order.totals.total} onPaid={onPaid} />
+            <>
+              <PaymentPanel orderId={order.id} total={order.totals.total} onPaid={onPaid} />
+              {order.payOnDelivery?.available ? (
+                <PayOnDeliveryPanel
+                  orderId={order.id}
+                  total={order.totals.total}
+                  providers={order.payOnDelivery.providers}
+                  onConfirmed={onPaid}
+                />
+              ) : order.payOnDelivery ? (
+                <p className="border-t border-border pt-4 text-sm text-foreground-muted">
+                  {order.payOnDelivery.message}
+                </p>
+              ) : null}
+            </>
           )}
         </Card>
       </div>
