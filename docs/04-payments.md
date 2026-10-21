@@ -1,9 +1,10 @@
 # 4. Payment architecture
 
 Status: designed. Tables, the payment lifecycle and their tests exist. The payment service and the mock
-provider are built in Phase 4. MTN MoMo and Airtel Money are NOT YET INTEGRATED: they need merchant sandbox
-credentials, and the provider details below must be confirmed against each provider's current documentation
-when that work starts.
+provider are built in Phase 4. MTN MoMo (Collections and Disbursement refunds) is built against MTN's documented API and unit tested with a
+scripted MTN, but has **not yet been run against the MTN sandbox**: that needs your credentials (section 4.6).
+Airtel Money is NOT YET INTEGRATED. Provider details below must be confirmed against each provider's current
+documentation.
 
 ## 4.1 Interface
 
@@ -127,6 +128,32 @@ stateDiagram-v2
 
 Known limits, listed in open question 15: a customer whose phone is off or who declines at the door leaves the order
 undelivered (the courier brings it back); there is no deposit for first-time customers.
+
+## 4.6 MTN MoMo: switching it on
+
+Implemented in `apps/api/src/providers/mtn-momo.ts`. How it behaves:
+
+- `requesttopay` asks the payer's wallet; the customer approves with their PIN. Our reference becomes MTN's
+  `X-Reference-Id` through a stable UUID, so a repeat is a 409 that we treat as the same request.
+- **Status is polled, never pushed.** MTN callbacks carry no signature, so `parseWebhook` refuses them. The
+  reconciliation job and the customer's own status checks ask MTN directly.
+- Refunds use Disbursement `refund` and need the second set of keys; without them a refund is refused.
+- The sandbox accepts EUR only (`MTN_MOMO_CURRENCY=EUR`); production uses RWF and the live host and target
+  environment name MTN assigns. The API refuses the sandbox host in production.
+
+To try it in the sandbox:
+
+1. Create an account at momodeveloper.mtn.com and subscribe to the **Collection** product (and **Disbursement** for
+   refunds). Copy each product's primary key (the subscription key).
+2. Create an API user and key for each product (the portal's sandbox provisioning calls, or the API: `POST
+/v1_0/apiuser` then `POST /v1_0/apiuser/{id}/apikey`).
+3. Set, per environment, with `wrangler secret put`: `MTN_MOMO_COLLECTION_SUBSCRIPTION_KEY`,
+   `MTN_MOMO_COLLECTION_API_USER`, `MTN_MOMO_COLLECTION_API_KEY` (and the three `MTN_MOMO_DISBURSEMENT_*`), then set
+   `PAYMENT_PROVIDERS_ENABLED=mock,mtn_momo` and `MTN_MOMO_CURRENCY=EUR` in `wrangler.jsonc`.
+4. Redeploy the API. In the sandbox, test numbers decide the outcome (46733123450 approves, 46733123451 rejects,
+   46733123452 times out; check the portal's current list).
+5. For production: the live host, `MTN_MOMO_TARGET_ENVIRONMENT`, `MTN_MOMO_CURRENCY=RWF`, `PAYMENT_METHODS` listing
+   `MTN MoMo` so the home page names it, and a real small payment and refund before launch.
 
 ## 4.5 Provider notes to verify at integration time
 

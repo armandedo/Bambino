@@ -6,7 +6,7 @@ import { loadEnv } from '../config/env';
 import { createLogger } from '../infra/logger';
 import { MemoryRateLimiter, PostgresRateLimiter } from '../infra/rate-limiter';
 import { createEmailProvider } from '../providers/email-factory';
-import { MockPaymentProvider, type PaymentProvider } from '../providers/payments';
+import { createPaymentProviders } from '../providers/payment-factory';
 import { createStorageProvider } from '../providers/storage-factory';
 import { createApp } from './app';
 import { loadLocalEnvFile } from './env-file';
@@ -38,20 +38,7 @@ async function main() {
     hasher: createArgon2Hasher(),
     rateLimiter:
       env.RATE_LIMITER === 'postgres' ? new PostgresRateLimiter(connection.db) : new MemoryRateLimiter(),
-    paymentProviders: new Map<PaymentProvider['code'], PaymentProvider>(
-      env.PAYMENT_PROVIDERS_ENABLED.includes('mock')
-        ? [
-            [
-              'MOCK',
-              new MockPaymentProvider(
-                env.MOCK_PAYMENT_WEBHOOK_SECRET,
-                env.PAYMENT_EXPIRY_MINUTES,
-                () => new Date(),
-              ),
-            ],
-          ]
-        : [],
-    ),
+    paymentProviders: createPaymentProviders(env),
     allowMockPayments: env.NODE_ENV !== 'production' && env.PAYMENT_PROVIDERS_ENABLED.includes('mock'),
     storage: createStorageProvider(env),
     errorReporter: createErrorReporter({

@@ -29,7 +29,7 @@ const envSchema = z
     /** Shown on Sentry reports, e.g. production or staging. Defaults to NODE_ENV. */
     SENTRY_ENVIRONMENT: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
     LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error', 'silent']).default('info'),
-    /** Comma-separated. Only `mock` exists today; MTN MoMo and Airtel Money are not yet integrated. */
+    /** Comma-separated: `mock` and `mtn_momo`. Airtel Money is not yet integrated. */
     PAYMENT_PROVIDERS_ENABLED: z
       .string()
       .default('mock')
@@ -41,9 +41,23 @@ const envSchema = z
       )
       .pipe(
         z.array(
-          z.enum(['mock'], 'only "mock" is available; MTN MoMo and Airtel Money are not yet integrated'),
+          z.enum(
+            ['mock', 'mtn_momo'],
+            'only "mock" and "mtn_momo" are available; Airtel Money is not yet integrated',
+          ),
         ),
       ),
+    /** MTN MoMo (https://momodeveloper.mtn.com). The sandbox host and `sandbox` target accept EUR only. */
+    MTN_MOMO_BASE_URL: z.url().default('https://sandbox.momodeveloper.mtn.com'),
+    MTN_MOMO_TARGET_ENVIRONMENT: z.string().min(1).default('sandbox'),
+    MTN_MOMO_CURRENCY: z.string().length(3).default('EUR'),
+    MTN_MOMO_COLLECTION_SUBSCRIPTION_KEY: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
+    MTN_MOMO_COLLECTION_API_USER: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
+    MTN_MOMO_COLLECTION_API_KEY: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
+    /** Needed only for refunds through MTN MoMo. */
+    MTN_MOMO_DISBURSEMENT_SUBSCRIPTION_KEY: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
+    MTN_MOMO_DISBURSEMENT_API_USER: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
+    MTN_MOMO_DISBURSEMENT_API_KEY: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
     MOCK_PAYMENT_WEBHOOK_SECRET: z.string().min(16).default('development-mock-webhook-secret'),
     PAYMENT_EXPIRY_MINUTES: z.coerce.number().int().min(1).max(60).default(10),
     RECONCILE_INTERVAL_SECONDS: z.coerce.number().int().min(10).max(3600).default(60),
@@ -77,7 +91,19 @@ const envSchema = z
         if (!env[key]) fail(key, 'is required when STORAGE_PROVIDER=s3');
       }
     }
+    if (env.PAYMENT_PROVIDERS_ENABLED.includes('mtn_momo')) {
+      for (const key of [
+        'MTN_MOMO_COLLECTION_SUBSCRIPTION_KEY',
+        'MTN_MOMO_COLLECTION_API_USER',
+        'MTN_MOMO_COLLECTION_API_KEY',
+      ] as const) {
+        if (!env[key]) fail(key, 'is required when mtn_momo is enabled');
+      }
+    }
     if (env.NODE_ENV !== 'production') return;
+    if (env.PAYMENT_PROVIDERS_ENABLED.includes('mtn_momo') && env.MTN_MOMO_BASE_URL.includes('sandbox')) {
+      fail('MTN_MOMO_BASE_URL', 'the MTN sandbox cannot be used in production');
+    }
     if (env.PAYMENT_PROVIDERS_ENABLED.includes('mock')) {
       fail('PAYMENT_PROVIDERS_ENABLED', 'the mock payment provider cannot be enabled in production');
     }

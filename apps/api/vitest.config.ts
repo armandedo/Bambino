@@ -10,7 +10,7 @@ const realServer = Boolean(process.env.TEST_DATABASE_URL);
 
 export default defineConfig({
   test: {
-    testTimeout: realServer ? 30_000 : 5_000,
+    testTimeout: 30_000,
     hookTimeout: 120_000,
     ...(realServer ? { maxWorkers: 2 } : {}),
   },

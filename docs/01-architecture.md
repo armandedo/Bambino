@@ -117,14 +117,14 @@ between packages: Next.js, Metro, Vitest and the API runtime all compile them on
 Every external system is reached through an interface with a development implementation, selected by
 environment configuration. Business logic depends on the interface only.
 
-| Interface          | Implementations                                                                        | Status                                                                                     |
-| ------------------ | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `PaymentProvider`  | `MockPaymentProvider`, `MtnMomoProvider`, `AirtelMoneyProvider`, later a card provider | Phase 4. Mock first; MTN and Airtel are NOT YET INTEGRATED until sandbox credentials exist |
-| `SizingProvider`   | `RulesBasedSizingProvider`, later `MLSizingProvider`                                   | Phase 5. Rules only; nothing is labelled AI                                                |
-| `DeliveryProvider` | `InHouseDeliveryProvider` (staff update status by hand)                                | Phase 4                                                                                    |
-| `EmailProvider`    | `ConsoleEmailProvider` (logs the message), real provider to be chosen                  | Phase 3, MOCKED until a provider is chosen                                                 |
-| `PushProvider`     | none yet, FCM later                                                                    | P1                                                                                         |
-| `StorageProvider`  | `LocalStorageProvider`, S3-compatible later                                            | Phase 4                                                                                    |
+| Interface          | Implementations                                                                        | Status                                                                                |
+| ------------------ | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `PaymentProvider`  | `MockPaymentProvider`, `MtnMomoProvider`, `AirtelMoneyProvider`, later a card provider | Mock and MTN MoMo built; MTN awaits sandbox credentials; Airtel is NOT YET INTEGRATED |
+| `SizingProvider`   | `RulesBasedSizingProvider`, later `MLSizingProvider`                                   | Phase 5. Rules only; nothing is labelled AI                                           |
+| `DeliveryProvider` | `InHouseDeliveryProvider` (staff update status by hand)                                | Phase 4                                                                               |
+| `EmailProvider`    | `ConsoleEmailProvider` (logs the message), real provider to be chosen                  | Phase 3, MOCKED until a provider is chosen                                            |
+| `PushProvider`     | none yet, FCM later                                                                    | P1                                                                                    |
+| `StorageProvider`  | `LocalStorageProvider`, S3-compatible later                                            | Phase 4                                                                               |
 
 See [04-payments.md](04-payments.md) and [05-lifecycles.md](05-lifecycles.md#sizing-engine) for the two that
 carry the most design.
