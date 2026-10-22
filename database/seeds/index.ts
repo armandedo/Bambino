@@ -367,3 +367,5 @@ export async function seedDevelopmentCatalogue(db: Executor): Promise<void> {
     })
     .onConflictDoNothing();
 }
+
+export { EXTENDED_COUNTS, seedExtendedCatalogue } from './extended-catalogue';

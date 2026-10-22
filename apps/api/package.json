@@ -10,6 +10,7 @@
     "db:seed": "tsx src/scripts/seed.ts",
     "launch:check": "tsx src/scripts/launch-check.ts",
     "storage:init": "tsx src/scripts/storage-init.ts",
+    "catalogue:images": "tsx src/scripts/catalogue-images.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run",

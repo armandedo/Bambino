@@ -4,6 +4,7 @@ import {
   grantRole,
   seedDevelopmentCatalogue,
   seedDevelopmentReference,
+  seedExtendedCatalogue,
   seedSystem,
 } from '@bambino/database/seeds';
 import { createArgon2Hasher } from '../auth/passwords';
@@ -34,6 +35,7 @@ try {
   if (env.NODE_ENV !== 'production') {
     await seedDevelopmentReference(connection.db);
     await seedDevelopmentCatalogue(connection.db);
+    await seedExtendedCatalogue(connection.db);
     logger.info('seeded development reference data (labelled SEED)');
 
     const services = createServices({

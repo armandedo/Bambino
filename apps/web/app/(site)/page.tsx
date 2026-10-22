@@ -4,6 +4,7 @@ import {
   ProductsQuery,
   SubscriptionPlansQuery,
 } from '@bambino/api-client';
+import { AGE_GROUPS } from '@bambino/config';
 import { EmptyState, buttonClasses } from '@bambino/ui';
 import { ArrowRight, Check, RefreshCw, Smartphone, Truck } from 'lucide-react';
 import Image from 'next/image';
@@ -82,6 +83,33 @@ export default async function HomePage() {
             );
           })}
         </ul>
+      </section>
+
+      {/* Age groups */}
+      <section aria-labelledby="ages" className={`${SECTION} pb-4 lg:pb-8`}>
+        <div className="flex flex-col gap-8">
+          <SectionHeading
+            id="ages"
+            title="Shop by age"
+            intro="Sizes are a guide: fit varies by garment and by baby."
+          />
+          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            {AGE_GROUPS.map((group) => (
+              <li key={group.slug} className="flex">
+                <NextLink
+                  href={`/shop?age=${group.slug}`}
+                  className="flex w-full flex-col gap-1 rounded-xl border border-border bg-surface p-5 transition-colors hover:border-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                >
+                  <span className="font-display text-xl font-semibold">{group.label}</span>
+                  <span className="text-sm font-medium tracking-[0.06em] text-primary uppercase">
+                    {group.ages}
+                  </span>
+                  <span className="text-sm text-foreground-muted">{group.blurb}</span>
+                </NextLink>
+              </li>
+            ))}
+          </ul>
+        </div>
       </section>
 
       {/* Categories */}

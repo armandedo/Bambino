@@ -1,19 +1,20 @@
 # Bambino technical documentation
 
-| #   | Document                                         | Covers (specification §52 item)                                                                                                  |
-| --- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | [Architecture](01-architecture.md)               | Architecture overview (1), technology decisions (2), monorepo structure (3), provider abstractions, money, i18n, errors, privacy |
-| 2   | [Data model](02-data-model.md)                   | Database ERD and schema (4)                                                                                                      |
-| 3   | [Auth and security](03-auth-and-security.md)     | Authentication flow (6), security model (15)                                                                                     |
-| 4   | [Payments](04-payments.md)                       | Payment architecture (7)                                                                                                         |
-| 5   | [Lifecycles and sizing](05-lifecycles.md)        | Subscription (8), return/exchange (9), garment (10) lifecycles, sizing engine (11)                                               |
-| 6   | [Route maps](06-routes.md)                       | Web routes (12), mobile navigation (13), admin routes (14)                                                                       |
-| 7   | [Testing and phases](07-testing-and-phases.md)   | Testing strategy (16), development phases (17)                                                                                   |
-| 8   | [Open questions](08-open-questions.md)           | Business decisions the build depends on                                                                                          |
-| 9   | [Operations](09-operations.md)                   | Deploys, migrations, rollback, backups and restore, secret rotation, launch checklist                                            |
-| 10  | [Cloudflare](10-cloudflare.md)                   | Cloudflare architecture, setup, deploying, DNS, security settings, costs                                                         |
-| 11  | [Verification](11-verification.md)               | Phase 9: dependency audit, API review, accessibility and performance measurements, CI status                                     |
-| 12  | [Plans and exchanges](12-plans-and-exchanges.md) | What a plan entitles a customer to, billing rules, the exchange workflow and its duplicate protection                            |
+| #   | Document                                           | Covers (specification §52 item)                                                                                                  |
+| --- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | [Architecture](01-architecture.md)                 | Architecture overview (1), technology decisions (2), monorepo structure (3), provider abstractions, money, i18n, errors, privacy |
+| 2   | [Data model](02-data-model.md)                     | Database ERD and schema (4)                                                                                                      |
+| 3   | [Auth and security](03-auth-and-security.md)       | Authentication flow (6), security model (15)                                                                                     |
+| 4   | [Payments](04-payments.md)                         | Payment architecture (7)                                                                                                         |
+| 5   | [Lifecycles and sizing](05-lifecycles.md)          | Subscription (8), return/exchange (9), garment (10) lifecycles, sizing engine (11)                                               |
+| 6   | [Route maps](06-routes.md)                         | Web routes (12), mobile navigation (13), admin routes (14)                                                                       |
+| 7   | [Testing and phases](07-testing-and-phases.md)     | Testing strategy (16), development phases (17)                                                                                   |
+| 8   | [Open questions](08-open-questions.md)             | Business decisions the build depends on                                                                                          |
+| 9   | [Operations](09-operations.md)                     | Deploys, migrations, rollback, backups and restore, secret rotation, launch checklist                                            |
+| 10  | [Cloudflare](10-cloudflare.md)                     | Cloudflare architecture, setup, deploying, DNS, security settings, costs                                                         |
+| 11  | [Verification](11-verification.md)                 | Phase 9: dependency audit, API review, accessibility and performance measurements, CI status                                     |
+| 12  | [Plans and exchanges](12-plans-and-exchanges.md)   | What a plan entitles a customer to, billing rules, the exchange workflow and its duplicate protection                            |
+| 13  | [Catalogue and images](13-catalogue-and-images.md) | Age groups, the development catalogue, and how product images are added (none generated yet)                                     |
 
 The GraphQL schema (5) is the SDL itself: [`apps/api/src/graphql/schema/`](../apps/api/src/graphql/schema).
 
