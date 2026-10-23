@@ -316,7 +316,8 @@ input CategoryInput {
 }
 
 input ProductInput {
-  slug: String!
+  "Optional. Left out, a new product's web address is made from its name and an edit keeps the current one."
+  slug: String
   name: String!
   description: String!
   brand: String!

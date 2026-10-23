@@ -218,7 +218,8 @@ export const AdminProductQuery = operation<{ adminProduct: AdminProduct | null }
 );
 
 export interface ProductInput {
-  slug: string;
+  /** Leave out: a new product's web address is made from its name and an edit keeps the current one. */
+  slug?: string | null;
   name: string;
   description: string;
   brand: string;

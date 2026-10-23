@@ -60,14 +60,10 @@ function ProductForm({ product }: { product: AdminProduct | null }) {
     const form = new FormData(event.currentTarget);
     const text = (name: string) => String(form.get(name) ?? '').trim();
     const optional = (name: string) => text(name) || null;
-    const slug = text('slug');
-    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug))
-      return setError('Slug: lowercase letters, numbers and single hyphens.');
     if (!text('categoryId')) return setError('Choose a category.');
     setError(null);
     save.mutate(
       {
-        slug,
         name: text('name'),
         description: text('description'),
         brand: text('brand') || 'Bambino',
@@ -94,13 +90,6 @@ function ProductForm({ product }: { product: AdminProduct | null }) {
       <fieldset disabled={readOnly} className="flex flex-col gap-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <TextField label="Name" name="name" defaultValue={product?.name ?? ''} required />
-          <TextField
-            label="Slug (web address)"
-            name="slug"
-            defaultValue={product?.slug ?? ''}
-            required
-            hint="e.g. organic-cotton-bodysuit"
-          />
           <TextField label="Brand" name="brand" defaultValue={product?.brand ?? 'Bambino'} />
           <SelectField
             label="Category"

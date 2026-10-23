@@ -1,6 +1,7 @@
 import { type Database, schema } from '@bambino/database';
 import { type SQL, and, asc, desc, eq, ilike, inArray, isNull, or, sql } from '@bambino/database/orm';
 import { z } from 'zod';
+import { firstFreeSlug, slugify } from '../domain/slugs';
 import { recordAudit } from './audit-service';
 import { type ServiceContext, requirePermission } from './context';
 import { AppError, isUniqueViolation, parseInput } from './errors';
@@ -44,7 +45,8 @@ const categorySchema = z.object({
 });
 
 const productSchema = z.object({
-  slug,
+  /** Optional: when left out, a new product's address is made from its name and an edit keeps the old one. */
+  slug: slug.nullish(),
   name: z.string().trim().min(1).max(160),
   description: z.string().trim().min(1).max(5_000),
   brand: z.string().trim().min(1).max(80),
@@ -281,26 +283,44 @@ export class CatalogueService {
 
   async createProduct(context: ServiceContext, rawInput: unknown): Promise<ProductRow> {
     requirePermission(context, 'product:write');
-    const input = parseInput(productSchema, rawInput);
-    return this.uniqueSlug(() =>
+    const { slug: chosen, ...rest } = parseInput(productSchema, rawInput);
+    const insert = (address: string) =>
       this.db.transaction(async (tx) => {
-        const [row] = await tx.insert(schema.products).values(input).returning();
+        const values = { ...rest, slug: address };
+        const [row] = await tx.insert(schema.products).values(values).returning();
         if (!row) throw new Error('Product insert returned no row');
         await recordAudit(tx, context, {
           action: 'product.created',
           entityType: 'product',
           entityId: row.id,
-          newValue: input,
+          newValue: values,
         });
         return row;
-      }),
-    );
+      });
+    if (chosen) return this.uniqueSlug(() => insert(chosen));
+
+    // No address given: build one from the name, numbering it if taken. Two products created at the same moment can
+    // pick the same one, so a clash is retried with a fresh look at what is taken.
+    const base = slugify(rest.name);
+    for (let attempt = 0; ; attempt++) {
+      const taken = await this.db
+        .select({ slug: schema.products.slug })
+        .from(schema.products)
+        .where(or(eq(schema.products.slug, base), ilike(schema.products.slug, `${base}-%`)));
+      try {
+        return await insert(firstFreeSlug(base, new Set(taken.map((row) => row.slug))));
+      } catch (error) {
+        if (!isUniqueViolation(error, 'products_slug_uq') || attempt >= 4) throw error;
+      }
+    }
   }
 
   async updateProduct(context: ServiceContext, id: string, rawInput: unknown): Promise<ProductRow> {
     requirePermission(context, 'product:write');
     const productId = parseInput(z.uuid(), id);
-    const input = parseInput(productSchema, rawInput);
+    const { slug: chosen, ...rest } = parseInput(productSchema, rawInput);
+    // Leaving the address out keeps the current one, so a customer's saved link keeps working.
+    const input = chosen ? { ...rest, slug: chosen } : rest;
     return this.uniqueSlug(() =>
       this.db.transaction(async (tx) => {
         const [before] = await tx
