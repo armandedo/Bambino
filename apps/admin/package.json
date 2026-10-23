@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@bambino/api-client": "workspace:*",
+    "@bambino/config": "workspace:*",
     "@bambino/types": "workspace:*",
     "@bambino/ui": "workspace:*",
     "@bambino/utils": "workspace:*",

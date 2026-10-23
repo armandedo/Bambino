@@ -3,6 +3,7 @@
 import {
   type AdminProduct,
   AdminAddProductImageMutation,
+  AdminAdjustInventoryMutation,
   AdminCreateProductImageUploadMutation,
   AdminCreateProductMutation,
   AdminProductQuery,
@@ -12,6 +13,7 @@ import {
   CatalogueFiltersQuery,
   type ProductInput,
 } from '@bambino/api-client';
+import { AGE_GROUPS, parseColors, planVariants } from '@bambino/config';
 import {
   Alert,
   Badge,
@@ -61,6 +63,25 @@ function ProductForm({ product }: { product: AdminProduct | null }) {
     const text = (name: string) => String(form.get(name) ?? '').trim();
     const optional = (name: string) => text(name) || null;
     if (!text('categoryId')) return setError('Choose a category.');
+
+    // A new product also takes its age groups, colours, price and opening stock, and the variants are made from them.
+    let setup: { variants: ReturnType<typeof planVariants>; price: number; stock: number } | null = null;
+    if (!product) {
+      const ageSlugs = form.getAll('age').map(String);
+      const colors = parseColors(text('colors'));
+      const price = Number(text('price'));
+      const stock = text('stock') === '' ? 0 : Number(text('stock'));
+      if (ageSlugs.length === 0) return setError('Choose at least one age group.');
+      if (colors.length === 0) return setError('Enter at least one colour, for example: White, Cream.');
+      if (!Number.isSafeInteger(price) || price <= 0)
+        return setError('Price must be a positive whole number of francs.');
+      if (!Number.isSafeInteger(stock) || stock < 0 || stock > 10_000)
+        return setError('Opening stock must be a whole number from 0 to 10,000.');
+      const availableSizes = (filters.data?.sizes ?? []).map((s) => s.code);
+      const variants = planVariants({ slug: 'PENDING', ageSlugs, colors, availableSizes });
+      if (variants.length === 0) return setError('None of those age groups has a size set up yet.');
+      setup = { variants, price, stock };
+    }
     setError(null);
     save.mutate(
       {
@@ -75,7 +96,49 @@ function ProductForm({ product }: { product: AdminProduct | null }) {
         oneTimeEligible: form.get('oneTimeEligible') === 'on',
         isActive: form.get('isActive') === 'on',
       },
-      { onSuccess: (saved) => !product && router.replace(`/products/${saved.id}`) },
+      {
+        onSuccess: async (saved) => {
+          if (product) return;
+          const plan = setup;
+          if (!plan) return router.replace(`/products/${saved.id}`);
+          // The real address is only known now, so the SKUs are made from it.
+          const ageSlugs = form.getAll('age').map(String);
+          const availableSizes = (filters.data?.sizes ?? []).map((s) => s.code);
+          const variants = planVariants({
+            slug: saved.slug,
+            ageSlugs,
+            colors: parseColors(text('colors')),
+            availableSizes,
+          });
+          const failed: string[] = [];
+          for (const variant of variants) {
+            try {
+              const made = await api.request(AdminUpsertVariantMutation, {
+                input: { productId: saved.id, ...variant, priceAmount: plan.price },
+              });
+              if (plan.stock > 0) {
+                await api.request(AdminAdjustInventoryMutation, {
+                  input: {
+                    variantId: made.adminUpsertVariant.id,
+                    locationCode: 'KGL-MAIN',
+                    onHandDelta: plan.stock,
+                    note: 'Opening stock',
+                  },
+                });
+              }
+            } catch {
+              failed.push(variant.sku);
+            }
+          }
+          if (failed.length > 0) {
+            setError(
+              `The product was created, but these variants could not be: ${failed.join(', ')}. Open the product to add them.`,
+            );
+            return;
+          }
+          router.replace(`/products/${saved.id}`);
+        },
+      },
     );
   }
 
@@ -115,6 +178,35 @@ function ProductForm({ product }: { product: AdminProduct | null }) {
             defaultValue={product?.sustainabilityInfo ?? ''}
           />
         </div>
+        {product ? null : (
+          <fieldset className="flex flex-col gap-4 rounded-lg border border-border p-4">
+            <legend className="px-1 text-sm font-medium">Where it is sold</legend>
+            <p className="text-sm text-foreground-muted">
+              Choose the age groups. A variant is made for every colour and every size in them, with the price
+              and stock below. Add or change variants later on the product page.
+            </p>
+            <div className="flex flex-col gap-2">
+              {AGE_GROUPS.map((group, index) => (
+                <Checkbox
+                  key={group.slug}
+                  name="age"
+                  value={group.slug}
+                  label={`Category ${String.fromCharCode(65 + index)}: ${group.label}, ${group.ages} (sizes ${group.sizeCodes.join(', ')})`}
+                />
+              ))}
+            </div>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <TextField label="Colours" name="colors" hint="Separate with commas: White, Cream, Soft pink" />
+              <TextField label="Price (RWF)" name="price" inputMode="numeric" hint="Whole francs" />
+              <TextField
+                label="Opening stock, each"
+                name="stock"
+                inputMode="numeric"
+                hint="Units for every variant; 0 to add later"
+              />
+            </div>
+          </fieldset>
+        )}
         <div className="flex flex-wrap gap-6">
           <Checkbox
             name="subscriptionEligible"
@@ -344,7 +436,11 @@ function ProductEditor({ id }: { id: string }) {
   if (id === 'new') {
     return (
       <Card>
-        <CardHeader title="New product" description="Add variants and photos after creating it." level={2} />
+        <CardHeader
+          title="New product"
+          description="Choose its age groups, colours and price here. Add photos after creating it."
+          level={2}
+        />
         <ProductForm product={null} />
       </Card>
     );

@@ -203,6 +203,9 @@ importers:
       '@bambino/api-client':
         specifier: workspace:*
         version: link:../../packages/api-client
+      '@bambino/config':
+        specifier: workspace:*
+        version: link:../../packages/config
       '@bambino/types':
         specifier: workspace:*
         version: link:../../packages/types
