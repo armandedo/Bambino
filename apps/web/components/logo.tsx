@@ -1,25 +1,15 @@
-/** Wordmark: a growth ruler on an ink tile (each mark a size a baby reaches) beside the "bambino" name. */
-export function Logo() {
+import Image from 'next/image';
+
+/** The approved Little Romper wordmark, with a monochrome option for dark surfaces. */
+export function Logo({ inverse = false }: { inverse?: boolean }) {
   return (
-    <span className="inline-flex items-center gap-2.5">
-      <svg aria-hidden="true" viewBox="0 0 32 32" className="size-8">
-        <rect width="32" height="32" rx="8" className="fill-primary" />
-        <path
-          d="M8 25h8M8 18h12M8 11h16"
-          fill="none"
-          strokeWidth="3"
-          strokeLinecap="round"
-          className="stroke-accent"
-        />
-        <path
-          d="M25 26V6"
-          fill="none"
-          strokeWidth="2"
-          strokeLinecap="round"
-          className="stroke-stage-newborn"
-        />
-      </svg>
-      <span className="font-display text-2xl font-semibold tracking-tight text-primary">bambino</span>
-    </span>
+    <Image
+      src="/brand/bambino-little-romper.webp"
+      alt="Bambino"
+      width={1080}
+      height={220}
+      unoptimized
+      className={`block h-auto w-40 sm:w-44${inverse ? ' brightness-0 invert' : ''}`}
+    />
   );
 }
