@@ -237,7 +237,13 @@ function Footer() {
     <footer className="mt-auto bg-primary text-primary-foreground">
       <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-[1.4fr_repeat(3,1fr)]">
         <div className="flex flex-col gap-4">
-          <span className="font-display text-2xl font-semibold">bambino</span>
+          <NextLink
+            href="/"
+            aria-label="Bambino home"
+            className="w-fit rounded-md focus-visible:outline-2 focus-visible:outline-focus"
+          >
+            <Logo inverse />
+          </NextLink>
           <p className="max-w-xs text-sm text-brand-100">
             Baby clothes that keep up with your baby. Designed in Kigali, and worn by more than one family.
           </p>
