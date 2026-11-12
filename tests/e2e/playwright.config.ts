@@ -22,6 +22,10 @@ export default defineConfig({
   reporter: process.env.CI ? 'github' : 'list',
   use: {
     baseURL: WEB_URL,
+    // Keep automated input and clicks steady while scrolling past the fixed phone navigation.
+    reducedMotion: 'reduce',
+    actionTimeout: 20_000,
+    navigationTimeout: 60_000,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     // E2E_CHANNEL=msedge (or chrome) uses an installed browser; otherwise run `pnpm exec playwright install chromium`.
@@ -33,24 +37,27 @@ export default defineConfig({
   ],
   // Starts the API, website and admin if they are not already running. Production builds (`build` then `start`)
   // make runs faster and steadier than dev servers, which compile each page on first visit.
-  webServer: [
-    {
-      command: 'pnpm --filter @bambino/api start',
-      url: `${API_URL}/health`,
-      reuseExistingServer: true,
-      timeout: 120_000,
-    },
-    {
-      command: 'pnpm --filter @bambino/web dev',
-      url: WEB_URL,
-      reuseExistingServer: true,
-      timeout: 180_000,
-    },
-    {
-      command: 'pnpm --filter @bambino/admin dev',
-      url: `${ADMIN_URL}/login`,
-      reuseExistingServer: true,
-      timeout: 180_000,
-    },
-  ],
+  webServer:
+    process.env.E2E_EXTERNAL_SERVERS === 'true'
+      ? []
+      : [
+          {
+            command: 'pnpm --filter @bambino/api start',
+            url: `${API_URL}/health`,
+            reuseExistingServer: true,
+            timeout: 120_000,
+          },
+          {
+            command: 'pnpm --filter @bambino/web dev',
+            url: WEB_URL,
+            reuseExistingServer: true,
+            timeout: 180_000,
+          },
+          {
+            command: 'pnpm --filter @bambino/admin dev',
+            url: `${ADMIN_URL}/login`,
+            reuseExistingServer: true,
+            timeout: 180_000,
+          },
+        ],
 });

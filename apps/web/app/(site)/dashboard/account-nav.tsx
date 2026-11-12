@@ -9,9 +9,6 @@ import { RequireAuth } from '@/components/require-auth';
 const LINKS = [
   { href: '/dashboard', label: 'Overview' },
   { href: '/dashboard/baby', label: 'Baby & sizes' },
-  { href: '/dashboard/wardrobe', label: 'Wardrobe' },
-  { href: '/dashboard/subscription', label: 'Subscription' },
-  { href: '/dashboard/exchange', label: 'Returns & exchanges' },
   { href: '/dashboard/orders', label: 'Orders & delivery' },
   { href: '/dashboard/payments', label: 'Payments' },
   { href: '/account', label: 'Settings' },

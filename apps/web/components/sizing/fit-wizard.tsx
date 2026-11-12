@@ -191,8 +191,8 @@ export function FitWizard() {
 
   const analyse = useMutation({
     mutationFn: async (d: Draft) => {
-      const heightMm = wholeUnits(d.heightCm, 10, 130);
-      const weightG = wholeUnits(d.weightKg, 1000, 40);
+      const heightMm = wholeUnits(d.heightCm, 10, 230);
+      const weightG = wholeUnits(d.weightKg, 1000, 200);
       const measurement: MeasurementInput = {
         ...(heightMm ? { heightMm } : {}),
         ...(weightG ? { weightG } : {}),
@@ -253,8 +253,8 @@ export function FitWizard() {
     step === 'analysis' || step === 'result' || step === 'account'
       ? labels.length - 1
       : Math.max(0, flow.indexOf(step));
-  const height = wholeUnits(draft.heightCm, 10, 130);
-  const weight = wholeUnits(draft.weightKg, 1000, 40);
+  const height = wholeUnits(draft.heightCm, 10, 230);
+  const weight = wholeUnits(draft.weightKg, 1000, 200);
 
   let body: React.ReactNode;
   if (step === 'who') {
@@ -415,14 +415,8 @@ export function FitWizard() {
         <RecommendationCard recommendation={result.recommendation} babyName={result.baby.nickname} />
         <div className="flex flex-wrap gap-3">
           <NextLink
-            href={`/dashboard/subscription/new?baby=${result.baby.id}`}
-            className={buttonClasses({ size: 'lg' })}
-          >
-            Build my Bambino box
-          </NextLink>
-          <NextLink
             href={`/shop?size=${encodeURIComponent(result.recommendation.recommendedSize.code)}`}
-            className={buttonClasses({ size: 'lg', variant: 'outline' })}
+            className={buttonClasses({ size: 'lg' })}
           >
             Shop this size
           </NextLink>

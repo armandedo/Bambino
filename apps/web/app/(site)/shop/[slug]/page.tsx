@@ -1,14 +1,13 @@
 import { ProductQuery } from '@bambino/api-client';
-import { Badge, Card, MoneyText } from '@bambino/ui';
+import { Card, MoneyText } from '@bambino/ui';
 import type { Metadata } from 'next';
 import NextLink from 'next/link';
 import { notFound } from 'next/navigation';
 import { AddToCart } from '@/components/add-to-cart';
 import { ApiErrorState } from '@/components/api-error';
-import { ProductArt } from '@/components/product-art';
+import { ProductGallery } from '@/components/storefront/product-gallery';
 import { load } from '@/lib/api';
 
-export const revalidate = 60;
 
 type Params = Promise<{ slug: string }>;
 
@@ -31,10 +30,8 @@ export default async function ProductPage({ params }: { params: Params }) {
   const product = result.data.product;
   if (!product) notFound();
 
-  const image = product.images[0];
-
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-10">
+    <div className="retail-container flex flex-col gap-6 pt-7 pb-28 sm:pt-10 lg:pb-16">
       <nav aria-label="Breadcrumb" className="text-sm">
         <ol className="flex flex-wrap gap-2 text-foreground-muted">
           <li>
@@ -58,32 +55,35 @@ export default async function ProductPage({ params }: { params: Params }) {
         </ol>
       </nav>
 
-      <div className="grid gap-10 md:grid-cols-2">
-        <div className="self-start overflow-hidden rounded-2xl border border-border">
-          {image ? (
-            // Plain img: product photos come from object storage, and next/image needs its domain configured first.
-            <img src={image.url} alt={image.altText} className="aspect-square w-full object-cover" />
-          ) : (
-            <ProductArt seed={product.slug} className="aspect-square" />
-          )}
-        </div>
+      <div className="grid gap-8 md:grid-cols-2 lg:gap-16">
+        <ProductGallery
+          product={{
+            id: product.id,
+            slug: product.slug,
+            name: product.name,
+            images: product.images,
+            priceFrom: product.priceFrom,
+          }}
+        />
 
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-2">
             <p className="text-sm font-semibold text-primary">{product.brand}</p>
-            <h1 className="font-display text-3xl font-semibold sm:text-4xl">{product.name}</h1>
+            <h1 className="font-display text-3xl font-bold tracking-[-.045em] sm:text-4xl">{product.name}</h1>
             {product.priceFrom ? (
-              <p className="text-2xl font-semibold">
+              <p className="text-2xl font-bold">
                 <MoneyText value={product.priceFrom} />
               </p>
             ) : null}
-            <div className="flex flex-wrap gap-2">
-              {product.subscriptionEligible ? <Badge tone="brand">Included in subscriptions</Badge> : null}
-              {product.oneTimeEligible ? <Badge>Buy once</Badge> : null}
-            </div>
           </div>
 
-          <p className="text-foreground-muted">{product.description}</p>
+          <p className="text-base leading-relaxed text-foreground-muted">{product.description}</p>
+          <p className="border-y border-border py-4 text-sm text-foreground-muted">
+            Delivery options and your total are shown before you pay.{' '}
+            <NextLink href="/how-it-works" className="font-semibold underline underline-offset-4">
+              Shopping & delivery
+            </NextLink>
+          </p>
 
           <AddToCart variants={product.variants} oneTimeEligible={product.oneTimeEligible} />
 
@@ -101,29 +101,6 @@ export default async function ProductPage({ params }: { params: Params }) {
               →
             </span>
           </NextLink>
-
-          <section aria-labelledby="lifecycle" className="flex flex-col gap-3">
-            <h2 id="lifecycle" className="font-display text-lg font-semibold text-primary">
-              This piece’s life
-            </h2>
-            <ol className="flex flex-wrap items-center gap-2 text-sm">
-              {['Produced', 'Worn', 'Returned', 'Refurbished', 'Redistributed or recycled'].map(
-                (stage, index, all) => (
-                  <li key={stage} className="flex items-center gap-2">
-                    <span className="rounded-full bg-surface-muted px-3 py-1 font-medium">{stage}</span>
-                    {index < all.length - 1 ? (
-                      <span aria-hidden="true" className="text-foreground-muted">
-                        →
-                      </span>
-                    ) : null}
-                  </li>
-                ),
-              )}
-            </ol>
-            <p className="text-sm text-foreground-muted">
-              Every piece is tagged, inspected when it comes back, and only reused if it passes.
-            </p>
-          </section>
 
           <Card padding="sm">
             <dl className="flex flex-col gap-3 text-sm">

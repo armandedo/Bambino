@@ -19,6 +19,7 @@ describe('environment validation', () => {
     const env = loadEnv(development);
     expect(env).toMatchObject({
       MARKET_CODE: 'RW',
+      SUBSCRIPTIONS_ENABLED: false,
       API_PORT: 4000,
       ACCESS_TOKEN_TTL_SECONDS: 900,
       TRUST_PROXY: false,

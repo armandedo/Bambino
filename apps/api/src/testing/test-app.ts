@@ -19,6 +19,7 @@ import type { QueryLimits } from '../graphql/limits';
 
 export const TEST_CONFIG = {
   nodeEnv: 'test' as const,
+  subscriptionsEnabled: true,
   marketCode: 'RW',
   webOrigin: 'http://web.test',
   adminOrigin: 'http://admin.test',
@@ -61,6 +62,7 @@ export async function createTestApp(
     rateLimiter?: RateLimiter;
     queryLimits?: QueryLimits;
     catalogue?: boolean;
+    subscriptionsEnabled?: boolean;
     /** Runs the app as production, to test the rules that only apply there. */
     nodeEnv?: 'production';
     errorReporter?: ErrorReporter;
@@ -78,7 +80,11 @@ export async function createTestApp(
   const storage = new FakeStorageProvider();
 
   const app = createApp({
-    config: options.nodeEnv ? { ...TEST_CONFIG, nodeEnv: options.nodeEnv } : TEST_CONFIG,
+    config: {
+      ...TEST_CONFIG,
+      ...(options.nodeEnv ? { nodeEnv: options.nodeEnv } : {}),
+      subscriptionsEnabled: options.subscriptionsEnabled ?? true,
+    },
     db,
     logger: silentLogger,
     email,

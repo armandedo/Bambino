@@ -42,8 +42,8 @@ interface MeasurementErrors {
 }
 
 function readMeasurements(form: FormData): { input: MeasurementInput; errors: MeasurementErrors } {
-  const heightMm = toWholeUnits(form.get('heightCm'), 10, 130);
-  const weightG = toWholeUnits(form.get('weightKg'), 1000, 40);
+  const heightMm = toWholeUnits(form.get('heightCm'), 10, 230);
+  const weightG = toWholeUnits(form.get('weightKg'), 1000, 200);
   const errors: MeasurementErrors = {};
   if (heightMm === null) errors.height = 'Enter a height in centimetres, for example 62.5.';
   if (weightG === null) errors.weight = 'Enter a weight in kilograms, for example 6.8.';

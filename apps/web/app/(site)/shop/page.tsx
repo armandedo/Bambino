@@ -11,6 +11,8 @@ import NextLink from 'next/link';
 import { ApiErrorState } from '@/components/api-error';
 import { ProductCard } from '@/components/product-card';
 import { load } from '@/lib/api';
+import { displaySizeLabel } from '@/lib/size-label';
+import { ShopFilters } from '@/components/storefront/shop-filters';
 
 export const metadata: Metadata = { title: 'Shop' };
 
@@ -55,15 +57,15 @@ export default async function ShopPage({
   const maxPrice = toAmount(one(params.max));
   const sortParam = one(params.sort);
   const sort = SORTS.find((s) => s.value === sortParam)?.value ?? 'NEWEST';
-  const inStock = one(params.inStock) === '1';
 
   const filter: ProductFilter = {
+    oneTimeEligible: true,
     ...(q ? { search: q } : {}),
     ...(category ? { categorySlug: category } : {}),
     ...(size ? { sizeCodes: [size] } : age ? { sizeCodes: [...age.sizeCodes] } : {}),
     ...(minPrice !== undefined ? { minPrice } : {}),
     ...(maxPrice !== undefined ? { maxPrice } : {}),
-    ...(inStock ? { inStockOnly: true } : {}),
+    inStockOnly: true,
   };
   const [filters, products] = await Promise.all([
     load(CatalogueFiltersQuery),
@@ -80,20 +82,26 @@ export default async function ShopPage({
     min: minPrice?.toString(),
     max: maxPrice?.toString(),
     sort: sort === 'NEWEST' ? undefined : sort,
-    inStock: inStock ? '1' : undefined,
   };
 
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-12">
-      <div className="flex flex-col gap-2">
-        <h1 className="font-display text-4xl font-semibold">Shop</h1>
+    <div className="retail-container flex flex-col gap-6 py-8 sm:py-12">
+      <div className="flex flex-col gap-3 border-b border-border pb-7">
+        <NextLink href="/" className="w-fit text-sm text-foreground-muted underline underline-offset-4">
+          Home / Shop
+        </NextLink>
+        <h1 className="font-display text-4xl font-bold tracking-[-.045em] sm:text-5xl">
+          {categories.find((item) => item.slug === category)?.name ?? 'Their next little favourites.'}
+        </h1>
         <p className="text-foreground-muted">
-          {age ? `${age.label}, ${age.ages}. ${age.blurb}` : 'Everyday babywear, by age and size.'}
+          {age
+            ? `${age.label}, ${age.ages}. ${age.blurb}`
+            : 'Little favourites for sleepy cuddles, busy days and first adventures.'}
         </p>
       </div>
 
-      <nav aria-label="Age groups">
-        <ul className="flex flex-wrap gap-2">
+      <nav aria-label="Age groups" className="overflow-x-auto pb-1">
+        <ul className="flex w-max min-w-full gap-2 lg:w-auto lg:flex-wrap">
           {[{ slug: undefined, label: 'All ages', ages: '' }, ...AGE_GROUPS].map((group) => {
             const active = group.slug === age?.slug;
             return (
@@ -113,8 +121,8 @@ export default async function ShopPage({
       </nav>
 
       {categories.length > 0 ? (
-        <nav aria-label="Categories">
-          <ul className="flex flex-wrap gap-2">
+        <nav aria-label="Categories" className="overflow-x-auto pb-1">
+          <ul className="flex w-max min-w-full gap-2 lg:w-auto lg:flex-wrap">
             {[{ slug: undefined, name: 'All' }, ...categories].map((item) => {
               const active = item.slug === category;
               return (
@@ -133,59 +141,51 @@ export default async function ShopPage({
         </nav>
       ) : null}
 
-      <form
-        method="get"
-        action="/shop"
-        className="grid items-end gap-4 rounded-xl border border-border bg-surface p-4 sm:grid-cols-2 lg:grid-cols-4"
-      >
-        {category ? <input type="hidden" name="category" value={category} /> : null}
-        {age ? <input type="hidden" name="age" value={age.slug} /> : null}
-        <TextField
-          id="search"
-          label="Search"
-          name="q"
-          type="search"
-          defaultValue={q ?? ''}
-          placeholder="Bodysuit, romper…"
-        />
-        <SelectField
-          label="Size"
-          name="size"
-          defaultValue={size ?? ''}
-          placeholder="Any size"
-          options={sizes.map((s) => ({ value: s.code, label: s.label }))}
-        />
-        <TextField
-          id="min"
-          label="Lowest price (RF)"
-          name="min"
-          type="number"
-          inputMode="numeric"
-          min={0}
-          defaultValue={minPrice ?? ''}
-        />
-        <TextField
-          id="max"
-          label="Highest price (RF)"
-          name="max"
-          type="number"
-          inputMode="numeric"
-          min={0}
-          defaultValue={maxPrice ?? ''}
-        />
-        <SelectField label="Sort by" name="sort" defaultValue={sort} options={SORTS} />
-        <label className="flex min-h-11 items-center gap-2 text-sm font-medium">
-          <input
-            type="checkbox"
-            name="inStock"
-            value="1"
-            defaultChecked={inStock}
-            className="size-5 accent-primary"
+      <ShopFilters activeCount={[q, category, size, age?.slug, minPrice, maxPrice].filter(Boolean).length}>
+        <form
+          method="get"
+          action="/shop"
+          className="grid items-end gap-4 rounded-xl border border-border bg-surface p-4 sm:grid-cols-2 lg:grid-cols-4"
+        >
+          {category ? <input type="hidden" name="category" value={category} /> : null}
+          {age ? <input type="hidden" name="age" value={age.slug} /> : null}
+          <TextField
+            id="search"
+            label="Search"
+            name="q"
+            type="search"
+            defaultValue={q ?? ''}
+            placeholder="Bodysuit, romper…"
           />
-          In stock only
-        </label>
-        <Button type="submit">Apply</Button>
-      </form>
+          <SelectField
+            label="Size"
+            name="size"
+            defaultValue={size ?? ''}
+            placeholder="Any size"
+            options={sizes.map((s) => ({ value: s.code, label: displaySizeLabel(s.label) }))}
+          />
+          <TextField
+            id="min"
+            label="Lowest price (RF)"
+            name="min"
+            type="number"
+            inputMode="numeric"
+            min={0}
+            defaultValue={minPrice ?? ''}
+          />
+          <TextField
+            id="max"
+            label="Highest price (RF)"
+            name="max"
+            type="number"
+            inputMode="numeric"
+            min={0}
+            defaultValue={maxPrice ?? ''}
+          />
+          <SelectField label="Sort by" name="sort" defaultValue={sort} options={SORTS} />
+          <Button type="submit">Apply</Button>
+        </form>
+      </ShopFilters>
 
       <section aria-labelledby="results" className="flex flex-col gap-4">
         <h2 id="results" className="sr-only">
@@ -209,7 +209,7 @@ export default async function ShopPage({
               {products.data.products.totalCount}{' '}
               {products.data.products.totalCount === 1 ? 'product' : 'products'}
             </p>
-            <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <ul className="grid grid-cols-2 gap-x-4 gap-y-9 md:grid-cols-3 md:gap-x-6 lg:grid-cols-4">
               {products.data.products.edges.map(({ node }) => (
                 <li key={node.id} className="flex">
                   <ProductCard product={node} />

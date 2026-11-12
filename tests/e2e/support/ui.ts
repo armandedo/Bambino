@@ -34,8 +34,8 @@ export async function addAddressThroughUi(page: Page) {
 /** Pays on the payment panel with the mock wallet that approves, and waits for the provider's confirmation. */
 export async function payWithApprovingTestWallet(page: Page) {
   // The test-wallet provider is preselected in development builds; choose the number that approves.
-  await page.getByRole('radio', { name: /\+250780000001/ }).check();
-  await page.getByRole('button', { name: /^Pay / }).click();
+  await page.locator('input[name="mock-wallet"][value="+250780000001"]').check();
+  await page.getByRole('button', { name: /^Pay (?!on delivery)/ }).click();
 }
 
 /** A date of birth `months` months ago, as YYYY-MM-DD. */

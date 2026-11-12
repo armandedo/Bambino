@@ -1,86 +1,67 @@
-import { buttonClasses, cn } from '@bambino/ui';
-import { ArrowRight } from 'lucide-react';
+import { buttonClasses } from '@bambino/ui';
+import { ArrowRight, Heart } from 'lucide-react';
 import Image from 'next/image';
 import NextLink from 'next/link';
 import { PHOTOS, stockSrc } from '@/lib/stock-photos';
 
-/**
- * The sizes a baby moves through, drawn as marks on a doorframe. Each stage has its own colour, which follows the
- * baby through tags, plans and boxes. Placeholder ranges until the size chart from the API is wired in here.
- */
-const STAGES = [
-  { label: 'Newborn', range: '0–3 months', tag: 'bg-stage-newborn', mark: 'w-10' },
-  { label: 'Early', range: '3–6 months', tag: 'bg-stage-early', mark: 'w-14' },
-  { label: 'Mid', range: '6–12 months', tag: 'bg-stage-mid', mark: 'w-20' },
-  { label: 'Toddler', range: '12–18 months', tag: 'bg-stage-toddler', mark: 'w-28' },
-  { label: 'Big', range: '18–24 months', tag: 'bg-stage-big', mark: 'w-36' },
-] as const;
-
-/**
- * The home page's opening: the headline, one main action, and a growth ruler that shows the stages a baby moves
- * through. Server-rendered; the ruler marks draw in once (transform only) and are readable without JavaScript.
- */
 export function Hero() {
   return (
-    <section aria-labelledby="hero-title" className="bg-surface-muted">
-      {/* Split hero: the photo fills the left half, the headline and ruler sit on the cream panel. */}
-      <div className="mx-auto grid max-w-[1400px] lg:grid-cols-2">
-        <div className="relative aspect-[4/3] bg-sand-200 lg:aspect-auto lg:min-h-[40rem]">
-          {/* The page's largest paint: fetched early, never lazy. */}
-          <Image
-            src={stockSrc(PHOTOS.heroMother)}
-            alt={PHOTOS.heroMother.alt}
-            fill
-            sizes="(min-width: 1024px) 50vw, 100vw"
-            fetchPriority="high"
-            loading="eager"
-            className="object-cover"
-          />
-        </div>
-        <div className="flex flex-col justify-center gap-7 px-4 py-12 sm:px-10 lg:px-16 lg:py-20">
+    <section aria-labelledby="hero-title" className="overflow-hidden bg-background">
+      <div className="mx-auto grid max-w-6xl items-center gap-10 px-5 py-10 sm:px-6 lg:grid-cols-[1.05fr_1fr] lg:gap-14 lg:py-16">
+        <div className="flex flex-col items-start gap-6">
+          <p className="flex items-center gap-2 text-sm font-medium text-emphasis">
+            <span className="h-px w-8 bg-current" aria-hidden="true" /> For their little everyday adventures
+          </p>
           <h1
             id="hero-title"
-            className="font-display text-[2.5rem] leading-[1.1] font-bold tracking-[0.016em] text-primary uppercase sm:text-5xl lg:text-[3.5rem]"
+            className="max-w-[12ch] font-display text-5xl leading-[1.06] font-semibold tracking-[-0.055em] text-primary sm:text-6xl lg:text-7xl"
           >
-            The right size, every month.
+            Little clothes.
+            <br />
+            <span className="text-emphasis">Lovely everyday</span> moments.
           </h1>
-          <p className="max-w-[44ch] text-lg leading-relaxed text-foreground-muted">
-            Babies outgrow clothes every few months. We bring clothes in your baby&rsquo;s size to your door
-            in Kigali, collect them when they get small, and bring the next size up.
+          <p className="max-w-[39ch] text-lg leading-relaxed text-foreground-muted">
+            From first cuddles to finding their own style. Shop clothes for babies, kids and teens, from
+            newborn through age 17, right here in Kigali.
           </p>
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <NextLink href="/fit" className={buttonClasses({ size: 'lg', variant: 'accent' })}>
-              Find my baby&rsquo;s size <ArrowRight aria-hidden="true" className="size-4" />
+          <div className="flex flex-wrap items-center gap-4 pt-1">
+            <NextLink href="/shop" className={buttonClasses({ size: 'lg' })}>
+              Shop little favourites <ArrowRight aria-hidden="true" className="size-4" />
             </NextLink>
-            <NextLink href="/plans" className={buttonClasses({ size: 'lg', variant: 'outline' })}>
-              See plans and prices
+            <NextLink href="#ages" className="py-3 text-sm font-medium underline underline-offset-4">
+              Find their age & size
             </NextLink>
           </div>
-
-          {/* The ruler: oldest stage at the top, like marks on a doorframe. */}
-          <ol
-            aria-label="Baby sizes from newborn to 24 months"
-            className="mt-2 flex flex-col-reverse border-l border-primary"
-          >
-            {STAGES.map((stage, index) => (
-              <li key={stage.label} className="relative flex items-center gap-4 py-1.5">
-                <span
-                  aria-hidden="true"
-                  className={cn('ruler-mark h-px bg-primary', stage.mark)}
-                  style={{ animationDelay: `${0.15 + index * 0.12}s` }}
-                />
-                <span
-                  className={cn(
-                    'rounded-full border border-primary/20 px-3.5 py-1 text-xs font-medium tracking-[0.08em] text-foreground uppercase',
-                    stage.tag,
-                  )}
-                >
-                  {stage.label}
-                </span>
-                <span className="text-sm text-foreground-muted">{stage.range}</span>
-              </li>
-            ))}
-          </ol>
+          <p className="flex items-center gap-2 text-sm text-foreground-muted">
+            <Heart aria-hidden="true" className="size-4 text-emphasis" /> Newborn to 17 years. A little
+            something for every stage.
+          </p>
+        </div>
+        <div className="relative mx-auto w-full max-w-lg pb-7 pl-4 sm:pl-6">
+          <div
+            aria-hidden="true"
+            className="absolute inset-x-0 top-7 bottom-0 rounded-t-[46%] rounded-b-[2rem] bg-accent-soft"
+          />
+          <div className="relative aspect-[4/4.5] overflow-hidden rounded-t-[46%] rounded-b-[2rem] bg-sand-200">
+            <Image
+              src={stockSrc(PHOTOS.heroMother)}
+              alt={PHOTOS.heroMother.alt}
+              fill
+              sizes="(min-width: 1024px) 480px, 90vw"
+              fetchPriority="high"
+              loading="eager"
+              className="object-cover"
+            />
+          </div>
+          <div className="absolute right-2 bottom-1 flex items-center gap-3 rounded-2xl border border-border bg-surface px-5 py-4 shadow-sm sm:-right-3">
+            <span className="flex size-10 items-center justify-center rounded-full bg-accent-soft">
+              <Heart className="size-5 text-emphasis" aria-hidden="true" />
+            </span>
+            <span className="text-sm">
+              <strong className="block font-semibold">For the moments that matter.</strong>
+              <span className="text-foreground-muted">And the wonderfully ordinary ones.</span>
+            </span>
+          </div>
         </div>
       </div>
     </section>

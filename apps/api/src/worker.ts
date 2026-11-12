@@ -58,6 +58,7 @@ function build(bindings: WorkerBindings) {
     config: {
       nodeEnv: env.NODE_ENV,
       marketCode: env.MARKET_CODE,
+      subscriptionsEnabled: env.SUBSCRIPTIONS_ENABLED,
       webOrigin: env.WEB_ORIGIN,
       adminOrigin: env.ADMIN_ORIGIN,
       jwtSecret: env.JWT_SECRET,

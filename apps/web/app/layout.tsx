@@ -15,9 +15,9 @@ const spaceGrotesk = localFont({
 });
 
 export const metadata: Metadata = {
-  title: { default: 'Bambino: babywear that grows with your baby', template: '%s · Bambino' },
+  title: { default: 'Bambino · Little clothes, lovely everyday moments', template: '%s · Bambino' },
   description:
-    'A babywear subscription for families in Rwanda: the right size delivered, swapped when your baby grows, and reused.',
+    'Shop clothes for babies, kids and teens, from newborn through age 17. Discover everyday outfits, sleepwear and occasion favourites at Bambino, Kigali.',
   // Preview build: keep it out of search engines until launch.
   robots: { index: false, follow: false },
 };

@@ -22,7 +22,7 @@ export function PageHero({
         <Entrance
           as="h1"
           delay={0.08}
-          className="max-w-4xl font-display text-4xl leading-[1.1] font-bold tracking-[0.016em] text-primary uppercase sm:text-5xl"
+          className="max-w-4xl font-display text-4xl leading-[1.1] font-semibold tracking-[-0.04em] text-primary sm:text-5xl"
         >
           {title}
         </Entrance>

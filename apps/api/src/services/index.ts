@@ -48,6 +48,7 @@ export interface ServiceDependencies {
     refreshTokenTtlDays: number;
     webOrigin: string;
     marketCode: string;
+    subscriptionsEnabled?: boolean;
   };
   /** Omitted by scripts that never take payments; no provider is then available. */
   payments?: { providers: PaymentProviderRegistry; allowMockProvider: boolean };
@@ -156,6 +157,7 @@ export function createServices(deps: ServiceDependencies): Services {
   const babies = new BabyService(db, now);
   const sizing = new SizingService(db, deps.sizingProvider ?? new RulesBasedSizingProvider(), babies, now);
   const subscriptions = new SubscriptionService({
+    enabled: deps.config.subscriptionsEnabled ?? false,
     db,
     orders,
     payments,

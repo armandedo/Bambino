@@ -4,18 +4,20 @@ import { createTtlMemo } from './ttl-memo';
 
 const API_URL = process.env.API_URL ?? 'http://127.0.0.1:4000/graphql';
 
-/** Public, cacheable reads for server-rendered pages. Catalogue data is revalidated every minute. */
+/** Cache stable reference data; product stock and prices are read fresh for each page request. */
 const publicClient: GraphQLClient = createClient({
   url: API_URL,
   client: 'server',
   init: { next: { revalidate: 60 } },
 });
 
-/**
- * The Cloudflare build has no Next.js data cache, so the `revalidate` above does not hold there. Public catalogue
- * answers are therefore also remembered in memory for a short time (see ttl-memo.ts). Thirty seconds is short
- * enough that a price or stock change shows up quickly, and checkout re-checks both on the server anyway.
- */
+const liveClient: GraphQLClient = createClient({
+  url: API_URL,
+  client: 'server',
+  init: { cache: 'no-store' },
+});
+
+/** Stable reference reads may be memoized; stock-bearing operations bypass both cache layers. */
 const memo = createTtlMemo({ ttlMs: 30_000, maxEntries: 100 });
 
 export type Loaded<T> = { ok: true; data: T } | { ok: false; error: ApiError };
@@ -29,6 +31,9 @@ export async function load<TData, TVariables>(
   ...variables: keyof TVariables extends never ? [] : [TVariables]
 ): Promise<Loaded<TData>> {
   try {
+    if (op.name === 'Products' || op.name === 'Product') {
+      return { ok: true, data: await liveClient.request(op, ...variables) };
+    }
     const key = `${op.name}:${JSON.stringify(variables[0] ?? null)}`;
     return { ok: true, data: await memo.run(key, () => publicClient.request(op, ...variables)) };
   } catch (error) {

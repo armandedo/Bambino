@@ -200,7 +200,7 @@ function Checkout({ viewer }: { viewer: Viewer }) {
         </div>
 
         <aside aria-labelledby="summary">
-          <Card className="flex flex-col gap-4 lg:sticky lg:top-24">
+          <Card className="flex flex-col gap-4 lg:sticky lg:top-44">
             <h2 id="summary" className="font-display text-xl font-semibold">
               Order summary
             </h2>
@@ -262,12 +262,15 @@ const STEPS = ['Delivery', 'Payment', 'Confirmation'] as const;
 /** Delivery → Payment → Confirmation. Confirmation is the order page the parent lands on after paying. */
 function CheckoutSteps({ current }: { current: number }) {
   return (
-    <ol aria-label="Checkout steps" className="flex items-center gap-2 text-sm">
+    <ol
+      aria-label="Checkout steps"
+      className="grid grid-cols-3 items-start gap-2 text-xs sm:flex sm:items-center sm:text-sm"
+    >
       {STEPS.map((step, index) => (
         <li
           key={step}
           aria-current={index === current ? 'step' : undefined}
-          className="flex items-center gap-2"
+          className="flex min-w-0 flex-col items-center gap-1.5 sm:flex-row sm:gap-2"
         >
           <span
             aria-hidden="true"
@@ -288,7 +291,7 @@ function CheckoutSteps({ current }: { current: number }) {
             </span>
           </span>
           {index < STEPS.length - 1 ? (
-            <span aria-hidden="true" className="mx-1 h-px w-6 bg-sand-300 sm:w-10" />
+            <span aria-hidden="true" className="mx-1 hidden h-px w-10 bg-sand-300 sm:block" />
           ) : null}
         </li>
       ))}

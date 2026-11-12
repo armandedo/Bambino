@@ -48,6 +48,7 @@ export interface ProductFilter {
   sizeCodes?: string[];
   inStockOnly?: boolean;
   subscriptionEligible?: boolean;
+  oneTimeEligible?: boolean;
 }
 
 export const ProductsQuery = operation<

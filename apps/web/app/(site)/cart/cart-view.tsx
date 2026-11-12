@@ -5,10 +5,11 @@ import { Alert, Button, Card, EmptyState, MoneyText, Skeleton, buttonClasses } f
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import NextLink from 'next/link';
 import { CART_KEY, useCart } from '@/components/header-actions';
-import { ProductArt } from '@/components/product-art';
+import { ProductPhoto } from '@/components/storefront/product-photo';
 import { RequireAuth } from '@/components/require-auth';
 import { api } from '@/lib/browser-api';
 import { errorMessage } from '@/lib/messages';
+import { displaySizeLabel } from '@/lib/size-label';
 
 const MAX_QUANTITY = 10;
 
@@ -68,8 +69,13 @@ function CartContents() {
           {data.items.map((item) => (
             <li key={item.id}>
               <Card padding="sm" className="flex gap-4">
-                <div className="w-20 shrink-0 overflow-hidden rounded-lg">
-                  <ProductArt seed={item.product.slug} className="aspect-square" />
+                <div className="h-28 w-20 shrink-0 overflow-hidden rounded-xl">
+                  <ProductPhoto
+                    src={item.product.images[0]?.url}
+                    alt={item.product.name}
+                    sizes="100px"
+                    fit="contain"
+                  />
                 </div>
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
                   <NextLink
@@ -79,7 +85,7 @@ function CartContents() {
                     {item.product.name}
                   </NextLink>
                   <p className="text-sm text-foreground-muted">
-                    {item.variant.size.label} · {item.variant.color} ·{' '}
+                    {displaySizeLabel(item.variant.size.label)} · {item.variant.color} ·{' '}
                     <MoneyText value={item.variant.price} /> each
                   </p>
                   {!item.variant.inStock ? (
@@ -134,8 +140,8 @@ function CartContents() {
         </ul>
       </section>
       <aside aria-labelledby="summary">
-        <Card className="flex flex-col gap-4 lg:sticky lg:top-24">
-          <h2 id="summary" className="font-display text-xl font-semibold">
+        <Card className="flex flex-col gap-4 lg:sticky lg:top-44">
+          <h2 id="summary" className="font-display text-2xl font-bold">
             Summary
           </h2>
           <div className="flex justify-between">
@@ -144,9 +150,7 @@ function CartContents() {
             </span>
             <MoneyText value={data.subtotal} className="font-semibold" />
           </div>
-          <p className="text-sm text-foreground-muted">
-            Delivery, discounts and exchange credit are added at checkout.
-          </p>
+          <p className="text-sm text-foreground-muted">Choose delivery and review your total at checkout.</p>
           <NextLink href="/checkout" className={buttonClasses({ fullWidth: true, size: 'lg' })}>
             Go to checkout
           </NextLink>

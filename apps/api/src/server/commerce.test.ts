@@ -798,3 +798,146 @@ describe('staff fulfilment', () => {
     expect(orders.errors).toBeUndefined();
   });
 });
+
+it('preserves order prices and history across staff price edits and removal/restoration', async () => {
+  const customer = await shopper();
+  const { order, variant } = await placeOrder(customer);
+  const staff = await t.registerStaff('CONTENT_MANAGER');
+  const [before] = await t.db
+    .select()
+    .from(schema.productVariants)
+    .where(eq(schema.productVariants.id, variant.id));
+  if (!before) throw new Error('Missing variant');
+  const snapshot = await t.gql(
+    'query ($id: ID!) { order(id: $id) { items { unitPrice { amount } } statusHistory { status } } }',
+    { id: order.id },
+    { token: customer.accessToken },
+  );
+  const edit = 'mutation ($input: VariantInput!) { adminUpsertVariant(input: $input) { id } }';
+  const input = {
+    id: before.id,
+    productId: before.productId,
+    sku: before.sku,
+    sizeCode: before.sizeCode,
+    color: before.color,
+    priceAmount: before.priceAmount + 1000,
+  };
+  expect(errorCode(await t.gql(edit, { input }, { token: customer.accessToken }))).toBe('FORBIDDEN');
+  const reader = await t.registerStaff('CUSTOMER_SUPPORT');
+  expect(errorCode(await t.gql(edit, { input }, { token: reader.accessToken }))).toBe('FORBIDDEN');
+  expect((await t.gql(edit, { input }, { token: staff.accessToken })).errors).toBeUndefined();
+  const [product] = await t.db.select().from(schema.products).where(eq(schema.products.id, before.productId));
+  if (!product) throw new Error('Missing product');
+  const update =
+    'mutation ($id: ID!, $input: ProductInput!) { adminUpdateProduct(id: $id, input: $input) { id isActive } }';
+  const details = {
+    name: product.name,
+    description: product.description,
+    brand: product.brand,
+    categoryId: product.categoryId,
+    subscriptionEligible: product.subscriptionEligible,
+    oneTimeEligible: product.oneTimeEligible,
+    isActive: false,
+  };
+  expect(
+    errorCode(await t.gql(update, { id: product.id, input: details }, { token: customer.accessToken })),
+  ).toBe('FORBIDDEN');
+  expect(
+    errorCode(await t.gql(update, { id: product.id, input: details }, { token: reader.accessToken })),
+  ).toBe('FORBIDDEN');
+  for (const isActive of [false, true]) {
+    expect(
+      (await t.gql(update, { id: product.id, input: { ...details, isActive } }, { token: staff.accessToken }))
+        .errors,
+    ).toBeUndefined();
+    const publicResult = await t.gql(PRODUCT, { slug: product.slug });
+    expect(Boolean(publicResult.data?.product)).toBe(isActive);
+    expect(
+      await t.gql(
+        'query ($id: ID!) { order(id: $id) { items { unitPrice { amount } } statusHistory { status } } }',
+        { id: order.id },
+        { token: customer.accessToken },
+      ),
+    ).toMatchObject({ data: snapshot.data, errors: snapshot.errors });
+  }
+  const audit = await t.db
+    .select()
+    .from(schema.auditLogs)
+    .where(
+      and(eq(schema.auditLogs.entityId, before.id), eq(schema.auditLogs.action, 'variant.price_changed')),
+    );
+  expect(audit.length).toBeGreaterThan(0);
+});
+
+it('keeps other sizes available when one sells out, and relists restocked sizes', async () => {
+  const staff = await t.registerStaff('SUPER_ADMIN');
+  const initial = await t.gql(PRODUCT, { slug: 'seed-organic-cotton-bodysuit' });
+  const product = initial.data?.product as {
+    id: string;
+    variants: { id: string; inStock: boolean; size: { code: string } }[];
+  };
+  const target = product.variants[0];
+  if (!target) throw new Error('Missing variant');
+  const adjust =
+    'mutation ($input: InventoryAdjustmentInput!) { adminAdjustInventory(input: $input) { id } }';
+  const [stock] = await t.db
+    .select()
+    .from(schema.inventoryItems)
+    .where(eq(schema.inventoryItems.variantId, target.id));
+  if (!stock) throw new Error('Missing stock');
+  // Use the inventory service through GraphQL, as a staff adjustment after a sale/restock would.
+  const change = async (delta: number) =>
+    t.gql(
+      adjust,
+      {
+        input: {
+          variantId: target.id,
+          locationCode: stock.locationCode,
+          onHandDelta: delta,
+          note: 'Stock regression',
+        },
+      },
+      { token: staff.accessToken },
+    );
+  expect((await change(-stock.quantityOnHand)).errors).toBeUndefined();
+  const sold = (await t.gql(PRODUCT, { slug: 'seed-organic-cotton-bodysuit' })).data
+    ?.product as typeof product;
+  expect(sold.variants.find((v) => v.id === target.id)?.inStock).toBe(false);
+  expect(sold.variants.some((v) => v.id !== target.id && v.inStock)).toBe(true);
+  const listing = await t.gql(
+    '{ products(filter: {inStockOnly: true}, first: 100) { edges { node { id } } } }',
+  );
+  expect(JSON.stringify(listing.data)).toContain(product.id);
+  expect((await change(2)).errors).toBeUndefined();
+  const restocked = (await t.gql(PRODUCT, { slug: 'seed-organic-cotton-bodysuit' })).data
+    ?.product as typeof product;
+  expect(restocked.variants.find((v) => v.id === target.id)?.inStock).toBe(true);
+  for (const variant of product.variants) {
+    const [item] = await t.db
+      .select()
+      .from(schema.inventoryItems)
+      .where(eq(schema.inventoryItems.variantId, variant.id));
+    if (!item) throw new Error('Missing inventory');
+    expect(
+      (
+        await t.gql(
+          adjust,
+          {
+            input: {
+              variantId: variant.id,
+              locationCode: item.locationCode,
+              onHandDelta: -item.quantityOnHand,
+              note: 'Sold out regression',
+            },
+          },
+          { token: staff.accessToken },
+        )
+      ).errors,
+    ).toBeUndefined();
+  }
+  const query = '{ products(filter: {inStockOnly: true}, first: 100) { edges { node { id } } } }';
+  expect(JSON.stringify((await t.gql(query)).data)).not.toContain(product.id);
+  expect((await t.gql(PRODUCT, { slug: 'seed-organic-cotton-bodysuit' })).data?.product).toBeTruthy();
+  expect((await change(3)).errors).toBeUndefined();
+  expect(JSON.stringify((await t.gql(query)).data)).toContain(product.id);
+});

@@ -1,21 +1,24 @@
 'use client';
 
 import { AddToCartMutation, type ProductDetail } from '@bambino/api-client';
-import { Alert, Button, buttonClasses, cn, useToast } from '@bambino/ui';
+import { Alert, Button, MoneyText, buttonClasses, cn, useToast } from '@bambino/ui';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import NextLink from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { api } from '@/lib/browser-api';
 import { errorMessage } from '@/lib/messages';
+import { displaySizeLabel } from '@/lib/size-label';
 import { useSession } from '@/lib/session';
 import { CART_KEY } from './header-actions';
+import { useStorefront } from './storefront/storefront-context';
 
 type Variant = ProductDetail['variants'][number];
 
 /** Size and colour choice plus "Add to cart". Prices shown come from the server; the cart re-prices on every read. */
 export function AddToCart({ variants, oneTimeEligible }: { variants: Variant[]; oneTimeEligible: boolean }) {
   const { viewer } = useSession();
+  const { openPanel } = useStorefront();
   const pathname = usePathname();
   const toast = useToast();
   const queryClient = useQueryClient();
@@ -32,6 +35,7 @@ export function AddToCart({ variants, oneTimeEligible }: { variants: Variant[]; 
     onSuccess: ({ addToCart }) => {
       queryClient.setQueryData(CART_KEY, addToCart);
       toast.show({ title: 'Added to your cart', tone: 'success' });
+      openPanel('cart');
     },
   });
 
@@ -95,7 +99,7 @@ export function AddToCart({ variants, oneTimeEligible }: { variants: Variant[]; 
                 onChange={() => setVariantId(variant.id)}
                 className="sr-only"
               />
-              <span className="font-semibold">{variant.size.label}</span>
+              <span className="font-semibold">{displaySizeLabel(variant.size.label)}</span>
               <span>{variant.inStock ? 'In stock' : 'Sold out'}</span>
             </label>
           ))}
@@ -108,30 +112,45 @@ export function AddToCart({ variants, oneTimeEligible }: { variants: Variant[]; 
         </Alert>
       ) : null}
 
-      <div className="flex flex-wrap gap-3">
-        {!oneTimeEligible ? (
-          <p className="text-sm text-foreground-muted">This piece is available through subscriptions only.</p>
-        ) : viewer ? (
-          <Button
-            size="lg"
-            disabled={!selected}
-            loading={add.isPending}
-            onClick={() => selected && add.mutate(selected.id)}
-          >
-            {selected ? 'Add to cart' : 'Choose a size'}
-          </Button>
-        ) : (
-          <NextLink
-            href={`/login?next=${encodeURIComponent(pathname)}`}
-            className={buttonClasses({ size: 'lg' })}
-          >
-            Sign in to buy
-          </NextLink>
-        )}
-        <NextLink href="/plans" className={buttonClasses({ size: 'lg', variant: 'outline' })}>
-          See plans
-        </NextLink>
+      <div className="fixed inset-x-0 bottom-0 z-30 flex items-center gap-4 border-t border-border bg-white px-5 pt-3 pb-[max(.75rem,env(safe-area-inset-bottom))] shadow-[0_-3px_16px_#19243d0a] lg:static lg:z-auto lg:flex-wrap lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none">
+        <div className="min-w-0 shrink-0 lg:hidden">
+          {selected ? (
+            <>
+              <span className="block text-sm text-foreground-muted">Size {selected.size.code}</span>
+              <MoneyText value={selected.price} className="font-bold" />
+            </>
+          ) : (
+            <span className="text-sm font-semibold">
+              Their next
+              <br />
+              little favourite
+            </span>
+          )}
+        </div>
+        <div className="flex min-w-0 flex-1 flex-wrap gap-3">
+          {!oneTimeEligible ? (
+            <p className="text-sm text-foreground-muted">This piece is not currently available to buy.</p>
+          ) : viewer ? (
+            <Button
+              size="lg"
+              fullWidth
+              disabled={!selected}
+              loading={add.isPending}
+              onClick={() => selected && add.mutate(selected.id)}
+            >
+              {selected ? 'Add to cart' : 'Choose a size'}
+            </Button>
+          ) : (
+            <NextLink
+              href={`/login?next=${encodeURIComponent(pathname)}`}
+              className={buttonClasses({ size: 'lg' })}
+            >
+              Sign in to buy
+            </NextLink>
+          )}
+        </div>
       </div>
+      <div className="h-20 lg:hidden" aria-hidden="true" />
     </div>
   );
 }

@@ -1,19 +1,21 @@
 'use client';
 
+import type { CategorySummary } from '@bambino/api-client';
 import { buttonClasses, cn } from '@bambino/ui';
-import { House, RefreshCw, Search, Shirt, ShoppingBag, UserRound } from 'lucide-react';
+import { Heart, House, Ruler, Search, ShoppingBag, UserRound } from 'lucide-react';
 import NextLink from 'next/link';
 import { usePathname } from 'next/navigation';
 import { type ReactNode, useEffect, useState } from 'react';
 import { useCart } from '@/components/header-actions';
 import { useSession } from '@/lib/session';
 import { Logo } from '../logo';
+import { StorefrontDrawer, StorefrontProvider, useStorefront } from '../storefront/storefront-context';
 
 const DESKTOP_NAV = [
-  { href: '/shop', label: 'Shop' },
-  { href: '/how-it-works', label: 'How it works' },
-  { href: '/plans', label: 'Plans' },
-  { href: '/exchange', label: 'Exchange' },
+  { href: '/shop', label: 'Shop all' },
+  { href: '/#ages', label: 'Shop by age' },
+  { href: '/about', label: 'Our little story' },
+  { href: '/how-it-works', label: 'Shopping & delivery' },
 ] as const;
 
 function isCurrent(pathname: string, href: string): boolean {
@@ -24,8 +26,18 @@ const ICON_BUTTON =
   'relative inline-flex size-11 items-center justify-center rounded-full text-foreground transition-colors hover:bg-surface-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus';
 
 function BagLink({ count }: { count: number }) {
+  const { ready, openPanel } = useStorefront();
   return (
-    <NextLink href="/cart" className={ICON_BUTTON}>
+    <NextLink
+      href="/cart"
+      className={ICON_BUTTON}
+      onClick={(event) => {
+        if (ready) {
+          event.preventDefault();
+          openPanel('cart');
+        }
+      }}
+    >
       <ShoppingBag aria-hidden="true" className="size-5" strokeWidth={1.75} />
       <span className="sr-only">Bag{count > 0 ? `, ${count} ${count === 1 ? 'item' : 'items'}` : ''}</span>
       {count > 0 ? (
@@ -79,7 +91,7 @@ function Navbar() {
                     href={item.href}
                     aria-current={current ? 'page' : undefined}
                     className={cn(
-                      'relative rounded-full px-3 py-2 text-xs font-medium tracking-[0.08em] uppercase transition-colors focus-visible:outline-2 focus-visible:outline-focus',
+                      'relative rounded-full px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-focus',
                       current ? 'text-primary' : 'text-foreground-muted hover:text-foreground',
                     )}
                   >
@@ -133,20 +145,15 @@ function Navbar() {
   );
 }
 
-/** Thumb-reachable navigation on phones. Wardrobe is a primary destination for subscribers. */
+/** Thumb-reachable navigation on phones. Shopping, sizing and account shortcuts stay close to hand. */
 function MobileNav() {
   const pathname = usePathname();
   const { viewer } = useSession();
   const items = [
     { href: '/', label: 'Home', icon: House },
-    { href: '/shop', label: 'Shop', icon: ShoppingBag },
-    {
-      href: viewer ? '/dashboard/wardrobe' : '/login?next=/dashboard/wardrobe',
-      match: '/dashboard/wardrobe',
-      label: 'Wardrobe',
-      icon: Shirt,
-    },
-    { href: '/exchange', label: 'Exchange', icon: RefreshCw },
+    { href: '/shop', label: 'Shop', icon: Search },
+    { href: '/cart', label: 'Bag', icon: ShoppingBag },
+    { href: '/fit', label: 'Find size', icon: Ruler },
     {
       href: viewer ? '/dashboard' : '/login',
       match: viewer ? '/dashboard' : '/login',
@@ -164,8 +171,7 @@ function MobileNav() {
           const target = item.match ?? item.href;
           const current =
             target === '/dashboard'
-              ? pathname === '/dashboard' ||
-                (pathname.startsWith('/dashboard/') && !pathname.startsWith('/dashboard/wardrobe'))
+              ? pathname === '/dashboard' || pathname.startsWith('/dashboard/')
               : isCurrent(pathname, target);
           const Icon = item.icon;
           return (
@@ -199,42 +205,42 @@ export function PreviewBanner({ preview = PREVIEW, mockPayments = MOCK_PAYMENTS 
   return (
     <div className="bg-primary px-4 py-2 text-center text-xs text-primary-foreground sm:text-sm">
       <strong className="font-semibold">Preview build.</strong>{' '}
-      {mockPayments ? 'Payments use test wallets only, and copy' : 'Copy'} and prices are placeholders.
+      {mockPayments ? 'Payments use test wallets only. This is a test shop.' : 'This is a test shop.'}
     </div>
   );
 }
 
 const FOOTER_LINKS = [
   {
-    title: 'Bambino',
+    title: 'Explore',
     links: [
-      { href: '/how-it-works', label: 'How it works' },
-      { href: '/plans', label: 'Subscriptions' },
-      { href: '/exchange', label: 'Exchange' },
-      { href: '/sustainability', label: 'Sustainability' },
+      { href: '/shop', label: 'All little favourites' },
+      { href: '/#ages', label: 'Shop by age' },
+      { href: '/fit', label: 'Find their size' },
     ],
   },
   {
-    title: 'Shop',
+    title: 'A little help',
     links: [
-      { href: '/shop', label: 'All babywear' },
-      { href: '/fit', label: 'Find the right fit' },
-      { href: '/cart', label: 'Your bag' },
+      { href: '/how-it-works', label: 'Shopping & delivery' },
+      { href: '/about', label: 'About Bambino' },
+      { href: '/cart', label: 'Your shopping bag' },
     ],
   },
   {
-    title: 'Account',
+    title: 'Your Bambino',
     links: [
-      { href: '/dashboard', label: 'Dashboard' },
-      { href: '/dashboard/wardrobe', label: 'Wardrobe' },
-      { href: '/account', label: 'Settings' },
+      { href: '/dashboard', label: 'Your account' },
+      { href: '/dashboard/orders', label: 'Orders & delivery' },
+      { href: '/account', label: 'Account settings' },
     ],
   },
 ];
 
 function Footer() {
+  const { ready, saved, openPanel } = useStorefront();
   return (
-    <footer className="mt-auto bg-primary text-primary-foreground">
+    <footer className="mt-auto bg-primary pb-20 text-primary-foreground lg:pb-0">
       <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-[1.4fr_repeat(3,1fr)]">
         <div className="flex flex-col gap-4">
           <NextLink
@@ -245,8 +251,17 @@ function Footer() {
             <Logo inverse />
           </NextLink>
           <p className="max-w-xs text-sm text-brand-100">
-            Baby clothes that keep up with your baby. Designed in Kigali, and worn by more than one family.
+            Little clothes for the wonderfully ordinary moments. Clothes for newborns through age 17, from
+            Kigali with love.
           </p>
+          <button
+            type="button"
+            disabled={!ready}
+            onClick={() => openPanel('saved')}
+            className="flex min-h-11 w-fit items-center gap-2 text-sm underline underline-offset-4"
+          >
+            <Heart aria-hidden="true" className="size-4" /> Your favourites ({saved.length})
+          </button>
         </div>
         {FOOTER_LINKS.map((group) => (
           <nav
@@ -254,7 +269,7 @@ function Footer() {
             aria-label={`Footer: ${group.title}`}
             className="flex flex-col gap-3 text-sm"
           >
-            <p className="font-semibold text-accent-200">{group.title}</p>
+            <p className="font-semibold text-accent">{group.title}</p>
             <ul className="flex flex-col gap-2">
               {group.links.map((link) => (
                 <li key={link.href}>
@@ -272,10 +287,7 @@ function Footer() {
       </div>
       <div className="border-t border-brand-700">
         <p className="mx-auto max-w-6xl px-4 py-5 text-xs text-brand-200 sm:px-6">
-          © {new Date().getFullYear()} Bambino · Kigali, Rwanda ·{' '}
-          <NextLink href="/design" className="underline underline-offset-4">
-            Design system
-          </NextLink>
+          © {new Date().getFullYear()} Bambino · Kigali, Rwanda · Little clothes. Lots of love.
         </p>
       </div>
     </footer>
@@ -294,9 +306,13 @@ function SkipLink() {
 }
 
 /** Website frame: skip link, preview notice, sticky navbar, main landmark, footer and the phone bottom bar. */
-export function SiteChrome({ children }: { children: ReactNode }) {
+function ChromeContent({ children }: { children: ReactNode }) {
+  const { ready } = useStorefront();
   return (
-    <div className="flex min-h-dvh flex-col bg-background text-foreground">
+    <div
+      data-storefront-ready={ready}
+      className="storefront flex min-h-dvh flex-col bg-background text-foreground"
+    >
       <SkipLink />
       <PreviewBanner />
       <Navbar />
@@ -306,6 +322,21 @@ export function SiteChrome({ children }: { children: ReactNode }) {
       </main>
       <Footer />
       <MobileNav />
+      <StorefrontDrawer />
     </div>
+  );
+}
+
+export function SiteChrome({
+  children,
+  categories = [],
+}: {
+  children: ReactNode;
+  categories?: CategorySummary[];
+}) {
+  return (
+    <StorefrontProvider categories={categories}>
+      <ChromeContent>{children}</ChromeContent>
+    </StorefrontProvider>
   );
 }

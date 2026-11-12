@@ -9,6 +9,8 @@ const booleanString = z.enum(['true', 'false']).transform((value) => value === '
 const envSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+    /** Legacy billing is opt-in; Bambino now runs as a shopping-only store. */
+    SUBSCRIPTIONS_ENABLED: booleanString.default(false),
     MARKET_CODE: z.string().default('RW').refine(isMarketCode, 'is not a configured market'),
     DATABASE_URL: z.string().min(1),
     API_PORT: z.coerce.number().int().min(1).max(65_535).default(4000),

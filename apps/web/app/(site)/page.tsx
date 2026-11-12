@@ -1,296 +1,234 @@
-import {
-  CatalogueFiltersQuery,
-  DeliveryOptionsQuery,
-  ProductsQuery,
-  SubscriptionPlansQuery,
-} from '@bambino/api-client';
+import { CatalogueFiltersQuery, ProductsQuery } from '@bambino/api-client';
 import { AGE_GROUPS } from '@bambino/config';
 import { EmptyState, buttonClasses } from '@bambino/ui';
-import { ArrowRight, Check, RefreshCw, Smartphone, Truck } from 'lucide-react';
+import { ArrowRight, Heart, Ruler, ShoppingBag, Truck } from 'lucide-react';
 import Image from 'next/image';
 import NextLink from 'next/link';
 import { ApiErrorState } from '@/components/api-error';
 import { CategoryTiles } from '@/components/category-tiles';
 import { Hero } from '@/components/hero/hero';
-import { PlanCard } from '@/components/plan-card';
 import { ProductCard } from '@/components/product-card';
 import { SectionHeading } from '@/components/sections';
 import { load } from '@/lib/api';
-import { buildHighlights, parsePaymentMethods } from '@/lib/highlights';
-import { PREVIEW_BUILD } from '@/lib/preview';
 import { PHOTOS, stockSrc } from '@/lib/stock-photos';
 
-export const revalidate = 60;
-
-/** Icons for the three facts in the band under the hero; the words come from lib/highlights.ts. */
-const HIGHLIGHT_ICONS = { delivery: Truck, payment: Smartphone, swap: RefreshCw } as const;
-
-const STEPS = [
+const SECTION = 'mx-auto max-w-6xl px-5 py-14 sm:px-6 lg:py-20';
+const AGE_COLOURS = [
+  'bg-stage-newborn',
+  'bg-stage-early',
+  'bg-stage-mid',
+  'bg-stage-toddler',
+  'bg-stage-big',
+];
+const AGE_NAMES = [
+  'Hello, little one',
+  'Growing every day',
+  'On the move',
+  'First little steps',
+  'Big little adventures',
+  'Ready for play',
+  'Everyday discoveries',
+  'Growing into themselves',
+  'Their own kind of style',
+];
+const FAQS = [
   {
-    title: 'Tell us about your baby',
-    body: 'Age, and height and weight if you know them. We suggest a size.',
+    question: 'How do I choose the right size?',
+    answer:
+      'Start with your child’s age, then check the available sizes and garment measurements. Ages are a guide; fit varies by brand and style. Our size finder explains the guidance available for each age.',
   },
-  { title: 'Choose a plan', body: 'Monthly, every three months or yearly. Pause or stop any time.' },
-  { title: 'Get your box', body: 'Clothes in your baby’s size, delivered to your door.' },
-  { title: 'Swap when it’s small', body: 'We collect what no longer fits and bring the next size up.' },
+  {
+    question: 'Where do you deliver?',
+    answer:
+      'Delivery options depend on your address. Add your delivery details at checkout to see the available service, fee and estimated timing before you place your order.',
+  },
+  {
+    question: 'How do I pay?',
+    answer:
+      'Your available payment options are shown at checkout. Review your order and delivery total before confirming.',
+  },
 ];
-
-const SWAP_POINTS = [
-  'Book a pickup from your account',
-  'We check every piece by hand',
-  'Pieces in good shape earn you credit',
-  'Clean pieces go on to another family',
-];
-
-/** Sections alternate paper and a pale ink tint; all share one width and rhythm. */
-const SECTION = 'mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:py-24';
 
 export default async function HomePage() {
-  const [plans, products, filters, delivery] = await Promise.all([
-    load(SubscriptionPlansQuery),
-    load(ProductsQuery, { first: 4, sort: 'NEWEST' }),
+  const [products, filters] = await Promise.all([
+    load(ProductsQuery, { first: 4, sort: 'NEWEST', filter: { oneTimeEligible: true, inStockOnly: true } }),
     load(CatalogueFiltersQuery),
-    load(DeliveryOptionsQuery),
   ]);
-  const highlights = buildHighlights({
-    delivery: delivery.ok ? delivery.data.deliveryOptions : null,
-    plans: plans.ok ? plans.data.subscriptionPlans : null,
-    // Set PAYMENT_METHODS ("MTN MoMo,Airtel Money") only once those providers are integrated and live.
-    paymentMethods: parsePaymentMethods(process.env.PAYMENT_METHODS),
-    mockPayments: process.env.NEXT_PUBLIC_MOCK_PAYMENTS === 'true',
-  });
   const categories = filters.ok ? filters.data.categories : [];
-  const productList = products.ok ? products.data.products.edges.map((edge) => edge.node) : [];
-
+  const productList = products.ok ? products.data.products.edges.map(({ node }) => node) : [];
   return (
     <>
       <Hero />
-
-      {/* Highlights: a quiet strip of the three facts a parent asks first. */}
-      <section aria-label="Why Bambino" className="bg-primary text-primary-foreground">
-        <ul className="mx-auto grid max-w-6xl divide-y divide-brand-800 px-4 sm:grid-cols-3 sm:divide-x sm:divide-y-0 sm:px-6">
-          {highlights.map((item) => {
-            const Icon = HIGHLIGHT_ICONS[item.id];
-            return (
-              <li key={item.id} className="flex items-start gap-4 py-5 sm:px-6 sm:first:pl-0 sm:last:pr-0">
-                <Icon aria-hidden="true" className="mt-0.5 size-7 shrink-0" strokeWidth={1.4} />
-                <span className="flex flex-col gap-0.5">
-                  <span className="text-sm font-medium tracking-[0.06em] uppercase">{item.title}</span>
-                  <span className="text-sm text-brand-300">{item.body}</span>
-                  <span className="text-xs text-brand-300">{item.note}</span>
-                </span>
-              </li>
-            );
-          })}
+      <section aria-label="A little easier for parents" className="border-y border-border bg-surface">
+        <ul className="mx-auto grid max-w-6xl gap-6 px-5 py-6 sm:grid-cols-3 sm:px-6">
+          {[
+            {
+              icon: Heart,
+              title: 'Pick what you love',
+              body: 'Buy the pieces you need, whenever you need them.',
+            },
+            {
+              icon: Ruler,
+              title: 'A size for every little stage',
+              body: 'Shop newborns, kids and teens through age 17.',
+            },
+            {
+              icon: Truck,
+              title: 'Delivery, made clear',
+              body: 'See delivery options and costs at checkout.',
+            },
+          ].map(({ icon: Icon, title, body }) => (
+            <li key={title} className="flex items-start gap-3">
+              <Icon aria-hidden="true" className="mt-1 size-6 shrink-0 text-emphasis" strokeWidth={1.5} />
+              <div>
+                <h2 className="text-sm font-semibold">{title}</h2>
+                <p className="mt-1 text-sm text-foreground-muted">{body}</p>
+              </div>
+            </li>
+          ))}
         </ul>
       </section>
-
-      {/* Age groups */}
-      <section aria-labelledby="ages" className={`${SECTION} pb-4 lg:pb-8`}>
-        <div className="flex flex-col gap-8">
+      <section aria-labelledby="new" className={SECTION}>
+        <div className="mb-8 flex flex-wrap items-end justify-between gap-5">
+          <SectionHeading
+            id="new"
+            eyebrow="A fresh little wardrobe"
+            title="Meet their next favourites"
+            intro="Bedtime, playtime, out-the-door time. Start with something lovely."
+          />
+          <NextLink
+            href="/shop"
+            className="flex items-center gap-2 py-3 text-sm font-semibold underline underline-offset-4"
+          >
+            Explore the shop <ArrowRight aria-hidden="true" className="size-4" />
+          </NextLink>
+        </div>
+        {!products.ok ? (
+          <ApiErrorState error={products.error} what="products" />
+        ) : productList.length === 0 ? (
+          <EmptyState
+            title="A little something is on its way"
+            description="Our next pieces will appear here as they arrive. Come back soon."
+          />
+        ) : (
+          <ul className="grid grid-cols-2 gap-x-3 gap-y-7 sm:gap-6 lg:grid-cols-4">
+            {productList.map((product) => (
+              <li key={product.id} className="flex">
+                <ProductCard product={product} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+      <section aria-labelledby="ages" className="bg-surface-muted">
+        <div className={SECTION}>
           <SectionHeading
             id="ages"
-            title="Shop by age"
-            intro="Sizes are a guide: fit varies by garment and by baby."
+            eyebrow="Small people. Big changes."
+            title="What stage are they at?"
+            intro="Find their little corner of the shop. Age is a starting point; check each piece’s size before ordering."
           />
-          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            {AGE_GROUPS.map((group) => (
-              <li key={group.slug} className="flex">
+          <ul className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-3">
+            {AGE_GROUPS.map((group, index) => (
+              <li key={group.slug}>
                 <NextLink
                   href={`/shop?age=${group.slug}`}
-                  className="flex w-full flex-col gap-1 rounded-xl border border-border bg-surface p-5 transition-colors hover:border-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                  className={`group flex h-full min-h-44 flex-col rounded-[1.5rem] border border-primary/10 p-5 transition-transform hover:-translate-y-1 focus-visible:outline-2 focus-visible:outline-focus ${AGE_COLOURS[index % AGE_COLOURS.length]}`}
                 >
-                  <span className="font-display text-xl font-semibold">{group.label}</span>
-                  <span className="text-sm font-medium tracking-[0.06em] text-primary uppercase">
+                  <span className="text-xs text-primary/75">{AGE_NAMES[index]}</span>
+                  <span className="mt-auto pt-5 font-display text-2xl font-semibold tracking-tight">
                     {group.ages}
                   </span>
-                  <span className="text-sm text-foreground-muted">{group.blurb}</span>
+                  <span className="mt-3 flex items-center justify-between text-sm font-medium">
+                    Shop this stage <ArrowRight className="size-4" aria-hidden="true" />
+                  </span>
                 </NextLink>
               </li>
             ))}
           </ul>
         </div>
       </section>
-
-      {/* Categories */}
       {categories.length > 0 ? (
-        <section aria-labelledby="browse" className={`${SECTION} pb-4 lg:pb-8`}>
-          <div className="flex flex-col gap-8">
-            <SectionHeading id="browse" title="Shop by category" />
+        <section aria-labelledby="browse" className={SECTION}>
+          <SectionHeading
+            id="browse"
+            title="A little of everything they need"
+            intro="Cosy nights, busy mornings and everything in between."
+          />
+          <div className="mt-7">
             <CategoryTiles categories={categories} />
           </div>
         </section>
       ) : null}
-
-      {/* How it works: a real sequence, so the steps are numbered; white cards. */}
-      <section aria-labelledby="how" className={SECTION}>
-        <div className="flex flex-col gap-10">
-          <SectionHeading id="how" title="How it works" />
-          <ol className="grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
-            {STEPS.map((step, index) => (
-              <li
-                key={step.title}
-                className="flex flex-col gap-3 rounded-[15px] border border-border bg-surface p-7"
-              >
-                <span
-                  aria-hidden="true"
-                  className="flex size-11 items-center justify-center rounded-full bg-primary font-display text-lg font-medium text-primary-foreground tabular-nums"
-                >
-                  {index + 1}
-                </span>
-                <h3 className="font-display text-xl font-semibold tracking-tight text-primary">
-                  {step.title}
-                </h3>
-                <p className="text-foreground-muted">{step.body}</p>
-              </li>
-            ))}
-          </ol>
-          <NextLink
-            href="/how-it-works"
-            className="w-fit font-semibold text-link underline underline-offset-4 hover:decoration-2"
-          >
-            Read the full guide
+      <section
+        aria-labelledby="story"
+        className={`${SECTION} grid items-center gap-8 lg:grid-cols-2 lg:gap-16`}
+      >
+        <div className="relative aspect-[5/4] overflow-hidden rounded-[2rem] bg-sand-100">
+          <Image
+            src={stockSrc(PHOTOS.circular)}
+            alt={PHOTOS.circular.alt}
+            fill
+            sizes="(min-width: 1024px) 520px, 90vw"
+            className="object-cover"
+          />
+        </div>
+        <div className="flex flex-col items-start gap-6">
+          <SectionHeading
+            id="story"
+            eyebrow="Hello from Bambino"
+            title="Their world is growing. Let’s dress them for it."
+            intro="Some days are for big adventures. Most are for cuddles, crumbs and another change of clothes. Bambino brings clothes for babies, kids and teens together in one easy-to-browse shop for families in Kigali."
+          />
+          <p className="text-foreground-muted">
+            Choose a piece, find their size, and make it part of their everyday.
+          </p>
+          <NextLink href="/shop" className={buttonClasses()}>
+            Find something for your little one <ArrowRight className="size-4" aria-hidden="true" />
           </NextLink>
         </div>
       </section>
-
-      {/* Products */}
-      <section aria-labelledby="new" className="bg-surface-muted">
-        <div className={SECTION}>
-          <div className="flex flex-col gap-10">
-            <div className="flex flex-wrap items-end justify-between gap-4">
-              <SectionHeading id="new" title="New this month" />
-              <NextLink href="/shop" className={buttonClasses({ variant: 'outline' })}>
-                View all clothes <ArrowRight aria-hidden="true" className="size-4" />
-              </NextLink>
-            </div>
-            {!products.ok ? (
-              <ApiErrorState error={products.error} what="products" />
-            ) : productList.length === 0 ? (
-              <EmptyState
-                title="The shop is empty"
-                description="Products appear here once they are published."
-              />
-            ) : (
-              <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                {productList.slice(0, 4).map((product) => (
-                  <li key={product.id} className="flex">
-                    <ProductCard product={product} />
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* Plans */}
-      <section aria-labelledby="plans" className={SECTION}>
-        <div className="flex flex-col gap-10">
+      <section aria-labelledby="questions" className="border-t border-border bg-surface">
+        <div className={`${SECTION} grid gap-8 lg:grid-cols-[.8fr_1.2fr] lg:gap-16`}>
           <SectionHeading
-            id="plans"
-            title="One plan per baby"
-            intro={
-              PREVIEW_BUILD
-                ? 'Change or pause your plan from your dashboard. Prices are placeholders until launch.'
-                : 'Change or pause your plan from your dashboard.'
-            }
+            id="questions"
+            eyebrow="A little help"
+            title="Questions before you shop?"
+            intro="Here are a few things you might be wondering."
           />
-          {!plans.ok ? (
-            <ApiErrorState error={plans.error} what="plans" />
-          ) : plans.data.subscriptionPlans.length === 0 ? (
-            <EmptyState title="No plans yet" description="Plans appear here once they are published." />
-          ) : (
-            <div className="flex flex-col gap-4">
-              {plans.data.subscriptionPlans.map((plan, index) => (
-                <PlanCard key={plan.id} plan={plan} featured={index === 0} />
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Swapping and reuse */}
-      <section aria-labelledby="swap" className="bg-surface-muted">
-        <div className={`${SECTION} grid items-center gap-10 lg:grid-cols-2 lg:gap-16`}>
-          <div className="relative aspect-[4/3] overflow-hidden rounded-[15px] bg-sand-100">
-            <Image
-              src={stockSrc(PHOTOS.circular)}
-              alt={PHOTOS.circular.alt}
-              fill
-              sizes="(min-width: 1024px) 34rem, 100vw"
-              className="object-cover"
-            />
-          </div>
-          <div className="flex flex-col gap-6">
-            <SectionHeading
-              id="swap"
-              title="Swap for the next size when they grow"
-              intro="No need to buy a new wardrobe. Send back what no longer fits and choose the next size."
-            />
-            <ul className="flex flex-col gap-3">
-              {SWAP_POINTS.map((point) => (
-                <li key={point} className="flex items-start gap-3 text-foreground">
-                  <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                    <Check aria-hidden="true" className="size-3.5" strokeWidth={3} />
+          <div className="divide-y divide-border">
+            {FAQS.map((item) => (
+              <details key={item.question} className="group py-5">
+                <summary className="flex min-h-8 cursor-pointer items-center justify-between gap-4 font-medium">
+                  {item.question}
+                  <span aria-hidden="true" className="text-xl group-open:rotate-45">
+                    +
                   </span>
-                  {point}
-                </li>
-              ))}
-            </ul>
-            <NextLink href="/exchange" className={buttonClasses({ className: 'w-fit' })}>
-              How swapping works
-            </NextLink>
+                </summary>
+                <p className="pt-4 text-sm leading-relaxed text-foreground-muted">
+                  {item.answer}
+                  {item.question === 'How do I pay?' && process.env.NEXT_PUBLIC_MOCK_PAYMENTS === 'true'
+                    ? ' This preview uses test wallets only.'
+                    : null}
+                </p>
+              </details>
+            ))}
           </div>
         </div>
       </section>
-
-      {/* Three ways in: the fit finder, swapping and plans. */}
-      <section aria-label="Get started" className={SECTION}>
-        <ul className="grid gap-4 lg:grid-cols-3">
-          {[
-            {
-              href: '/fit',
-              title: 'Not sure of your baby’s size?',
-              body: 'Answer four quick questions and we’ll suggest a size.',
-              action: 'Start the fit finder',
-              tone: 'bg-primary text-primary-foreground',
-              bodyTone: 'text-brand-300',
-              button: buttonClasses({ variant: 'accent' }),
-            },
-            {
-              href: '/exchange',
-              title: 'Outgrown it already?',
-              body: 'Swap what is small for the next size and earn credit.',
-              action: 'How swapping works',
-              tone: 'bg-surface-muted text-primary',
-              bodyTone: 'text-foreground-muted',
-              button: buttonClasses({ variant: 'outline' }),
-            },
-            {
-              href: '/plans',
-              title: 'One plan per baby',
-              body: 'Monthly, every three months or yearly. Pause or stop any time.',
-              action: 'See plans and prices',
-              tone: 'bg-surface text-primary',
-              bodyTone: 'text-foreground-muted',
-              button: buttonClasses({ variant: 'outline' }),
-            },
-          ].map((card) => (
-            <li
-              key={card.href}
-              className={`flex flex-col items-start gap-4 rounded-[15px] border border-border p-8 ${card.tone}`}
-            >
-              <h2 className="font-display text-2xl leading-tight font-semibold tracking-tight">
-                {card.title}
-              </h2>
-              <p className={`max-w-[34ch] ${card.bodyTone}`}>{card.body}</p>
-              <NextLink href={card.href} className={`${card.button} mt-auto`}>
-                {card.action} <ArrowRight aria-hidden="true" className="size-4" />
-              </NextLink>
-            </li>
-          ))}
-        </ul>
+      <section className="bg-accent-soft">
+        <div className={`${SECTION} flex flex-col items-center gap-5 text-center`}>
+          <ShoppingBag aria-hidden="true" className="size-8 text-emphasis" strokeWidth={1.4} />
+          <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+            Something small. A whole lot of love.
+          </h2>
+          <p className="max-w-lg text-foreground-muted">
+            Discover their next outfit, bedtime favourite or everyday layer.
+          </p>
+          <NextLink href="/shop" className={buttonClasses({ size: 'lg' })}>
+            Let’s find their favourites <ArrowRight className="size-4" aria-hidden="true" />
+          </NextLink>
+        </div>
       </section>
     </>
   );

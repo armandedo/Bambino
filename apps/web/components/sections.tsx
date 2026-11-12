@@ -38,7 +38,7 @@ export function SectionHeading({
       <h2
         id={id}
         className={cn(
-          'font-display text-3xl leading-[1.1] font-bold tracking-[0.016em] uppercase sm:text-4xl',
+          'font-display text-3xl leading-[1.15] font-semibold tracking-[-0.035em] sm:text-4xl',
           tone === 'inverse' ? 'text-primary-foreground' : 'text-primary',
         )}
       >
