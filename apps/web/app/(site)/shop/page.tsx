@@ -1,4 +1,3 @@
-import { AGE_GROUPS, ageGroupBySlug } from '@bambino/config';
 import {
   CatalogueFiltersQuery,
   type ProductFilter,
@@ -10,9 +9,10 @@ import type { Metadata } from 'next';
 import NextLink from 'next/link';
 import { ApiErrorState } from '@/components/api-error';
 import { ProductCard } from '@/components/product-card';
-import { load } from '@/lib/api';
-import { displaySizeLabel } from '@/lib/size-label';
 import { ShopFilters } from '@/components/storefront/shop-filters';
+import { load } from '@/lib/api';
+import { SHOP_AGES, shopAgeBySlug } from '@/lib/shop-ages';
+import { displaySizeLabel } from '@/lib/size-label';
 
 export const metadata: Metadata = { title: 'Shop' };
 
@@ -22,6 +22,14 @@ const SORTS: { value: ProductSort; label: string }[] = [
   { value: 'PRICE_DESC', label: 'Price: high to low' },
   { value: 'NAME_ASC', label: 'Name' },
 ];
+
+const PILL =
+  'inline-flex min-h-11 items-center gap-1.5 rounded-full border px-4 whitespace-nowrap transition-colors';
+const PILL_ON = 'border-primary bg-primary font-semibold text-primary-foreground';
+const PILL_OFF = 'border-border bg-surface font-medium hover:border-primary hover:bg-accent-soft';
+const PILL_ROW =
+  'no-scrollbar -mx-[var(--gutter)] flex gap-2 overflow-x-auto px-[var(--gutter)] py-2 lg:mx-0 lg:flex-wrap lg:px-0';
+const CRUMB = 'rounded-sm underline underline-offset-4 hover:text-foreground';
 
 function one(value: string | string[] | undefined): string | undefined {
   const first = Array.isArray(value) ? value[0] : value;
@@ -51,7 +59,7 @@ export default async function ShopPage({
   const q = one(params.q);
   const category = one(params.category);
   const size = one(params.size);
-  const age = ageGroupBySlug(one(params.age));
+  const age = shopAgeBySlug(one(params.age));
   const after = one(params.after);
   const minPrice = toAmount(one(params.min));
   const maxPrice = toAmount(one(params.max));
@@ -83,80 +91,121 @@ export default async function ShopPage({
     max: maxPrice?.toString(),
     sort: sort === 'NEWEST' ? undefined : sort,
   };
+  const categoryName = categories.find((item) => item.slug === category)?.name;
+  const ageTitle = age ? `${age.label}, ${age.ages}` : undefined;
+  const title = categoryName ?? ageTitle ?? (q ? `Results for “${q}”` : 'Shop everything');
+  const crumb = categoryName ?? age?.label;
+  const narrowed = Boolean(q || category || size || minPrice !== undefined || maxPrice !== undefined);
 
   return (
-    <div className="retail-container flex flex-col gap-6 py-8 sm:py-12">
-      <div className="flex flex-col gap-3 border-b border-border pb-7">
-        <NextLink href="/" className="w-fit text-sm text-foreground-muted underline underline-offset-4">
-          Home / Shop
-        </NextLink>
-        <h1 className="font-display text-4xl font-bold tracking-[-.045em] sm:text-5xl">
-          {categories.find((item) => item.slug === category)?.name ?? 'Their next little favourites.'}
+    <div className="retail-container flex flex-col gap-5 pt-5 pb-14 md:gap-6 md:pt-8 lg:pb-20">
+      <div className="flex flex-col gap-2">
+        <nav aria-label="Breadcrumb" className="text-[15px] text-foreground-muted">
+          <ol className="flex flex-wrap items-center gap-x-2">
+            <li>
+              <NextLink href="/" className={CRUMB}>
+                Home
+              </NextLink>
+            </li>
+            <li aria-hidden="true">/</li>
+            {crumb ? (
+              <>
+                <li>
+                  <NextLink href="/shop" className={CRUMB}>
+                    Shop
+                  </NextLink>
+                </li>
+                <li aria-hidden="true">/</li>
+                <li aria-current="page" className="text-foreground">
+                  {crumb}
+                </li>
+              </>
+            ) : (
+              <li aria-current="page" className="text-foreground">
+                Shop
+              </li>
+            )}
+          </ol>
+        </nav>
+        <h1 className="text-[clamp(2rem,4.6vw,3.5rem)] leading-[1.05] font-semibold tracking-[-0.045em]">
+          {title}
         </h1>
-        <p className="text-foreground-muted">
-          {age
-            ? `${age.label}, ${age.ages}. ${age.blurb}`
-            : 'Little favourites for sleepy cuddles, busy days and first adventures.'}
-        </p>
+        {categoryName && ageTitle ? <p className="text-lg text-foreground-muted">{ageTitle}</p> : null}
       </div>
 
-      <nav aria-label="Age groups" className="overflow-x-auto pb-1">
-        <ul className="flex w-max min-w-full gap-2 lg:w-auto lg:flex-wrap">
-          {[{ slug: undefined, label: 'All ages', ages: '' }, ...AGE_GROUPS].map((group) => {
-            const active = group.slug === age?.slug;
-            return (
-              <li key={group.slug ?? 'all'}>
-                <NextLink
-                  href={hrefWith({ ...keep, size: undefined, age: group.slug, category })}
-                  aria-current={active ? 'page' : undefined}
-                  className={cn(buttonClasses({ size: 'sm', variant: active ? 'primary' : 'outline' }))}
-                >
-                  {group.label}
-                  {group.ages ? <span className="ml-1 font-normal opacity-80">({group.ages})</span> : null}
-                </NextLink>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
-
-      {categories.length > 0 ? (
-        <nav aria-label="Categories" className="overflow-x-auto pb-1">
-          <ul className="flex w-max min-w-full gap-2 lg:w-auto lg:flex-wrap">
-            {[{ slug: undefined, name: 'All' }, ...categories].map((item) => {
-              const active = item.slug === category;
+      <div className="flex flex-col gap-1.5">
+        <nav aria-label="Age groups">
+          <ul className={PILL_ROW}>
+            {[{ slug: undefined, label: 'All ages', ages: '' }, ...SHOP_AGES].map((group) => {
+              const active = group.slug === age?.slug;
               return (
-                <li key={item.slug ?? 'all'}>
+                <li key={group.slug ?? 'all'} className="shrink-0">
                   <NextLink
-                    href={hrefWith({ ...keep, category: item.slug })}
+                    href={hrefWith({ ...keep, size: undefined, age: group.slug, category })}
                     aria-current={active ? 'page' : undefined}
-                    className={cn(buttonClasses({ size: 'sm', variant: active ? 'primary' : 'outline' }))}
+                    className={cn(PILL, active ? PILL_ON : PILL_OFF)}
                   >
-                    {item.name}
+                    {group.label}
+                    {group.ages ? (
+                      <span
+                        className={cn(
+                          'text-[15px] font-normal',
+                          active ? 'opacity-85' : 'text-foreground-muted',
+                        )}
+                      >
+                        {group.ages}
+                      </span>
+                    ) : null}
                   </NextLink>
                 </li>
               );
             })}
           </ul>
         </nav>
-      ) : null}
 
-      <ShopFilters activeCount={[q, category, size, age?.slug, minPrice, maxPrice].filter(Boolean).length}>
-        <form
-          method="get"
-          action="/shop"
-          className="grid items-end gap-4 rounded-xl border border-border bg-surface p-4 sm:grid-cols-2 lg:grid-cols-4"
+        {categories.length > 0 ? (
+          <nav aria-label="Categories">
+            <ul className={PILL_ROW}>
+              {[{ slug: undefined, name: 'All types' }, ...categories].map((item) => {
+                const active = item.slug === category;
+                return (
+                  <li key={item.slug ?? 'all'} className="shrink-0">
+                    <NextLink
+                      href={hrefWith({ ...keep, category: item.slug })}
+                      aria-current={active ? 'page' : undefined}
+                      className={cn(PILL, active ? PILL_ON : PILL_OFF)}
+                    >
+                      {item.name}
+                    </NextLink>
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
+        ) : null}
+      </div>
+
+      <form
+        method="get"
+        action="/shop"
+        className="grid gap-4 border-y border-border py-5 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,3.4fr)_auto] lg:items-end"
+      >
+        {category ? <input type="hidden" name="category" value={category} /> : null}
+        {age ? <input type="hidden" name="age" value={age.slug} /> : null}
+        <TextField
+          id="search"
+          label="Search"
+          name="q"
+          type="search"
+          defaultValue={q ?? ''}
+          placeholder="Bodysuit, romper…"
+        />
+        <ShopFilters
+          activeCount={
+            [size, minPrice !== undefined, maxPrice !== undefined, sort !== 'NEWEST'].filter(Boolean).length
+          }
+          panelClassName="grid grid-cols-2 items-end gap-4 lg:grid-cols-4"
         >
-          {category ? <input type="hidden" name="category" value={category} /> : null}
-          {age ? <input type="hidden" name="age" value={age.slug} /> : null}
-          <TextField
-            id="search"
-            label="Search"
-            name="q"
-            type="search"
-            defaultValue={q ?? ''}
-            placeholder="Bodysuit, romper…"
-          />
           <SelectField
             label="Size"
             name="size"
@@ -164,6 +213,7 @@ export default async function ShopPage({
             placeholder="Any size"
             options={sizes.map((s) => ({ value: s.code, label: displaySizeLabel(s.label) }))}
           />
+          <SelectField label="Sort by" name="sort" defaultValue={sort} options={SORTS} />
           <TextField
             id="min"
             label="Lowest price (RF)"
@@ -182,30 +232,46 @@ export default async function ShopPage({
             min={0}
             defaultValue={maxPrice ?? ''}
           />
-          <SelectField label="Sort by" name="sort" defaultValue={sort} options={SORTS} />
-          <Button type="submit">Apply</Button>
-        </form>
-      </ShopFilters>
+        </ShopFilters>
+        <Button type="submit">Apply</Button>
+      </form>
 
-      <section aria-labelledby="results" className="flex flex-col gap-4">
+      <section aria-labelledby="results" className="flex flex-col gap-5">
         <h2 id="results" className="sr-only">
           Results
         </h2>
         {!products.ok ? (
           <ApiErrorState error={products.error} what="products" />
         ) : products.data.products.edges.length === 0 ? (
-          <EmptyState
-            title="No products match"
-            description="Try another size or category, or clear the search."
-            action={
-              <NextLink href="/shop" className={buttonClasses({ variant: 'outline' })}>
-                Clear filters
-              </NextLink>
-            }
-          />
+          age && !narrowed ? (
+            <EmptyState
+              title={`Nothing in stock for ${age.label.toLowerCase()} (${age.ages}) right now`}
+              description="Browse every size in stock, or use the size finder to check what fits them today."
+              action={
+                <span className="flex flex-wrap justify-center gap-3">
+                  <NextLink href="/shop" className={buttonClasses()}>
+                    Shop everything
+                  </NextLink>
+                  <NextLink href="/fit" className={buttonClasses({ variant: 'outline' })}>
+                    Find their size
+                  </NextLink>
+                </span>
+              }
+            />
+          ) : (
+            <EmptyState
+              title="No clothes match those filters"
+              description="Try another size or type, or clear the search."
+              action={
+                <NextLink href="/shop" className={buttonClasses({ variant: 'outline' })}>
+                  Clear filters
+                </NextLink>
+              }
+            />
+          )
         ) : (
           <>
-            <p className="text-sm text-foreground-muted" aria-live="polite">
+            <p className="text-[15px] text-foreground-muted" aria-live="polite">
               {products.data.products.totalCount}{' '}
               {products.data.products.totalCount === 1 ? 'product' : 'products'}
             </p>

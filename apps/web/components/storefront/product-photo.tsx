@@ -23,7 +23,13 @@ export function ProductPhoto({
 }) {
   const [failedSource, setFailedSource] = useState<string>();
   return (
-    <div className={cn('relative h-full w-full overflow-hidden bg-[#f7f5f2]', className)}>
+    <div
+      className={cn(
+        'relative h-full w-full overflow-hidden',
+        fit === 'contain' ? 'bg-surface' : 'bg-surface-muted',
+        className,
+      )}
+    >
       {src && failedSource !== src ? (
         <Image
           src={src}
@@ -35,8 +41,8 @@ export function ProductPhoto({
           fetchPriority={priority ? 'high' : 'auto'}
           onError={() => setFailedSource(src)}
           className={cn(
-            fit === 'contain' ? 'bg-white object-contain' : 'object-cover',
-            'transition-transform duration-200 group-hover:scale-[1.035] motion-reduce:transition-none',
+            fit === 'contain' ? 'object-contain' : 'object-cover',
+            'transition-transform duration-300 ease-settle group-hover/photo:scale-[1.04]',
           )}
         />
       ) : (

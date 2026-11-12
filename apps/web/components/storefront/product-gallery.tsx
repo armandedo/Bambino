@@ -1,6 +1,7 @@
 'use client';
 
 import type { ProductCard } from '@bambino/api-client';
+import { cn } from '@bambino/ui';
 import { Heart } from 'lucide-react';
 import { useState } from 'react';
 import { ProductPhoto } from './product-photo';
@@ -13,29 +14,33 @@ export function ProductGallery({ product }: { product: GalleryProduct }) {
   const image = product.images[selected] ?? product.images[0];
   const isSaved = saved.some((item) => item.id === product.id);
   return (
-    <div className="self-start lg:sticky lg:top-44">
-      <div className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-border bg-white">
+    <div className="self-start md:sticky md:top-24 lg:top-28">
+      <div className="relative aspect-[4/5] overflow-hidden rounded-[22px] border border-border bg-surface">
         <ProductPhoto
           key={image?.url}
           src={image?.url}
           alt={image?.altText || product.name}
-          sizes="(min-width: 1328px) 580px, (min-width: 768px) 50vw, 100vw"
+          sizes="(min-width: 1440px) 680px, (min-width: 768px) 50vw, 100vw"
           fit="contain"
           priority
         />
         <button
           type="button"
-          className="retail-icon-button absolute top-4 right-4 bg-white shadow-sm"
+          className="retail-icon-button absolute top-3 right-3 border border-border bg-surface"
           disabled={!ready}
           aria-pressed={isSaved}
           aria-label={`${isSaved ? 'Unsave' : 'Save'} ${product.name}`}
           onClick={() => toggleSaved(product)}
         >
-          <Heart className={`size-5 ${isSaved ? 'fill-[#a64732] text-[#a64732]' : ''}`} aria-hidden="true" />
+          <Heart
+            className={cn('size-5', isSaved && 'count-pop fill-emphasis text-emphasis')}
+            strokeWidth={1.8}
+            aria-hidden="true"
+          />
         </button>
       </div>
       {product.images.length > 1 ? (
-        <div className="mt-3 flex gap-3 overflow-x-auto pb-2">
+        <div className="no-scrollbar mt-3 flex gap-3 overflow-x-auto p-1.5">
           {product.images.map((photo, index) => (
             <button
               key={photo.id}
@@ -43,7 +48,10 @@ export function ProductGallery({ product }: { product: GalleryProduct }) {
               aria-label={`View photo ${index + 1} of ${product.name}`}
               aria-pressed={selected === index}
               onClick={() => setSelected(index)}
-              className={`h-24 w-20 shrink-0 overflow-hidden rounded-xl border-2 ${selected === index ? 'border-primary' : 'border-transparent'}`}
+              className={cn(
+                'h-24 w-20 shrink-0 overflow-hidden rounded-xl border-2 bg-surface transition-colors',
+                selected === index ? 'border-primary' : 'border-border hover:border-border-strong',
+              )}
             >
               <ProductPhoto src={photo.url} alt="" sizes="100px" fit="contain" />
             </button>

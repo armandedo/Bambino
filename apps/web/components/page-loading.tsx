@@ -8,11 +8,11 @@ export function LoadingStatus({ label }: { label: string }) {
 /** Shop grid while products load. */
 export function ShopLoading() {
   return (
-    <div aria-busy="true" className="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-12">
+    <div aria-busy="true" className="retail-container flex flex-col gap-6 pt-5 pb-14 md:pt-8">
       <LoadingStatus label="Loading products" />
-      <Skeleton className="h-10 w-40" />
-      <Skeleton className="h-9 w-full max-w-lg" />
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <Skeleton className="h-12 w-56" />
+      <Skeleton className="h-11 w-full max-w-lg rounded-full" />
+      <div className="grid grid-cols-2 gap-x-4 gap-y-9 md:grid-cols-3 md:gap-x-6 lg:grid-cols-4">
         {Array.from({ length: 8 }, (_, i) => (
           <div key={i} className="flex flex-col gap-3">
             <Skeleton className="aspect-[4/5] w-full rounded-2xl" />
@@ -28,10 +28,10 @@ export function ShopLoading() {
 /** Product page while it loads. */
 export function ProductLoading() {
   return (
-    <div aria-busy="true" className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-10">
+    <div aria-busy="true" className="retail-container flex flex-col gap-6 pt-5 pb-14 md:pt-8">
       <LoadingStatus label="Loading product" />
-      <div className="grid gap-10 md:grid-cols-2">
-        <Skeleton className="aspect-square w-full rounded-2xl" />
+      <div className="grid gap-7 md:grid-cols-2 md:gap-10 lg:gap-20">
+        <Skeleton className="aspect-[4/5] w-full rounded-[22px]" />
         <div className="flex flex-col gap-4">
           <Skeleton className="h-4 w-24" />
           <Skeleton className="h-10 w-3/4" />

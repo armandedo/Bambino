@@ -9,7 +9,7 @@ export function Logo({ inverse = false }: { inverse?: boolean }) {
       width={1080}
       height={220}
       unoptimized
-      className={`block h-auto w-40 sm:w-44${inverse ? ' brightness-0 invert' : ''}`}
+      className={`block h-auto w-[8.25rem] sm:w-44${inverse ? ' brightness-0 invert' : ''}`}
     />
   );
 }

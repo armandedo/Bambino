@@ -1,9 +1,9 @@
 'use client';
 
 import type { CategorySummary, Money, ProductCard } from '@bambino/api-client';
-import { AGE_GROUPS } from '@bambino/config';
 import { MoneyText, buttonClasses } from '@bambino/ui';
-import { ArrowRight, Heart, ShoppingBag, X } from 'lucide-react';
+import { X } from 'lucide-react';
+import Image from 'next/image';
 import NextLink from 'next/link';
 import {
   createContext,
@@ -17,6 +17,7 @@ import {
   type ReactNode,
 } from 'react';
 import { useCart } from '@/components/header-actions';
+import { SHOP_AGES } from '@/lib/shop-ages';
 import { useSession } from '@/lib/session';
 import { ProductPhoto } from './product-photo';
 
@@ -139,59 +140,90 @@ export function useStorefront() {
   return state;
 }
 
+const GROUP_TITLE = 'mb-1 text-[15px] text-foreground-muted';
+const ROW = 'flex min-h-[52px] items-center rounded-lg text-lg font-medium';
+const AGE_ROW = 'flex min-h-[68px] items-center gap-4 rounded-lg text-lg font-medium';
+const THUMB = 'block h-[108px] w-[86px] shrink-0 overflow-hidden rounded-xl border border-border';
+const EMPTY_PANEL = 'flex flex-col items-start gap-3 px-6 py-10';
+const EMPTY_TITLE = 'text-2xl font-semibold tracking-[-0.03em]';
+
 function MenuContent() {
   const { categories, openPanel } = useStorefront();
   return (
     <div
-      className="space-y-8 p-6"
+      className="flex flex-col gap-7 px-6 pt-5 pb-8"
       onClick={(event) => {
         if ((event.target as HTMLElement).closest('a')) openPanel(null);
       }}
     >
-      <NextLink href="/shop?sort=NEWEST" className="flex items-center justify-between text-lg font-bold">
-        Shop new arrivals <ArrowRight className="size-5" aria-hidden="true" />
-      </NextLink>
-      <nav aria-label="Browse clothing">
-        <p className="mb-3 text-sm font-semibold text-foreground-muted">Their everyday wardrobe</p>
-        <ul className="divide-y divide-border">
-          {categories.map((category) => (
-            <li key={category.id}>
-              <NextLink
-                href={`/shop?category=${encodeURIComponent(category.slug)}`}
-                className="block py-3 font-medium"
-              >
-                {category.name}
-              </NextLink>
-            </li>
-          ))}
-        </ul>
-      </nav>
       <nav aria-label="Shop by age">
-        <p className="mb-4 font-bold">Find their little stage</p>
-        <ul className="grid grid-cols-2 gap-2">
-          {AGE_GROUPS.map((age) => (
+        <p className={GROUP_TITLE}>Shop by age</p>
+        <ul className="divide-y divide-border">
+          {SHOP_AGES.map((age) => (
             <li key={age.slug}>
-              <NextLink
-                href={`/shop?age=${age.slug}`}
-                className="block rounded-xl bg-surface-muted p-3 font-medium"
-              >
-                {age.ages}
+              <NextLink href={`/shop?age=${age.slug}`} className={AGE_ROW}>
+                <span className="arch-door flex w-11 shrink-0 items-end justify-center overflow-hidden border border-border bg-background pb-1">
+                  <Image
+                    src={age.image.src}
+                    alt=""
+                    width={age.image.width}
+                    height={age.image.height}
+                    unoptimized
+                    className="h-auto max-h-[74%] w-auto max-w-[74%]"
+                  />
+                </span>
+                <span className="flex flex-col leading-snug">
+                  {age.label}
+                  <span className="text-[15px] font-normal text-foreground-muted">{age.ages}</span>
+                </span>
               </NextLink>
             </li>
           ))}
         </ul>
       </nav>
-      <NextLink href="/fit" className={buttonClasses({ fullWidth: true })}>
-        Help me find their size
-      </NextLink>
-      <div className="flex flex-wrap gap-5 text-base">
-        <NextLink href="/about" className="underline underline-offset-4">
-          Our story
+      {categories.length > 0 ? (
+        <nav aria-label="Shop by type">
+          <p className={GROUP_TITLE}>Shop by type</p>
+          <ul className="divide-y divide-border">
+            <li>
+              <NextLink href="/shop" className={ROW}>
+                Everything
+              </NextLink>
+            </li>
+            {categories.map((category) => (
+              <li key={category.id}>
+                <NextLink href={`/shop?category=${encodeURIComponent(category.slug)}`} className={ROW}>
+                  {category.name}
+                </NextLink>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      ) : (
+        <NextLink href="/shop" className={buttonClasses({ fullWidth: true, className: 'cta' })}>
+          Shop everything
         </NextLink>
-        <NextLink href="/how-it-works" className="underline underline-offset-4">
-          Shopping & delivery
-        </NextLink>
-      </div>
+      )}
+      <nav aria-label="Help">
+        <p className={GROUP_TITLE}>Help</p>
+        <ul className="divide-y divide-border">
+          <li>
+            <NextLink href="/fit" className={ROW}>
+              Find their size
+            </NextLink>
+          </li>
+          <li>
+            <NextLink href="/how-it-works" className={ROW}>
+              Shopping and delivery
+            </NextLink>
+          </li>
+          <li>
+            <NextLink href="/about" className={ROW}>
+              About Bambino
+            </NextLink>
+          </li>
+        </ul>
+      </nav>
     </div>
   );
 }
@@ -202,40 +234,49 @@ function CartContent() {
   const cart = useCart(viewer !== null);
   if (loading || (viewer && cart.isPending))
     return (
-      <p className="p-6" role="status">
+      <p className="p-6 text-foreground-muted" role="status">
         Opening your bag…
       </p>
     );
   if (!viewer)
     return (
-      <div className="space-y-5 p-6">
-        <p>Sign in to see your bag and keep your favourites close.</p>
+      <div className={EMPTY_PANEL}>
+        <p className="text-lg">Sign in to see your bag and check out.</p>
         <NextLink
           onClick={() => openPanel(null)}
           href="/login?next=/cart"
-          className={buttonClasses({ fullWidth: true })}
+          className={buttonClasses({ fullWidth: true, className: 'cta mt-2' })}
         >
-          Sign in to your bag
+          Sign in
         </NextLink>
       </div>
     );
   if (cart.isError)
     return (
-      <div className="space-y-5 p-6">
-        <p role="alert">Your bag could not be loaded just now.</p>
-        <NextLink onClick={() => openPanel(null)} href="/cart" className={buttonClasses()}>
+      <div className={EMPTY_PANEL}>
+        <p role="alert" className="text-lg">
+          We couldn’t load your bag. Open the bag page to try again.
+        </p>
+        <NextLink
+          onClick={() => openPanel(null)}
+          href="/cart"
+          className={buttonClasses({ className: 'mt-2' })}
+        >
           Open your bag
         </NextLink>
       </div>
     );
   if (!cart.data?.items.length)
     return (
-      <div className="flex flex-col items-center gap-5 px-6 py-16 text-center">
-        <ShoppingBag className="size-12 text-emphasis" aria-hidden="true" strokeWidth={1.3} />
-        <p className="font-display text-2xl font-bold">A little room for lovely things.</p>
-        <p className="text-foreground-muted">Your bag is empty. Let’s find their next favourite.</p>
-        <NextLink href="/shop" onClick={() => openPanel(null)} className={buttonClasses()}>
-          Explore the shop
+      <div className={EMPTY_PANEL}>
+        <p className={EMPTY_TITLE}>Your bag is empty</p>
+        <p className="text-foreground-muted">Clothes you add wait here until you check out.</p>
+        <NextLink
+          href="/shop"
+          onClick={() => openPanel(null)}
+          className={buttonClasses({ className: 'mt-2' })}
+        >
+          Shop everything
         </NextLink>
       </div>
     );
@@ -247,46 +288,50 @@ function CartContent() {
             <NextLink
               onClick={() => openPanel(null)}
               href={`/shop/${item.product.slug}`}
-              className="h-28 w-22 shrink-0 overflow-hidden rounded-xl"
+              tabIndex={-1}
+              aria-hidden="true"
+              className={THUMB}
             >
-              <ProductPhoto src={item.product.images[0]?.url} alt={item.product.name} sizes="100px" />
+              <ProductPhoto src={item.product.images[0]?.url} alt="" sizes="100px" fit="contain" />
             </NextLink>
-            <div className="flex-1">
+            <div className="flex min-w-0 flex-1 flex-col gap-1">
               <NextLink
                 onClick={() => openPanel(null)}
                 href={`/shop/${item.product.slug}`}
-                className="font-semibold"
+                className="rounded-sm leading-snug font-semibold"
               >
                 {item.product.name}
               </NextLink>
-              <p className="mt-2 text-sm text-foreground-muted">
-                {item.variant.size.code} · {item.variant.color}
+              <p className="text-[15px] text-foreground-muted">
+                Size {item.variant.size.code}, {item.variant.color}
               </p>
-              <p className="mt-2 text-sm">Quantity {item.quantity}</p>
-              <MoneyText value={item.lineTotal} className="mt-2 block font-semibold" />
+              <p className="text-[15px] text-foreground-muted">Quantity {item.quantity}</p>
+              <MoneyText value={item.lineTotal} className="mt-auto block font-semibold" />
             </div>
           </li>
         ))}
       </ul>
-      <div className="sticky bottom-0 mt-auto space-y-4 border-t border-border bg-white p-6">
-        <p className="flex justify-between font-bold">
+      <div className="sticky bottom-0 mt-auto flex flex-col gap-3 border-t border-border bg-surface px-6 pt-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+        <p className="flex justify-between text-lg font-semibold">
           <span>Subtotal</span>
           <MoneyText value={cart.data.subtotal} />
         </p>
-        <p className="text-sm text-foreground-muted">Delivery options and totals are shown at checkout.</p>
+        <p className="text-[15px] text-foreground-muted">
+          Delivery options and your total are shown at checkout.
+        </p>
         <NextLink
           href="/checkout"
           onClick={() => openPanel(null)}
-          className={buttonClasses({ fullWidth: true, size: 'lg' })}
+          className={buttonClasses({ fullWidth: true, size: 'lg', className: 'cta' })}
         >
-          Checkout <ArrowRight className="size-4" aria-hidden="true" />
+          Checkout
         </NextLink>
         <NextLink
           href="/cart"
           onClick={() => openPanel(null)}
-          className="block py-2 text-center font-semibold underline underline-offset-4"
+          className="self-center rounded-md py-2.5 font-medium underline underline-offset-4"
         >
-          View & edit your bag
+          View and edit your bag
         </NextLink>
       </div>
     </>
@@ -295,59 +340,73 @@ function CartContent() {
 
 function SavedContent() {
   const { saved, removeSaved, openPanel } = useStorefront();
+  if (!saved.length)
+    return (
+      <div className={EMPTY_PANEL}>
+        <p className={EMPTY_TITLE}>No favourites yet</p>
+        <p className="text-foreground-muted">
+          Tap the heart on anything you like and it stays here, on this device.
+        </p>
+        <NextLink
+          href="/shop"
+          onClick={() => openPanel(null)}
+          className={buttonClasses({ className: 'mt-2' })}
+        >
+          Shop everything
+        </NextLink>
+      </div>
+    );
   return (
-    <div className="p-6">
-      <p className="mb-6 text-base text-foreground-muted">A few things you love, saved on this device.</p>
-      {saved.length ? (
-        <ul className="space-y-5">
-          {saved.map((item) => (
-            <li key={item.id} className="flex gap-4">
+    <div className="px-6 pb-8">
+      <ul className="divide-y divide-border">
+        {saved.map((item) => (
+          <li key={item.id} className="flex gap-4 py-5">
+            <NextLink
+              onClick={() => openPanel(null)}
+              href={`/shop/${item.slug}`}
+              tabIndex={-1}
+              aria-hidden="true"
+              className={THUMB}
+            >
+              <ProductPhoto src={item.image} alt="" sizes="100px" fit="contain" />
+            </NextLink>
+            <div className="flex min-w-0 flex-1 flex-col items-start gap-1">
               <NextLink
                 onClick={() => openPanel(null)}
                 href={`/shop/${item.slug}`}
-                className="h-28 w-22 shrink-0 overflow-hidden rounded-xl"
+                className="rounded-sm leading-snug font-semibold"
               >
-                <ProductPhoto src={item.image} alt={item.name} sizes="100px" />
+                {item.name}
               </NextLink>
-              <div className="flex-1">
-                <NextLink
-                  onClick={() => openPanel(null)}
-                  href={`/shop/${item.slug}`}
-                  className="font-semibold"
-                >
-                  {item.name}
-                </NextLink>
-                {item.price ? <MoneyText value={item.price} className="mt-2 block" /> : null}
-                <button
-                  type="button"
-                  onClick={() => removeSaved(item.id)}
-                  className="mt-2 min-h-11 text-sm underline underline-offset-4"
-                >
-                  Remove {item.name} from favourites
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <div className="flex flex-col items-center gap-5 py-10 text-center">
-          <Heart className="size-12 text-emphasis" aria-hidden="true" strokeWidth={1.3} />
-          <p className="font-display text-2xl font-bold">Found something lovely?</p>
-          <p>Tap a heart to keep it here.</p>
-          <NextLink href="/shop" onClick={() => openPanel(null)} className={buttonClasses()}>
-            Find a favourite
-          </NextLink>
-        </div>
-      )}
+              {item.price ? (
+                <MoneyText value={item.price} className="block text-[15px] text-foreground-muted" />
+              ) : null}
+              <button
+                type="button"
+                onClick={() => removeSaved(item.id)}
+                className="mt-auto min-h-11 rounded-md text-[15px] font-medium underline underline-offset-4"
+              >
+                Remove<span className="sr-only"> {item.name} from favourites</span>
+              </button>
+            </div>
+          </li>
+        ))}
+      </ul>
+      <p className="pt-4 text-[15px] text-foreground-muted">Favourites are saved on this device.</p>
     </div>
   );
 }
+
+const TITLES = { menu: 'Menu', saved: 'Your favourites', cart: 'Your bag' } as const;
 
 /** Native modal provides Escape, inert background, focus containment and return to its trigger. */
 export function StorefrontDrawer() {
   const { panel, openPanel } = useStorefront();
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
+  // Keep showing the last panel while the dialog slides shut, so it never closes empty.
+  const [shown, setShown] = useState<Exclude<Panel, null>>('menu');
+  if (panel && panel !== shown) setShown(panel);
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
@@ -372,14 +431,10 @@ export function StorefrontDrawer() {
         if (event.target === event.currentTarget) openPanel(null);
       }}
     >
-      <div className="flex min-h-full flex-col bg-white">
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-white px-6 py-4">
-          <h2 id={titleId} className="font-display text-2xl font-bold">
-            {panel === 'menu'
-              ? 'Hello, little shopper.'
-              : panel === 'saved'
-                ? 'Your little favourites'
-                : 'Your shopping bag'}
+      <div className="flex min-h-full flex-col bg-surface">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-surface py-3 pr-4 pl-6">
+          <h2 id={titleId} className="text-2xl font-semibold tracking-[-0.03em]">
+            {TITLES[shown]}
           </h2>
           <button
             type="button"
@@ -387,16 +442,10 @@ export function StorefrontDrawer() {
             className="retail-icon-button"
             onClick={() => openPanel(null)}
           >
-            <X className="size-5" aria-hidden="true" />
+            <X className="size-[22px]" strokeWidth={1.8} aria-hidden="true" />
           </button>
         </div>
-        {panel === 'menu' ? (
-          <MenuContent />
-        ) : panel === 'saved' ? (
-          <SavedContent />
-        ) : panel === 'cart' ? (
-          <CartContent />
-        ) : null}
+        {shown === 'menu' ? <MenuContent /> : shown === 'saved' ? <SavedContent /> : <CartContent />}
       </div>
     </dialog>
   );

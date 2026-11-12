@@ -3,6 +3,7 @@
 import { AddToCartMutation, type ProductDetail } from '@bambino/api-client';
 import { Alert, Button, MoneyText, buttonClasses, cn, useToast } from '@bambino/ui';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Check } from 'lucide-react';
 import NextLink from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
@@ -14,6 +15,13 @@ import { CART_KEY } from './header-actions';
 import { useStorefront } from './storefront/storefront-context';
 
 type Variant = ProductDetail['variants'][number];
+
+const LEGEND = 'mb-2.5 text-lg font-semibold';
+const CHOICE =
+  'relative flex min-h-12 items-center justify-center rounded-xl border px-4 text-center transition-colors has-focus-visible:outline-[3px] has-focus-visible:outline-offset-[3px] has-focus-visible:outline-primary';
+const CHOICE_ON = 'cursor-pointer border-primary bg-primary font-semibold text-primary-foreground';
+const CHOICE_OFF = 'cursor-pointer border-border-strong bg-surface font-medium hover:bg-accent-soft';
+const CHOICE_GONE = 'cursor-not-allowed border-dashed border-border bg-surface-muted text-foreground-muted';
 
 /** Size and colour choice plus "Add to cart". Prices shown come from the server; the cart re-prices on every read. */
 export function AddToCart({ variants, oneTimeEligible }: { variants: Variant[]; oneTimeEligible: boolean }) {
@@ -40,19 +48,13 @@ export function AddToCart({ variants, oneTimeEligible }: { variants: Variant[]; 
   });
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6">
       {colors.length > 1 ? (
-        <fieldset className="flex flex-col gap-2">
-          <legend className="mb-1 font-display text-lg font-semibold">Colour</legend>
+        <fieldset>
+          <legend className={LEGEND}>Colour</legend>
           <div className="flex flex-wrap gap-2">
             {colors.map((c) => (
-              <label
-                key={c}
-                className={cn(
-                  buttonClasses({ size: 'sm', variant: c === color ? 'primary' : 'outline' }),
-                  'cursor-pointer has-focus-visible:outline-2 has-focus-visible:outline-focus',
-                )}
-              >
+              <label key={c} className={cn(CHOICE, c === color ? CHOICE_ON : CHOICE_OFF)}>
                 <input
                   type="radio"
                   name="color"
@@ -71,39 +73,52 @@ export function AddToCart({ variants, oneTimeEligible }: { variants: Variant[]; 
         </fieldset>
       ) : null}
 
-      <fieldset className="flex flex-col gap-2">
-        <legend className="mb-1 font-display text-lg font-semibold">
-          Size{' '}
-          {colors.length === 1 ? (
-            <span className="font-sans text-sm font-normal text-foreground-muted">· {color}</span>
+      <fieldset>
+        <legend className={LEGEND}>
+          Size
+          {colors.length === 1 && color ? (
+            <span className="font-normal text-foreground-muted">, {color}</span>
           ) : null}
         </legend>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {forColor.map((variant) => (
-            <label
-              key={variant.id}
-              className={cn(
-                'flex cursor-pointer flex-col rounded-lg border p-3 text-sm has-focus-visible:outline-2 has-focus-visible:outline-focus',
-                variant.id === variantId
-                  ? 'border-primary bg-primary-soft'
-                  : 'border-border-strong bg-surface',
-                !variant.inStock && 'cursor-not-allowed border-border bg-surface-muted text-foreground-muted',
-              )}
-            >
-              <input
-                type="radio"
-                name="variant"
-                value={variant.id}
-                disabled={!variant.inStock}
-                checked={variant.id === variantId}
-                onChange={() => setVariantId(variant.id)}
-                className="sr-only"
-              />
-              <span className="font-semibold">{displaySizeLabel(variant.size.label)}</span>
-              <span>{variant.inStock ? 'In stock' : 'Sold out'}</span>
-            </label>
-          ))}
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-3 xl:grid-cols-4">
+          {forColor.map((variant) => {
+            const on = variant.id === variantId;
+            return (
+              <label
+                key={variant.id}
+                className={cn(
+                  CHOICE,
+                  'flex-col gap-0.5 py-2',
+                  !variant.inStock ? CHOICE_GONE : on ? CHOICE_ON : CHOICE_OFF,
+                )}
+              >
+                <input
+                  type="radio"
+                  name="variant"
+                  value={variant.id}
+                  disabled={!variant.inStock}
+                  checked={on}
+                  onChange={() => setVariantId(variant.id)}
+                  className="sr-only"
+                />
+                <span className="flex items-center gap-1.5">
+                  {on ? <Check className="count-pop size-4" strokeWidth={2.4} aria-hidden="true" /> : null}
+                  {displaySizeLabel(variant.size.label)}
+                </span>
+                {!variant.inStock ? <span className="text-[13px] font-normal">Sold out</span> : null}
+              </label>
+            );
+          })}
         </div>
+        <p className="mt-3 text-[15px] text-foreground-muted">
+          Not sure which size?{' '}
+          <NextLink
+            href="/fit"
+            className="rounded-sm font-medium text-foreground underline underline-offset-4"
+          >
+            Find their size
+          </NextLink>
+        </p>
       </fieldset>
 
       {add.isError ? (
@@ -112,30 +127,26 @@ export function AddToCart({ variants, oneTimeEligible }: { variants: Variant[]; 
         </Alert>
       ) : null}
 
-      <div className="fixed inset-x-0 bottom-0 z-30 flex items-center gap-4 border-t border-border bg-white px-5 pt-3 pb-[max(.75rem,env(safe-area-inset-bottom))] shadow-[0_-3px_16px_#19243d0a] lg:static lg:z-auto lg:flex-wrap lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none">
-        <div className="min-w-0 shrink-0 lg:hidden">
-          {selected ? (
-            <>
-              <span className="block text-sm text-foreground-muted">Size {selected.size.code}</span>
-              <MoneyText value={selected.price} className="font-bold" />
-            </>
-          ) : (
-            <span className="text-sm font-semibold">
-              Their next
-              <br />
-              little favourite
-            </span>
-          )}
-        </div>
-        <div className="flex min-w-0 flex-1 flex-wrap gap-3">
+      {/* Phones: pinned above the bottom bar, so the button is always in reach. Desktop: in the column. */}
+      <div className="buy-bar fixed inset-x-0 bottom-[var(--bottom-nav)] z-30 flex items-center gap-4 border-t border-border bg-surface px-[var(--gutter)] py-3 shadow-bar lg:static lg:z-auto lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none">
+        {selected ? (
+          <div className="min-w-0 shrink-0 lg:hidden">
+            <span className="block text-sm text-foreground-muted">Size {selected.size.code}</span>
+            <MoneyText value={selected.price} className="font-semibold" />
+          </div>
+        ) : null}
+        <div className="flex min-w-0 flex-1">
           {!oneTimeEligible ? (
-            <p className="text-sm text-foreground-muted">This piece is not currently available to buy.</p>
+            <p className="py-2 text-[15px] text-foreground-muted">
+              This piece is not available to buy right now.
+            </p>
           ) : viewer ? (
             <Button
               size="lg"
               fullWidth
               disabled={!selected}
               loading={add.isPending}
+              className="cta"
               onClick={() => selected && add.mutate(selected.id)}
             >
               {selected ? 'Add to cart' : 'Choose a size'}
@@ -143,14 +154,13 @@ export function AddToCart({ variants, oneTimeEligible }: { variants: Variant[]; 
           ) : (
             <NextLink
               href={`/login?next=${encodeURIComponent(pathname)}`}
-              className={buttonClasses({ size: 'lg' })}
+              className={buttonClasses({ size: 'lg', fullWidth: true, className: 'cta' })}
             >
               Sign in to buy
             </NextLink>
           )}
         </div>
       </div>
-      <div className="h-20 lg:hidden" aria-hidden="true" />
     </div>
   );
 }
