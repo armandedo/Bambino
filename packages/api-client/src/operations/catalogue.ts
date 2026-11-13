@@ -28,8 +28,18 @@ export interface ProductCard {
   category: CategorySummary;
   images: { id: string; url: string; altText: string }[];
   priceFrom: Money | null;
-  /** `inStock`: new units for sale. `availableForSubscription`: a tagged garment can be reserved now. */
-  variants: { id: string; inStock: boolean; availableForSubscription: boolean; size: SizeSummary }[];
+  /**
+   * `inStock`: new units for sale. `availableForSubscription`: a tagged garment can be reserved now.
+   * Colour and price let the shop offer "Choose options" from a product card without a second request.
+   */
+  variants: {
+    id: string;
+    color: string;
+    inStock: boolean;
+    availableForSubscription: boolean;
+    price: Money;
+    size: SizeSummary;
+  }[];
 }
 
 const PRODUCT_CARD_FIELDS = `
@@ -37,7 +47,7 @@ const PRODUCT_CARD_FIELDS = `
   category { id slug name }
   images { id url altText }
   priceFrom { amount currency }
-  variants { id inStock availableForSubscription size { code label sortOrder } }
+  variants { id color inStock availableForSubscription price { amount currency } size { code label sortOrder } }
 `;
 
 export type ProductSort = 'NEWEST' | 'PRICE_ASC' | 'PRICE_DESC' | 'NAME_ASC';
@@ -46,6 +56,9 @@ export interface ProductFilter {
   search?: string;
   categorySlug?: string;
   sizeCodes?: string[];
+  /** Whole francs. */
+  minPrice?: number;
+  maxPrice?: number;
   inStockOnly?: boolean;
   subscriptionEligible?: boolean;
   oneTimeEligible?: boolean;

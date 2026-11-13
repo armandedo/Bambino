@@ -78,7 +78,7 @@ export function PayOnDeliveryPanel({
   return (
     <div className="flex flex-col gap-3 border-t border-border pt-4">
       <div>
-        <h3 className="font-display text-lg font-semibold">Or pay when it arrives</h3>
+        <h3 className="text-base font-semibold">Or pay when it arrives</h3>
         <p className="text-sm text-foreground-muted">
           Pay <MoneyText value={total} className="font-semibold" /> from your mobile money wallet when your
           order reaches you. When the courier is at your door we send a payment request to the wallet you

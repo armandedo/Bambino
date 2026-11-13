@@ -144,11 +144,7 @@ function StepFrame({
       }}
     >
       <div className="flex flex-col gap-2">
-        <h2
-          ref={headingRef}
-          tabIndex={-1}
-          className="font-display text-3xl font-semibold text-primary focus:outline-none sm:text-4xl"
-        >
+        <h2 ref={headingRef} tabIndex={-1} className="text-lg font-semibold focus:outline-none">
           {title}
         </h2>
         {hint ? <p className="text-foreground-muted">{hint}</p> : null}
@@ -372,9 +368,7 @@ export function FitWizard() {
   } else if (step === 'account') {
     body = (
       <div className="flex flex-col gap-5">
-        <h2 className="font-display text-3xl font-semibold text-primary">
-          Create a free account to see the result
-        </h2>
+        <h2 className="text-lg font-semibold">Create a free account to see the result</h2>
         <p className="text-foreground-muted">
           We save your baby’s details to your account so the recommendation improves as your baby grows. Only
           you and authorised Bambino staff can see them. Your answers are kept in this tab while you sign up.
@@ -399,7 +393,7 @@ export function FitWizard() {
             transition={{ duration: 1, ease: 'linear', repeat: Infinity }}
           />
         </div>
-        <p className="font-display text-2xl font-semibold text-primary">Comparing with our size chart…</p>
+        <p className="text-lg font-semibold">Comparing with our size chart…</p>
         <p className="text-foreground-muted">
           Checking age{draft.heightCm ? ', height' : ''}
           {draft.weightKg ? ' and weight' : ''}.
@@ -428,14 +422,14 @@ export function FitWizard() {
   if (loading || (viewer && babies.isPending)) {
     return (
       <div
-        className="h-72 animate-pulse rounded-2xl bg-surface-muted motion-reduce:animate-none"
+        className="h-72 animate-pulse rounded-lg bg-surface-muted motion-reduce:animate-none"
         aria-busy="true"
       />
     );
   }
 
   return (
-    <div className="flex flex-col gap-8 rounded-2xl border border-border bg-surface p-6 shadow-sm sm:p-10">
+    <div className="flex flex-col gap-6 rounded-lg border border-border p-4 sm:p-6">
       <Progress steps={labels} current={position} />
       <AnimatePresence mode="wait" initial={false}>
         <motion.div

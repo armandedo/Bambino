@@ -15,15 +15,14 @@ const spaceGrotesk = localFont({
 });
 
 export const metadata: Metadata = {
-  title: { default: 'Bambino · Little clothes, lovely everyday moments', template: '%s · Bambino' },
-  description:
-    'Shop clothes for babies, kids and teens, from newborn through age 17. Discover everyday outfits, sleepwear and occasion favourites at Bambino, Kigali.',
+  title: { default: 'Bambino | Clothes for babies, kids and teens in Kigali', template: '%s | Bambino' },
+  description: 'Shop clothes for babies, kids and teens, from newborn through age 17, at Bambino in Kigali.',
   // Preview build: keep it out of search engines until launch.
   robots: { index: false, follow: false },
 };
 
 export const viewport: Viewport = {
-  themeColor: '#FFFAF5',
+  themeColor: '#ffffff',
 };
 
 export default async function RootLayout({ children }: { children: ReactNode }) {

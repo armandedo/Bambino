@@ -17,6 +17,8 @@ const config: NextConfig = {
   poweredByHeader: false,
   images: {
     formats: ['image/webp'],
+    // Product photos are large originals that rarely change: keep each resized copy for a day, not four hours.
+    minimumCacheTTL: 86_400,
     remotePatterns: [
       {
         protocol: 'https',
@@ -42,19 +44,17 @@ const config: NextConfig = {
       { source: '/plans', destination: '/shop', permanent: true },
       { source: '/dashboard/subscription/:path*', destination: '/shop', permanent: true },
       { source: '/dashboard/wardrobe', destination: '/dashboard/orders', permanent: true },
-      { source: '/dashboard/exchange', destination: '/how-it-works', permanent: true },
-      { source: '/exchange', destination: '/how-it-works', permanent: true },
-      { source: '/sustainability', destination: '/about', permanent: true },
+      { source: '/dashboard/exchange', destination: '/delivery-returns', permanent: true },
+      { source: '/exchange', destination: '/delivery-returns', permanent: true },
+      { source: '/how-it-works', destination: '/delivery-returns', permanent: true },
+      { source: '/about', destination: '/shop', permanent: true },
+      { source: '/sustainability', destination: '/shop', permanent: true },
       { source: '/size-finder', destination: '/fit', permanent: true },
       { source: '/account/settings', destination: '/account', permanent: true },
       { source: '/account/baby', destination: '/dashboard/baby', permanent: true },
-      { source: '/account/exchanges', destination: '/how-it-works', permanent: true },
+      { source: '/account/exchanges', destination: '/delivery-returns', permanent: true },
       { source: '/account/orders/:path*', destination: '/dashboard/orders/:path*', permanent: true },
-      {
-        source: '/account/subscription/:path*',
-        destination: '/shop',
-        permanent: true,
-      },
+      { source: '/account/subscription/:path*', destination: '/shop', permanent: true },
       { source: '/product/:slug', destination: '/shop/:slug', permanent: true },
     ];
   },

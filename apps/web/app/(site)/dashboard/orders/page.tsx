@@ -24,7 +24,7 @@ export default function OrdersPage() {
           list.length === 0 ? (
             <EmptyState
               title="No orders yet"
-              description="When you buy something or a subscription cycle starts, it appears here."
+              description="When you place an order, it appears here."
               action={
                 <NextLink href="/shop" className={buttonClasses()}>
                   Go to the shop

@@ -1,7 +1,7 @@
 import Image from 'next/image';
 
-/** The approved Little Romper wordmark, with a monochrome option for dark surfaces. */
-export function Logo({ inverse = false }: { inverse?: boolean }) {
+/** The Little Romper wordmark, sized for the compact shop header. */
+export function Logo() {
   return (
     <Image
       src="/brand/bambino-little-romper.webp"
@@ -9,7 +9,8 @@ export function Logo({ inverse = false }: { inverse?: boolean }) {
       width={1080}
       height={220}
       unoptimized
-      className={`block h-auto w-[8.25rem] sm:w-44${inverse ? ' brightness-0 invert' : ''}`}
+      loading="eager"
+      className="block h-auto w-[7.25rem] sm:w-36"
     />
   );
 }

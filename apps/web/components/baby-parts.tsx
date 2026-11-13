@@ -276,7 +276,7 @@ export function RecommendationCard({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-sm text-foreground-muted">Recommended size for {babyName}</p>
-          <h2 id={`rec-${recommendation.id}`} className="font-display text-4xl font-semibold text-primary">
+          <h2 id={`rec-${recommendation.id}`} className="text-2xl font-semibold">
             {recommendation.recommendedSize.label}
           </h2>
           <p className="font-semibold">{confidenceWords(recommendation.confidence)}</p>
@@ -294,8 +294,7 @@ export function RecommendationCard({
       </ul>
       {recommendation.nextSize ? (
         <p className="rounded-lg bg-accent-soft p-3 text-sm text-accent-soft-foreground">
-          Next size: <strong>{recommendation.nextSize.label}</strong>. Swap when you need it through returns
-          and exchanges.
+          Next size up: <strong>{recommendation.nextSize.label}</strong>.
         </p>
       ) : null}
       <p className="text-xs text-foreground-muted">

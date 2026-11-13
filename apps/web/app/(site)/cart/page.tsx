@@ -1,15 +1,12 @@
 import type { Metadata } from 'next';
 import { CartView } from './cart-view';
 
-export const metadata: Metadata = { title: 'Cart', robots: { index: false } };
+export const metadata: Metadata = { title: 'Your bag', robots: { index: false } };
 
 export default function CartPage() {
   return (
-    <div className="retail-container flex flex-col gap-8 py-8 sm:py-12">
-      <div className="border-b border-border pb-7">
-        <h1 className="font-display text-4xl font-bold tracking-[-.045em] sm:text-5xl">Your shopping bag</h1>
-        <p className="mt-3 text-base text-foreground-muted">Lovely little finds, ready when you are.</p>
-      </div>
+    <div className="retail-container flex flex-col gap-4 pt-4 pb-10">
+      <h1 className="text-xl font-semibold tracking-[-0.01em]">Your bag</h1>
       <CartView />
     </div>
   );

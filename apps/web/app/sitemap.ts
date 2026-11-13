@@ -8,7 +8,7 @@ export const revalidate = 3600;
 
 /** Public pages and every active product. If the API is down, the static pages are still listed. */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const pages = ['/', '/shop', '/fit', '/about', '/how-it-works'].map((path) => ({
+  const pages = ['/', '/shop', '/fit', '/help', '/delivery-returns', '/privacy', '/terms'].map((path) => ({
     url: `${SITE_URL}${path}`,
   }));
   const products = await load(ProductsQuery, { first: 100, filter: { oneTimeEligible: true } });

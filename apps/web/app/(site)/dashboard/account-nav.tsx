@@ -8,8 +8,8 @@ import { RequireAuth } from '@/components/require-auth';
 
 const LINKS = [
   { href: '/dashboard', label: 'Overview' },
-  { href: '/dashboard/baby', label: 'Baby & sizes' },
-  { href: '/dashboard/orders', label: 'Orders & delivery' },
+  { href: '/dashboard/baby', label: 'Children and sizes' },
+  { href: '/dashboard/orders', label: 'Orders' },
   { href: '/dashboard/payments', label: 'Payments' },
   { href: '/account', label: 'Settings' },
 ] as const;
@@ -19,10 +19,10 @@ export function AccountFrame({ children }: { children: ReactNode }) {
   return (
     <RequireAuth>
       {() => (
-        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-4 py-10 lg:grid-cols-[14rem_1fr]">
+        <div className="retail-container grid grid-cols-1 gap-5 py-5 lg:grid-cols-[13rem_1fr] lg:gap-10 lg:py-8">
           {/* min-w-0: lets the horizontally scrolling menu shrink to the screen instead of widening the page. */}
           <nav aria-label="Account" className="min-w-0">
-            <ul className="flex gap-1 overflow-x-auto pb-2 lg:flex-col lg:pb-0">
+            <ul className="no-scrollbar flex gap-1 overflow-x-auto lg:flex-col">
               {LINKS.map((link) => {
                 const current =
                   link.href === '/dashboard' ? pathname === '/dashboard' : pathname.startsWith(link.href);
@@ -32,8 +32,8 @@ export function AccountFrame({ children }: { children: ReactNode }) {
                       href={link.href}
                       aria-current={current ? 'page' : undefined}
                       className={cn(
-                        'flex min-h-11 items-center rounded-lg px-3 font-medium whitespace-nowrap focus-visible:outline-2 focus-visible:outline-focus',
-                        current ? 'bg-primary-soft text-primary-soft-foreground' : 'hover:bg-surface-muted',
+                        'flex min-h-11 items-center rounded-md px-3 text-sm font-medium whitespace-nowrap',
+                        current ? 'bg-primary text-primary-foreground' : 'hover:bg-surface-muted',
                       )}
                     >
                       {link.label}
@@ -43,7 +43,7 @@ export function AccountFrame({ children }: { children: ReactNode }) {
               })}
             </ul>
           </nav>
-          <div className="flex min-w-0 flex-col gap-6">{children}</div>
+          <div className="flex min-w-0 flex-col gap-5">{children}</div>
         </div>
       )}
     </RequireAuth>
@@ -62,8 +62,8 @@ export function PageTitle({
   return (
     <div className="flex flex-wrap items-end justify-between gap-4">
       <div className="flex flex-col gap-1">
-        <h1 className="font-display text-3xl font-semibold text-primary sm:text-4xl">{title}</h1>
-        {description ? <p className="text-foreground-muted">{description}</p> : null}
+        <h1 className="text-xl font-semibold md:text-2xl">{title}</h1>
+        {description ? <p className="text-sm text-foreground-muted">{description}</p> : null}
       </div>
       {action}
     </div>

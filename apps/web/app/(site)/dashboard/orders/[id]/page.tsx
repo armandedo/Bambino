@@ -84,7 +84,6 @@ export default function OrderPage() {
     setJustPaid(true);
     void queryClient.invalidateQueries({ queryKey: keys.order(id) });
     void queryClient.invalidateQueries({ queryKey: keys.orders });
-    void queryClient.invalidateQueries({ queryKey: keys.subscriptions });
   }, [queryClient, id]);
 
   return (
