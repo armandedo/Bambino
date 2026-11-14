@@ -1,5 +1,5 @@
 import { CatalogueFiltersQuery, type ProductFilter, ProductsQuery } from '@bambino/api-client';
-import { EmptyState, MoneyText, buttonClasses, cn } from '@bambino/ui';
+import { EmptyState, MoneyText, buttonClasses } from '@bambino/ui';
 import { X } from 'lucide-react';
 import NextLink from 'next/link';
 import type { ReactNode } from 'react';
@@ -18,16 +18,10 @@ import {
 } from '@/lib/shop-url';
 import { displaySizeLabel } from '@/lib/size-label';
 import { FilterBar } from './filter-bar';
+import { ShopTabs } from './shop-tabs';
 
 export type ShopSearchParams = Promise<Record<string, string | string[] | undefined>>;
 
-const SCROLL_ROW = 'no-scrollbar -mx-[var(--gutter)] flex overflow-x-auto px-[var(--gutter)]';
-const TAB =
-  'flex min-h-12 shrink-0 flex-col justify-center border-b-2 px-3 py-1.5 leading-tight whitespace-nowrap';
-const CHIP =
-  'inline-flex min-h-9 shrink-0 items-center rounded-full border px-3.5 text-sm whitespace-nowrap transition-colors';
-const CHIP_ON = 'border-primary bg-primary font-semibold text-primary-foreground';
-const CHIP_OFF = 'border-border bg-surface font-medium hover:border-border-strong';
 export const PRODUCT_GRID = 'grid grid-cols-2 gap-x-2.5 gap-y-5 md:grid-cols-4 md:gap-x-3 xl:grid-cols-5';
 
 function Removable({ href, label, children }: { href: string; label: string; children: ReactNode }) {
@@ -98,50 +92,31 @@ export async function ShopView({ searchParams }: { searchParams: ShopSearchParam
 
   return (
     <div className="retail-container flex flex-col pb-10">
-      <nav aria-label="Age groups" className="border-b border-border">
-        <ul className={SCROLL_ROW}>
-          {[{ slug: undefined, label: 'All ages', ages: 'Newborn to 17' }, ...SHOP_AGES].map((group) => {
-            const active = group.slug === age?.slug;
-            return (
-              <li key={group.slug ?? 'all'} className="-mb-px flex">
-                <NextLink
-                  href={shopHref(state, { age: group.slug, size: undefined })}
-                  aria-current={active ? 'page' : undefined}
-                  className={cn(
-                    TAB,
-                    active
-                      ? 'border-primary font-semibold'
-                      : 'border-transparent font-medium hover:border-border-strong',
-                  )}
-                >
-                  <span className="text-[15px]">{group.label}</span>
-                  <span className="text-xs font-normal text-foreground-muted">{group.ages}</span>
-                </NextLink>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
+      <ShopTabs
+        label="Age groups"
+        variant="underline"
+        className="border-b border-border"
+        activeKey={age?.slug ?? 'all'}
+        tabs={[{ slug: undefined, label: 'All ages', ages: 'Newborn to 17' }, ...SHOP_AGES].map((group) => ({
+          key: group.slug ?? 'all',
+          href: shopHref(state, { age: group.slug, size: undefined }),
+          label: group.label,
+          detail: group.ages,
+        }))}
+      />
 
       {categories.length > 0 ? (
-        <nav aria-label="Categories" className="pt-2.5">
-          <ul className={cn(SCROLL_ROW, 'gap-1.5 py-0.5')}>
-            {[{ id: 'all', slug: undefined, name: 'All' }, ...categories].map((item) => {
-              const active = item.slug === state.category;
-              return (
-                <li key={item.id} className="flex">
-                  <NextLink
-                    href={shopHref(state, { category: item.slug })}
-                    aria-current={active ? 'page' : undefined}
-                    className={cn(CHIP, active ? CHIP_ON : CHIP_OFF)}
-                  >
-                    {item.name}
-                  </NextLink>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
+        <ShopTabs
+          label="Categories"
+          variant="pill"
+          className="pt-2.5"
+          activeKey={state.category ?? 'all'}
+          tabs={[{ slug: undefined, name: 'All' }, ...categories].map((item) => ({
+            key: item.slug ?? 'all',
+            href: shopHref(state, { category: item.slug }),
+            label: item.name,
+          }))}
+        />
       ) : null}
 
       <div className="flex flex-col gap-2.5 pt-3.5 pb-3">
