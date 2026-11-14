@@ -16,13 +16,13 @@ Lint of edited admin/web forms, sizing code and regression tests passes, as does
 
 This attempt changed only this report. Existing implementation and saved patches were preserved. Checks ran sequentially, with no builds or app servers alongside the test suite. No deployment or live database access occurred.
 
-| Check | Actual result |
-| --- | --- |
-| Disposable seed suite | Failed during setup; three tests skipped. Command: `env -u TEST_DATABASE_URL pnpm --filter @bambino/database test seeds/seeds.test.ts --maxWorkers=1`. With that variable unset, `createTestDatabase()` uses in-memory PGlite. |
-| Storefront production build | Failed before producing a usable build. Command: `NEXT_PUBLIC_PREVIEW_BANNER=true NEXT_PUBLIC_API_URL=http://localhost:4100/graphql API_URL=http://127.0.0.1:4100/graphql NEXT_PUBLIC_SITE_URL=http://localhost:3000 timeout 600 pnpm --filter @bambino/web build --webpack`. |
-| Admin production build | Failed before producing a usable build. Command: `NEXT_PUBLIC_API_URL=http://localhost:4100/graphql timeout 600 pnpm --filter @bambino/admin build --webpack`. Started after the storefront build exited. |
-| TypeScript configuration diagnostic | Direct `node node_modules/typescript/bin/tsc --showConfig -p apps/web/tsconfig.json` produced 6,551 bytes of valid JSON and zero stderr. This does not establish why Next's invocation failed. |
-| Desktop/mobile storefront and authenticated admin browser inspection | Blocked by failed production builds. Age filters, price editing, remove/restore and stock status were **not browser-verified in this attempt**. Earlier API test results above remain separate evidence. No development server fallback or build restart was attempted. |
+| Check                                                                | Actual result                                                                                                                                                                                                                                                                 |
+| -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Disposable seed suite                                                | Failed during setup; three tests skipped. Command: `env -u TEST_DATABASE_URL pnpm --filter @bambino/database test seeds/seeds.test.ts --maxWorkers=1`. With that variable unset, `createTestDatabase()` uses in-memory PGlite.                                                |
+| Storefront production build                                          | Failed before producing a usable build. Command: `NEXT_PUBLIC_PREVIEW_BANNER=true NEXT_PUBLIC_API_URL=http://localhost:4100/graphql API_URL=http://127.0.0.1:4100/graphql NEXT_PUBLIC_SITE_URL=http://localhost:3000 timeout 600 pnpm --filter @bambino/web build --webpack`. |
+| Admin production build                                               | Failed before producing a usable build. Command: `NEXT_PUBLIC_API_URL=http://localhost:4100/graphql timeout 600 pnpm --filter @bambino/admin build --webpack`. Started after the storefront build exited.                                                                     |
+| TypeScript configuration diagnostic                                  | Direct `node node_modules/typescript/bin/tsc --showConfig -p apps/web/tsconfig.json` produced 6,551 bytes of valid JSON and zero stderr. This does not establish why Next's invocation failed.                                                                                |
+| Desktop/mobile storefront and authenticated admin browser inspection | Blocked by failed production builds. Age filters, price editing, remove/restore and stock status were **not browser-verified in this attempt**. Earlier API test results above remain separate evidence. No development server fallback or build restart was attempted.       |
 
 Exact seed error:
 
@@ -60,9 +60,9 @@ Inspected installed Next.js 16.3.8 `dist/lib/typescript/runTypeScriptCli.js`. `g
 
 Both apps resolve TypeScript **6.0.3**, at `/home/armandgedo/bambino/node_modules/.pnpm/typescript@6.0.3/node_modules/typescript/package.json`. Compiler: `/home/armandgedo/bambino/node_modules/.pnpm/typescript@6.0.3/node_modules/typescript/bin/tsc`. Executable: `/home/armandgedo/.nvm/versions/node/v24.19.0/bin/node`.
 
-| App | Working directory | Compiler arguments |
-| --- | --- | --- |
-| Web | `/home/armandgedo/bambino/apps/web` | `--showConfig --project /home/armandgedo/bambino/apps/web/tsconfig.json --pretty false` |
+| App   | Working directory                     | Compiler arguments                                                                        |
+| ----- | ------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Web   | `/home/armandgedo/bambino/apps/web`   | `--showConfig --project /home/armandgedo/bambino/apps/web/tsconfig.json --pretty false`   |
 | Admin | `/home/armandgedo/bambino/apps/admin` | `--showConfig --project /home/armandgedo/bambino/apps/admin/tsconfig.json --pretty false` |
 
 Called the installed `runTypeScriptCli` directly for each app, using those exact arguments. In the command sandbox both subprocesses returned exit code **0**, signal **null**, **0 stdout bytes**, **0 stderr bytes**. Output was empty, not truncated JSON or extra diagnostic text. `JSON.parse` failed with `Unexpected end of JSON input`. A direct Node spawn comparison also returned empty output with either detached setting.
@@ -120,11 +120,11 @@ The changed storefront production build exited **0**, with TypeScript checking e
 
 Both viewport runs passed these exact-product-link assertions on the **same `/`, `/shop`, and product detail URLs**, without any cache-expiry sleeps or cache-busting query parameters:
 
-| Transition | Desktop phase duration | Mobile phase duration | Result |
-| --- | --- | --- | --- |
-| Sell out one size/colour while another remains stocked | 14,538 ms | 7,319 ms | Product remains on default homepage/shop; sold-out size disabled; alternate colour remains selectable. |
-| Sell out every variant | 9,507 ms | 6,303 ms | Product disappears from default homepage/shop; detail stock status refreshes. |
-| Restock a variant | 13,131 ms | 8,798 ms | Product returns automatically on next request to those same listing URLs; detail variant is selectable again. |
+| Transition                                             | Desktop phase duration | Mobile phase duration | Result                                                                                                        |
+| ------------------------------------------------------ | ---------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Sell out one size/colour while another remains stocked | 14,538 ms              | 7,319 ms              | Product remains on default homepage/shop; sold-out size disabled; alternate colour remains selectable.        |
+| Sell out every variant                                 | 9,507 ms               | 6,303 ms              | Product disappears from default homepage/shop; detail stock status refreshes.                                 |
+| Restock a variant                                      | 13,131 ms              | 8,798 ms              | Product returns automatically on next request to those same listing URLs; detail variant is selectable again. |
 
 Durations include both listing navigations, screenshots and detail assertions, rather than measuring API latency. Stock changes were made immediately before each phase. This replaces the previous 65–100-second cache-wait procedure; no explicit TTL waits were used.
 
