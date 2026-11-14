@@ -142,6 +142,30 @@ function ProductForm({ product }: { product: AdminProduct | null }) {
     );
   }
 
+  const visibility = useAction(
+    () => {
+      if (!product) throw new Error('Save the product first.');
+      return api.request(AdminUpdateProductMutation, {
+        id: product.id,
+        input: {
+          name: product.name,
+          description: product.description,
+          brand: product.brand,
+          categoryId: product.category.id,
+          material: product.material,
+          sustainabilityInfo: product.sustainabilityInfo,
+          careInstructions: product.careInstructions,
+          subscriptionEligible: product.subscriptionEligible,
+          oneTimeEligible: product.oneTimeEligible,
+          isActive: !product.isActive,
+        },
+      });
+    },
+    {
+      success: product?.isActive ? 'Product removed from shop' : 'Product restored',
+      invalidate: [['admin-products'], ['admin-product', product?.id]],
+    },
+  );
   const readOnly = !can('product:write');
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate aria-label="Product details">
@@ -221,6 +245,16 @@ function ProductForm({ product }: { product: AdminProduct | null }) {
           <Checkbox name="isActive" label="Visible in the shop" defaultChecked={product?.isActive ?? false} />
         </div>
       </fieldset>
+      {product && !readOnly ? (
+        <Button
+          type="button"
+          variant="outline"
+          loading={visibility.isPending}
+          onClick={() => visibility.mutate(undefined)}
+        >
+          {product.isActive ? 'Remove from shop' : 'Restore to shop'}
+        </Button>
+      ) : null}
       {readOnly ? null : (
         <Button type="submit" className="w-fit" loading={save.isPending}>
           {product ? 'Save changes' : 'Create product'}
@@ -235,12 +269,17 @@ function Variants({ product }: { product: AdminProduct }) {
   const filters = useCatalogueFilters();
   const [error, setError] = useState<string | null>(null);
   const add = useAction(
-    (input: { sku: string; sizeCode: string; color: string; priceAmount: number }) =>
+    (input: { id?: string; sku: string; sizeCode: string; color: string; priceAmount: number }) =>
       api.request(AdminUpsertVariantMutation, { input: { productId: product.id, ...input } }),
     { success: 'Variant saved', invalidate: [['admin-product', product.id]] },
   );
   return (
     <div className="flex flex-col gap-4">
+      {error ? (
+        <Alert tone="danger" live>
+          {error}
+        </Alert>
+      ) : null}
       <DataTable
         caption="Variants"
         captionHidden
@@ -256,7 +295,37 @@ function Variants({ product }: { product: AdminProduct }) {
           },
           { key: 'size', header: 'Size', cell: (v) => v.size.label },
           { key: 'color', header: 'Colour', cell: (v) => v.color },
-          { key: 'price', header: 'Price', align: 'end', cell: (v) => <MoneyText value={v.price} /> },
+          {
+            key: 'price',
+            header: 'Price',
+            align: 'end',
+            cell: (v) =>
+              can('product:write') ? (
+                <form
+                  aria-label={`Edit price for ${v.sku}`}
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    const priceAmount = Number(new FormData(event.currentTarget).get('price'));
+                    if (!Number.isSafeInteger(priceAmount) || priceAmount <= 0)
+                      return setError('Price must be a positive whole number of francs.');
+                    setError(null);
+                    add.mutate({ id: v.id, sku: v.sku, sizeCode: v.size.code, color: v.color, priceAmount });
+                  }}
+                >
+                  <TextField
+                    label={`Price for ${v.sku} (RWF)`}
+                    name="price"
+                    inputMode="numeric"
+                    defaultValue={String(v.price.amount)}
+                  />
+                  <Button type="submit" loading={add.isPending}>
+                    Save price
+                  </Button>
+                </form>
+              ) : (
+                <MoneyText value={v.price} />
+              ),
+          },
           {
             key: 'stock',
             header: 'New stock',
@@ -454,7 +523,7 @@ function ProductEditor({ id }: { id: string }) {
           <div className="flex flex-col gap-6">
             <Card>
               <CardHeader title={product.name} description={`/shop/${product.slug}`} level={2} />
-              <ProductForm product={product} />
+              <ProductForm key={`${product.id}-${product.isActive}`} product={product} />
             </Card>
             <Card>
               <CardHeader title="Variants and prices" level={2} />

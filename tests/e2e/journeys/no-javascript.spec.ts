@@ -16,7 +16,7 @@ test('the home page calls to action work without JavaScript', async ({ page }) =
   await page.goto('/');
   const cta = page
     .getByRole('main')
-    .getByRole('link', { name: /Find my baby/ })
+    .getByRole('link', { name: /Shop new arrivals/ })
     .first();
   await expect(cta).toBeVisible();
   await expect(cta).toHaveCSS('opacity', '1');
@@ -24,7 +24,7 @@ test('the home page calls to action work without JavaScript', async ({ page }) =
   await expect(
     page
       .getByRole('main')
-      .getByRole('link', { name: /See plans and prices/ })
+      .getByRole('link', { name: /Need a hand with sizing/ })
       .first(),
   ).toBeVisible();
 });

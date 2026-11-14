@@ -72,6 +72,7 @@ function sizeFor(sizes: readonly SizeRange[], measure: Measure, value: number | 
   const first = defined[0];
   const last = defined[defined.length - 1];
   if (!first || !last) return null;
+  if (measure !== 'age' && value >= (bounds(last, measure)[1] ?? 0)) return null;
   return value < (bounds(first, measure)[0] ?? 0) ? first : last;
 }
 

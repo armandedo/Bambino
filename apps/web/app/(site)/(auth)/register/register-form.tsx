@@ -11,7 +11,7 @@ import { useSession } from '@/lib/session';
 
 type Errors = Partial<Record<'email' | 'password' | 'firstName' | 'lastName' | 'phone' | 'consents', string>>;
 
-export function RegisterForm({ next }: { next: string }) {
+export function RegisterForm({ next, initialEmail = '' }: { next: string; initialEmail?: string }) {
   const { register } = useSession();
   const router = useRouter();
   const [errors, setErrors] = useState<Errors>({});
@@ -88,7 +88,15 @@ export function RegisterForm({ next }: { next: string }) {
           error={errors.lastName}
         />
       </div>
-      <TextField label="Email" name="email" type="email" autoComplete="email" required error={errors.email} />
+      <TextField
+        defaultValue={initialEmail}
+        label="Email"
+        name="email"
+        type="email"
+        autoComplete="email"
+        required
+        error={errors.email}
+      />
       <TextField
         label="Phone (optional)"
         name="phone"

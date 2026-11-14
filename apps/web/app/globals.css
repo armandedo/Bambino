@@ -23,27 +23,273 @@
 .entrance {
   animation: entrance-rise 700ms var(--ease-brand) both;
 }
+.storefront .entrance {
+  animation-duration: 220ms;
+}
+
+/*
+ * Storefront palette: a white shop floor, quiet navy for words and buttons, and the Little Romper logo's apricot
+ * for the few things that should catch the eye. The soft, link and focus tokens are set here too, so shared
+ * components stop falling back to the old blue theme.
+ */
+@theme {
+  --color-background: #ffffff;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f6f4f1;
+  --color-surface-sunken: #f6f4f1;
+  --color-border: #e7e3de;
+  --color-border-strong: #8d8780;
+  --color-primary: #19243d;
+  --color-primary-hover: #2b3a56;
+  --color-primary-soft: #fbece3;
+  --color-primary-soft-foreground: #19243d;
+  --color-foreground: #19243d;
+  --color-foreground-muted: #5f5e5b;
+  --color-accent: #e9b69c;
+  --color-accent-hover: #efc5b0;
+  --color-accent-foreground: #19243d;
+  --color-accent-soft: #fbece3;
+  --color-accent-soft-foreground: #754831;
+  --color-emphasis: #935535;
+  --color-link: #19243d;
+  --color-focus: #19243d;
+
+  /* Older screens still name these two scales. Point them at the storefront palette. */
+  --color-brand-50: #f6f4f1;
+  --color-brand-100: #e7e3de;
+  --color-brand-700: #19243d;
+  --color-accent-200: #efc5b0;
+
+  /* Tighter corners than the shared theme: a shop shelf, not a set of soft cards. */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.5rem;
+  --radius-2xl: 0.625rem;
+  --radius-3xl: 0.75rem;
+
+  /* The theme ships without shadows. These two are the only ones the storefront uses. */
+  --shadow-lift: 0 12px 32px rgb(25 36 61 / 0.14);
+  --shadow-bar: 0 -6px 20px rgb(25 36 61 / 0.08);
+
+  /* Arrivals: quick start, long soft landing. */
+  --ease-settle: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+html {
+  scroll-padding-top: 7.5rem;
+}
+@media (min-width: 1024px) {
+  html {
+    scroll-padding-top: 5.5rem;
+  }
+}
+
+/* Page frame. One gutter for the header, every page and the footer. */
+.storefront {
+  --gutter: clamp(12px, 2.6vw, 40px);
+}
+.retail-container {
+  width: 100%;
+  max-width: calc(1440px + 2 * var(--gutter, 12px));
+  margin-inline: auto;
+  padding-inline: var(--gutter, 12px);
+}
+/* Reading pages (help, terms) and forms keep a comfortable line length inside the same gutters. */
+.retail-narrow {
+  width: 100%;
+  max-width: calc(46rem + 2 * var(--gutter, 12px));
+  margin-inline: auto;
+  padding-inline: var(--gutter, 12px);
+}
+
+/* Keep storefront calls to action conversational without changing admin UI primitives. */
+.storefront :is(a, button).rounded-full {
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+/* Keyboard focus: navy on white. */
+.storefront :is(a, button, input, select, textarea, summary):focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Round 40px icon control (drawer close, save a product). */
+.retail-icon-button {
+  display: inline-flex;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  transition: background-color 150ms;
+}
+.retail-icon-button:hover {
+  background-color: var(--color-surface-muted);
+}
+
+/* The one big button on a screen: add to bag, checkout. */
+.storefront .cta {
+  min-height: 48px;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/* Compact select used by the shop toolbar. The arrow is drawn here so the control keeps one look everywhere. */
+.shop-select {
+  appearance: none;
+  min-height: 40px;
+  max-width: 100%;
+  padding: 0 2rem 0 0.875rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background-color: var(--color-surface);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2319243d' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  color: var(--color-foreground);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.shop-select:hover {
+  border-color: var(--color-border-strong);
+}
+.shop-select[data-on='true'] {
+  border-color: var(--color-primary);
+  background-color: var(--color-accent-soft);
+}
+.shop-input {
+  min-height: 40px;
+  width: 100%;
+  padding: 0 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background-color: var(--color-surface);
+  color: var(--color-foreground);
+  /* 16px on phones stops iOS zooming the page when the field is tapped. */
+  font-size: 1rem;
+}
+@media (min-width: 1024px) {
+  .shop-input {
+    font-size: 0.875rem;
+  }
+}
+.shop-input::placeholder {
+  color: var(--color-foreground-muted);
+}
+
+/*
+ * The product page pins its buy button to the bottom of a phone screen. Leave room for it at the end of the page,
+ * and keep keyboard focus from landing underneath it.
+ */
+@media (max-width: 1023.98px) {
+  .storefront:has(.buy-bar) {
+    scroll-padding-bottom: 6rem;
+  }
+  .storefront:has(.buy-bar) footer {
+    padding-bottom: 76px;
+  }
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Small confirmations: the bag count when it changes, a size when it is chosen. */
+@keyframes count-pop {
+  from {
+    transform: scale(0.4);
+  }
+  60% {
+    transform: scale(1.2);
+  }
+}
+.count-pop {
+  animation: count-pop 320ms ease-out;
+}
+
+/*
+ * Side panel for product options, favourites and the bag. It slides in on open. Browsers that can transition a
+ * closing dialog also slide it back out; the others simply close it.
+ */
+.retail-drawer {
+  position: fixed;
+  inset: 0 0 0 auto;
+  width: min(420px, 100%);
+  height: 100dvh;
+  max-width: 100%;
+  max-height: 100dvh;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  color: var(--color-foreground);
+  background: var(--color-surface);
+  overscroll-behavior: contain;
+  transform: translateX(100%);
+  transition:
+    transform 180ms ease-in,
+    overlay 180ms allow-discrete,
+    display 180ms allow-discrete;
+}
+.retail-drawer[open] {
+  transform: none;
+  animation: retail-drawer-enter 240ms var(--ease-settle);
+}
+.retail-drawer::backdrop {
+  background: rgb(25 36 61 / 0.4);
+  opacity: 0;
+  transition:
+    opacity 180ms ease-in,
+    overlay 180ms allow-discrete,
+    display 180ms allow-discrete;
+}
+.retail-drawer[open]::backdrop {
+  opacity: 1;
+  animation: retail-backdrop-enter 240ms ease-out;
+}
+@keyframes retail-drawer-enter {
+  from {
+    transform: translateX(100%);
+  }
+}
+@keyframes retail-backdrop-enter {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Visitors who ask their system for less motion get every state at once, with no waiting. */
 @media (prefers-reduced-motion: reduce) {
   .entrance {
     animation: none;
   }
+  .storefront *,
+  .storefront *::before,
+  .storefront *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
+    scroll-behavior: auto !important;
+  }
 }
 
-/*
- * The growth ruler in the home hero: each mark is drawn in once, from the baseline up. Transform only, so every
- * mark is in the server HTML and visible without JavaScript; off for reduced motion.
- */
-@keyframes ruler-mark {
-  from {
-    transform: scaleX(0);
-  }
+/* The header search is one pill: the outline goes around the whole field, not the text box inside it. */
+.storefront .search-field input:focus-visible {
+  outline: none;
 }
-.ruler-mark {
-  transform-origin: left center;
-  animation: ruler-mark 600ms var(--ease-brand) both;
+.storefront .search-field:has(input:focus-visible) {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
 }
-@media (prefers-reduced-motion: reduce) {
-  .ruler-mark {
-    animation: none;
-  }
+
+/* Fields are pills; a multi-line box with pill corners looks pinched, so it gets ordinary rounded corners. */
+.storefront textarea {
+  border-radius: 0.75rem;
 }

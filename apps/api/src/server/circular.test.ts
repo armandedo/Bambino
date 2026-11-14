@@ -240,7 +240,7 @@ describe('baby profiles and sizing', () => {
       errorReason(
         await t.gql(
           CREATE_BABY,
-          { input: { nickname: 'X', dateOfBirth: '2010-01-01' } },
+          { input: { nickname: 'X', dateOfBirth: '2008-10-01' } },
           { token: parent.accessToken },
         ),
       ),
@@ -798,4 +798,16 @@ describe('exchange rejection and staff garment controls', () => {
       errorReason(await t.gql(adjust, { id: parent.userId, amount: -5_000 }, { token: finance.accessToken })),
     ).toBe('NEGATIVE_BALANCE');
   });
+});
+
+it('accepts a 17-year-old profile and adolescent measurements', async () => {
+  const parent = await t.registerCustomer();
+  const result = await t.gql(
+    CREATE_BABY,
+    {
+      input: { nickname: 'Teen', dateOfBirth: '2009-01-01', measurement: { heightMm: 1800, weightG: 75000 } },
+    },
+    { token: parent.accessToken },
+  );
+  expect(result.errors).toBeUndefined();
 });

@@ -22,7 +22,7 @@ import { errorMessage } from '@/lib/messages';
 function Step({ number, title, children }: { number: number; title: string; children: ReactNode }) {
   return (
     <Card as="section" aria-labelledby={`step-${number}`} className="flex flex-col gap-4">
-      <h2 id={`step-${number}`} className="flex items-center gap-3 font-display text-xl font-semibold">
+      <h2 id={`step-${number}`} className="flex items-center gap-3 text-lg font-semibold">
         <span
           aria-hidden="true"
           className="flex size-8 items-center justify-center rounded-full bg-primary-soft text-base text-primary-soft-foreground"
@@ -101,7 +101,7 @@ function Checkout({ viewer }: { viewer: Viewer }) {
     return (
       <Alert
         tone="info"
-        title="Your cart is empty"
+        title="Your bag is empty"
         action={
           <NextLink href="/shop" className={buttonClasses({ size: 'sm' })}>
             Go to the shop
@@ -118,7 +118,7 @@ function Checkout({ viewer }: { viewer: Viewer }) {
       <div className="mx-auto flex w-full max-w-xl flex-col gap-6">
         <CheckoutSteps current={1} />
         <Card className="flex flex-col gap-4">
-          <h2 className="font-display text-2xl font-semibold">Pay for order {order.orderNumber}</h2>
+          <h2 className="text-lg font-semibold">Pay for order {order.orderNumber}</h2>
           <p className="text-foreground-muted">
             Your items are reserved while you pay. Total:{' '}
             <MoneyText value={order.totals.total} className="font-semibold text-foreground" />
@@ -201,7 +201,7 @@ function Checkout({ viewer }: { viewer: Viewer }) {
 
         <aside aria-labelledby="summary">
           <Card className="flex flex-col gap-4 lg:sticky lg:top-24">
-            <h2 id="summary" className="font-display text-xl font-semibold">
+            <h2 id="summary" className="text-lg font-semibold">
               Order summary
             </h2>
             <ul className="flex flex-col gap-2 text-sm">
@@ -235,7 +235,7 @@ function Checkout({ viewer }: { viewer: Viewer }) {
             ) : null}
             {unavailable ? (
               <Alert tone="warning">
-                Something in your cart is out of stock. Remove it from the cart to continue.
+                Something in your bag is sold out. Remove it from your bag to continue.
               </Alert>
             ) : null}
             <Button
@@ -262,12 +262,15 @@ const STEPS = ['Delivery', 'Payment', 'Confirmation'] as const;
 /** Delivery → Payment → Confirmation. Confirmation is the order page the parent lands on after paying. */
 function CheckoutSteps({ current }: { current: number }) {
   return (
-    <ol aria-label="Checkout steps" className="flex items-center gap-2 text-sm">
+    <ol
+      aria-label="Checkout steps"
+      className="grid grid-cols-3 items-start gap-2 text-xs sm:flex sm:items-center sm:text-sm"
+    >
       {STEPS.map((step, index) => (
         <li
           key={step}
           aria-current={index === current ? 'step' : undefined}
-          className="flex items-center gap-2"
+          className="flex min-w-0 flex-col items-center gap-1.5 sm:flex-row sm:gap-2"
         >
           <span
             aria-hidden="true"
@@ -276,7 +279,7 @@ function CheckoutSteps({ current }: { current: number }) {
                 ? 'flex size-7 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground'
                 : index === current
                   ? 'flex size-7 items-center justify-center rounded-full border-2 border-primary text-xs font-semibold text-primary'
-                  : 'flex size-7 items-center justify-center rounded-full border-2 border-sand-300 text-xs font-semibold text-foreground-muted'
+                  : 'flex size-7 items-center justify-center rounded-full border-2 border-border-strong text-xs font-semibold text-foreground-muted'
             }
           >
             {index + 1}
@@ -288,7 +291,7 @@ function CheckoutSteps({ current }: { current: number }) {
             </span>
           </span>
           {index < STEPS.length - 1 ? (
-            <span aria-hidden="true" className="mx-1 h-px w-6 bg-sand-300 sm:w-10" />
+            <span aria-hidden="true" className="mx-1 hidden h-px w-10 bg-border-strong sm:block" />
           ) : null}
         </li>
       ))}

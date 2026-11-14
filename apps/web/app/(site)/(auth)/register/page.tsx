@@ -11,7 +11,9 @@ export default async function RegisterPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const next = safeNext((await searchParams).next, '/fit');
+  const params = await searchParams;
+  const next = safeNext(params.next, '/fit');
+  const initialEmail = typeof params.email === 'string' ? params.email : '';
   return (
     <AuthCard
       title="Create your account"
@@ -28,7 +30,7 @@ export default async function RegisterPage({
         </>
       }
     >
-      <RegisterForm next={next} />
+      <RegisterForm next={next} initialEmail={initialEmail} />
     </AuthCard>
   );
 }

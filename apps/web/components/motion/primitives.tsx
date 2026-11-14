@@ -13,7 +13,7 @@ export const DURATION = motionTokens.duration;
  */
 export function MotionProvider({ children }: { children: ReactNode }) {
   return (
-    <MotionConfig reducedMotion="user" transition={{ duration: DURATION.normal, ease: EASE }}>
+    <MotionConfig reducedMotion="user" transition={{ duration: 0.22, ease: EASE }}>
       {children}
     </MotionConfig>
   );
@@ -53,17 +53,24 @@ export function Reveal({
 }: RevealProps) {
   const Component = motion[as];
   const hidden = { opacity: 0, ...OFFSET[from] };
-  const shown = { opacity: 1, x: 0, y: 0, transition: { duration: DURATION[duration], ease: EASE, delay } };
+  const shown = {
+    opacity: 1,
+    x: 0,
+    y: 0,
+    transition: { duration: Math.min(DURATION[duration], 0.24), ease: EASE, delay },
+  };
   return (
-    <Component
-      className={className}
-      initial={hidden}
-      {...(immediate
-        ? { animate: shown }
-        : { whileInView: shown, viewport: { once: true, margin: '0px 0px -10% 0px' } })}
-    >
-      {children}
-    </Component>
+    <MotionProvider>
+      <Component
+        className={className}
+        initial={hidden}
+        {...(immediate
+          ? { animate: shown }
+          : { whileInView: shown, viewport: { once: true, margin: '0px 0px -10% 0px' } })}
+      >
+        {children}
+      </Component>
+    </MotionProvider>
   );
 }
 
@@ -81,15 +88,17 @@ export function Stagger({
 }) {
   const Component = motion[as];
   return (
-    <Component
-      className={className}
-      initial="hidden"
-      whileInView="shown"
-      viewport={{ once: true, margin: '0px 0px -10% 0px' }}
-      variants={{ hidden: {}, shown: { transition: { staggerChildren: gap } } }}
-    >
-      {children}
-    </Component>
+    <MotionProvider>
+      <Component
+        className={className}
+        initial="hidden"
+        whileInView="shown"
+        viewport={{ once: true, margin: '0px 0px -10% 0px' }}
+        variants={{ hidden: {}, shown: { transition: { staggerChildren: gap } } }}
+      >
+        {children}
+      </Component>
+    </MotionProvider>
   );
 }
 
@@ -108,7 +117,7 @@ export function StaggerItem({
       className={className}
       variants={{
         hidden: { opacity: 0, y: 20 },
-        shown: { opacity: 1, y: 0, transition: { duration: DURATION.slow, ease: EASE } },
+        shown: { opacity: 1, y: 0, transition: { duration: 0.22, ease: EASE } },
       }}
     >
       {children}

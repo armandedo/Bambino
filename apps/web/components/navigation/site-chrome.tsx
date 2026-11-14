@@ -1,191 +1,160 @@
 'use client';
 
-import { buttonClasses, cn } from '@bambino/ui';
-import { House, RefreshCw, Search, Shirt, ShoppingBag, UserRound } from 'lucide-react';
+import type { CategorySummary } from '@bambino/api-client';
+import { cn } from '@bambino/ui';
+import { Heart, Search, ShoppingBag, UserRound } from 'lucide-react';
 import NextLink from 'next/link';
-import { usePathname } from 'next/navigation';
-import { type ReactNode, useEffect, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { type FormEvent, type ReactNode, Suspense, useId } from 'react';
 import { useCart } from '@/components/header-actions';
 import { useSession } from '@/lib/session';
+import { type ShopState, readShopState, shopHref } from '@/lib/shop-url';
 import { Logo } from '../logo';
+import { StorefrontProvider, useStorefront } from '../storefront/storefront-context';
+import { StorefrontDrawer } from '../storefront/storefront-drawer';
 
-const DESKTOP_NAV = [
-  { href: '/shop', label: 'Shop' },
-  { href: '/how-it-works', label: 'How it works' },
-  { href: '/plans', label: 'Plans' },
-  { href: '/exchange', label: 'Exchange' },
-] as const;
-
-function isCurrent(pathname: string, href: string): boolean {
-  return href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`);
+function itemCount(count: number): string {
+  return `${count} ${count === 1 ? 'item' : 'items'}`;
 }
 
-const ICON_BUTTON =
-  'relative inline-flex size-11 items-center justify-center rounded-full text-foreground transition-colors hover:bg-surface-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus';
+/** One stroke weight for every icon in the frame. */
+const STROKE = 1.8;
 
-function BagLink({ count }: { count: number }) {
+const ACTION =
+  'relative inline-flex h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 rounded-full px-2.5 text-sm font-medium text-foreground transition-colors hover:bg-surface-muted';
+
+/** The number on the bag and favourites icons. Give it `key={value}` so it pops each time the number changes. */
+function Count({ value }: { value: number }) {
+  if (value < 1) return null;
   return (
-    <NextLink href="/cart" className={ICON_BUTTON}>
-      <ShoppingBag aria-hidden="true" className="size-5" strokeWidth={1.75} />
-      <span className="sr-only">Bag{count > 0 ? `, ${count} ${count === 1 ? 'item' : 'items'}` : ''}</span>
-      {count > 0 ? (
-        <span
-          aria-hidden="true"
-          className="absolute top-1.5 right-1.5 flex min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[0.625rem] leading-4 font-semibold text-accent-foreground"
-        >
-          {count}
-        </span>
-      ) : null}
-    </NextLink>
+    <span
+      aria-hidden="true"
+      className="count-pop absolute top-1 left-6 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-accent px-1 text-[11px] leading-none font-bold text-accent-foreground"
+    >
+      {value > 99 ? '99+' : value}
+    </span>
   );
 }
 
-/** Top bar. Turns from cream to a bordered, blurred surface once the page scrolls. */
-function Navbar() {
-  const pathname = usePathname();
-  const { viewer, loading } = useSession();
-  const cart = useCart(viewer !== null);
-  const [scrolled, setScrolled] = useState(false);
+/**
+ * Always-visible search. `state` is the shop's current filters when the shopper is already browsing, so a search
+ * narrows what they are looking at instead of starting over. Without JavaScript it is a plain GET form.
+ */
+function SearchField({ state }: { state: ShopState }) {
+  const router = useRouter();
+  const inputId = useId();
 
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8);
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const value = new FormData(event.currentTarget).get('q');
+    const term = typeof value === 'string' ? value.trim() : '';
+    router.push(shopHref(state, { q: term || undefined }));
+  }
 
   return (
-    <header
-      className={cn(
-        'sticky top-0 z-40 transition-[background-color,border-color,box-shadow] duration-300 ease-brand',
-        scrolled ? 'bg-surface/95 shadow-sm backdrop-blur' : 'bg-surface',
-      )}
+    <form
+      role="search"
+      aria-label="Search catalogue"
+      action="/shop"
+      method="get"
+      onSubmit={submit}
+      className="search-field flex h-11 w-full items-center rounded-full border border-border-strong bg-surface pr-1 pl-4"
     >
-      <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:px-6">
-        <NextLink
-          href="/"
-          aria-label="Bambino home"
-          className="shrink-0 rounded-md focus-visible:outline-2 focus-visible:outline-focus"
-        >
+      <label htmlFor={inputId} className="sr-only">
+        Search for clothes
+      </label>
+      <input
+        key={state.q ?? ''}
+        id={inputId}
+        type="search"
+        name="q"
+        defaultValue={state.q ?? ''}
+        enterKeyHint="search"
+        autoComplete="off"
+        placeholder="Search for clothes"
+        className="h-full min-w-0 flex-1 bg-transparent text-base text-foreground placeholder:text-foreground-muted"
+      />
+      {(['age', 'category', 'size', 'min', 'max', 'stock', 'sort'] as const).map((key) =>
+        state[key] ? <input key={key} type="hidden" name={key} value={state[key]} /> : null,
+      )}
+      <button
+        type="submit"
+        aria-label="Search products"
+        className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground hover:bg-primary-hover"
+      >
+        <Search aria-hidden="true" className="size-[18px]" strokeWidth={2.2} />
+      </button>
+    </form>
+  );
+}
+
+/** Reads the address bar, so it sits behind a Suspense boundary (see Next's useSearchParams guide). */
+function ShopAwareSearch() {
+  const pathname = usePathname();
+  const params = useSearchParams();
+  const browsing = pathname === '/' || pathname === '/shop';
+  return <SearchField state={browsing ? readShopState(Object.fromEntries(params)) : {}} />;
+}
+
+/** Opens the bag panel. Before the page is interactive, and without JavaScript, it is a plain link to the bag page. */
+function useBagLink() {
+  const { ready, openPanel } = useStorefront();
+  return (event: { preventDefault: () => void }) => {
+    if (!ready) return;
+    event.preventDefault();
+    openPanel('cart');
+  };
+}
+
+/** Compact top bar: logo, search, favourites, account and bag. The search takes its own row on phones. */
+function Header() {
+  const { viewer, loading } = useSession();
+  const cart = useCart(viewer !== null);
+  const { ready, saved, openPanel } = useStorefront();
+  const openBag = useBagLink();
+  const count = cart.data?.itemCount ?? 0;
+
+  return (
+    <header className="sticky top-0 z-40 border-b border-border bg-background">
+      <div className="retail-container flex flex-wrap items-center gap-x-4 gap-y-1.5 py-2 md:flex-nowrap md:gap-x-8 md:py-2.5">
+        <NextLink href="/" aria-label="Bambino home" className="shrink-0 rounded-md">
           <Logo />
         </NextLink>
-        <nav aria-label="Main" className="hidden flex-1 justify-center lg:flex">
-          <ul className="flex items-center gap-1">
-            {DESKTOP_NAV.map((item) => {
-              const current = isCurrent(pathname, item.href);
-              return (
-                <li key={item.href}>
-                  <NextLink
-                    href={item.href}
-                    aria-current={current ? 'page' : undefined}
-                    className={cn(
-                      'relative rounded-full px-3 py-2 text-xs font-medium tracking-[0.08em] uppercase transition-colors focus-visible:outline-2 focus-visible:outline-focus',
-                      current ? 'text-primary' : 'text-foreground-muted hover:text-foreground',
-                    )}
-                  >
-                    {item.label}
-                    {current ? (
-                      <span
-                        aria-hidden="true"
-                        className="absolute inset-x-3 -bottom-0.5 h-0.5 rounded-full bg-accent"
-                      />
-                    ) : null}
-                  </NextLink>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
-        <div className="ml-auto flex items-center gap-1 lg:ml-0">
-          <NextLink href="/shop#search" className={ICON_BUTTON}>
-            <Search aria-hidden="true" className="size-5" strokeWidth={1.75} />
-            <span className="sr-only">Search the shop</span>
-          </NextLink>
+        <div className="order-last w-full md:order-none md:mx-auto md:max-w-xl md:flex-1">
+          <Suspense fallback={<SearchField state={{}} />}>
+            <ShopAwareSearch />
+          </Suspense>
+        </div>
+        <div className="-mr-2 ml-auto flex items-center md:ml-0">
+          <button type="button" disabled={!ready} onClick={() => openPanel('saved')} className={ACTION}>
+            <Heart aria-hidden="true" className="size-[22px]" strokeWidth={STROKE} />
+            <span className="sr-only">Your favourites, {saved.length} saved</span>
+            <Count key={saved.length} value={saved.length} />
+          </button>
           {loading ? (
-            <span className="hidden size-11 sm:block" aria-hidden="true" />
-          ) : viewer ? (
-            <NextLink
-              href="/dashboard"
-              className={cn(ICON_BUTTON, 'hidden w-auto gap-2 px-3 sm:inline-flex')}
-            >
-              <UserRound aria-hidden="true" className="size-5" strokeWidth={1.75} />
-              <span className="text-sm font-semibold">{viewer.firstName}</span>
-              <span className="sr-only">: your dashboard</span>
-            </NextLink>
+            <span className="h-11 w-11" aria-hidden="true" />
           ) : (
-            <NextLink
-              href="/login"
-              className="hidden min-h-11 items-center rounded-full px-4 text-sm font-semibold text-foreground hover:bg-surface-muted focus-visible:outline-2 focus-visible:outline-focus sm:inline-flex"
-            >
-              Sign in
+            <NextLink href={viewer ? '/dashboard' : '/login'} className={ACTION}>
+              <UserRound aria-hidden="true" className="size-[22px]" strokeWidth={STROKE} />
+              {viewer ? (
+                <>
+                  <span className="sr-only">Your account, </span>
+                  <span className="max-w-24 truncate max-lg:sr-only">{viewer.firstName}</span>
+                </>
+              ) : (
+                <span className="max-lg:sr-only">Sign in</span>
+              )}
             </NextLink>
           )}
-          <BagLink count={cart.data?.itemCount ?? 0} />
-          <NextLink
-            href="/fit"
-            className={buttonClasses({ size: 'sm', className: 'ml-2 px-4 max-lg:hidden' })}
-          >
-            Find my size
+          <NextLink href="/cart" onClick={openBag} className={ACTION}>
+            <ShoppingBag aria-hidden="true" className="size-[22px]" strokeWidth={STROKE} />
+            <span className="max-lg:sr-only">Bag</span>
+            <span className="sr-only">, {itemCount(count)}</span>
+            <Count key={count} value={count} />
           </NextLink>
         </div>
       </div>
     </header>
-  );
-}
-
-/** Thumb-reachable navigation on phones. Wardrobe is a primary destination for subscribers. */
-function MobileNav() {
-  const pathname = usePathname();
-  const { viewer } = useSession();
-  const items = [
-    { href: '/', label: 'Home', icon: House },
-    { href: '/shop', label: 'Shop', icon: ShoppingBag },
-    {
-      href: viewer ? '/dashboard/wardrobe' : '/login?next=/dashboard/wardrobe',
-      match: '/dashboard/wardrobe',
-      label: 'Wardrobe',
-      icon: Shirt,
-    },
-    { href: '/exchange', label: 'Exchange', icon: RefreshCw },
-    {
-      href: viewer ? '/dashboard' : '/login',
-      match: viewer ? '/dashboard' : '/login',
-      label: 'Account',
-      icon: UserRound,
-    },
-  ];
-  return (
-    <nav
-      aria-label="Mobile"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
-    >
-      <ul className="mx-auto grid max-w-lg grid-cols-5">
-        {items.map((item) => {
-          const target = item.match ?? item.href;
-          const current =
-            target === '/dashboard'
-              ? pathname === '/dashboard' ||
-                (pathname.startsWith('/dashboard/') && !pathname.startsWith('/dashboard/wardrobe'))
-              : isCurrent(pathname, target);
-          const Icon = item.icon;
-          return (
-            <li key={item.label}>
-              <NextLink
-                href={item.href}
-                aria-current={current ? 'page' : undefined}
-                className={cn(
-                  'flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs font-medium focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus',
-                  current ? 'text-primary' : 'text-foreground-muted',
-                )}
-              >
-                <Icon aria-hidden="true" className="size-5" strokeWidth={current ? 2.25 : 1.75} />
-                {item.label}
-              </NextLink>
-            </li>
-          );
-        })}
-      </ul>
-    </nav>
   );
 }
 
@@ -197,79 +166,46 @@ const MOCK_PAYMENTS = process.env.NEXT_PUBLIC_MOCK_PAYMENTS === 'true';
 export function PreviewBanner({ preview = PREVIEW, mockPayments = MOCK_PAYMENTS }) {
   if (!preview) return null;
   return (
-    <div className="bg-primary px-4 py-2 text-center text-xs text-primary-foreground sm:text-sm">
+    <div className="bg-primary px-4 py-1.5 text-center text-xs text-primary-foreground">
       <strong className="font-semibold">Preview build.</strong>{' '}
-      {mockPayments ? 'Payments use test wallets only, and copy' : 'Copy'} and prices are placeholders.
+      {mockPayments ? 'Payments use test wallets only. This is a test shop.' : 'This is a test shop.'}
     </div>
   );
 }
 
 const FOOTER_LINKS = [
-  {
-    title: 'Bambino',
-    links: [
-      { href: '/how-it-works', label: 'How it works' },
-      { href: '/plans', label: 'Subscriptions' },
-      { href: '/exchange', label: 'Exchange' },
-      { href: '/sustainability', label: 'Sustainability' },
-    ],
-  },
-  {
-    title: 'Shop',
-    links: [
-      { href: '/shop', label: 'All babywear' },
-      { href: '/fit', label: 'Find the right fit' },
-      { href: '/cart', label: 'Your bag' },
-    ],
-  },
-  {
-    title: 'Account',
-    links: [
-      { href: '/dashboard', label: 'Dashboard' },
-      { href: '/dashboard/wardrobe', label: 'Wardrobe' },
-      { href: '/account', label: 'Settings' },
-    ],
-  },
-];
+  { href: '/shop', label: 'Shop all' },
+  { href: '/fit', label: 'Find a size' },
+  { href: '/dashboard/orders', label: 'Your orders' },
+  { href: '/help', label: 'Help' },
+  { href: '/delivery-returns', label: 'Delivery and returns' },
+  { href: '/privacy', label: 'Privacy' },
+  { href: '/terms', label: 'Terms' },
+] as const;
 
 function Footer() {
   return (
-    <footer className="mt-auto bg-primary text-primary-foreground">
-      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-[1.4fr_repeat(3,1fr)]">
-        <div className="flex flex-col gap-4">
-          <span className="font-display text-2xl font-semibold">bambino</span>
-          <p className="max-w-xs text-sm text-brand-100">
-            Baby clothes that keep up with your baby. Designed in Kigali, and worn by more than one family.
-          </p>
-        </div>
-        {FOOTER_LINKS.map((group) => (
-          <nav
-            key={group.title}
-            aria-label={`Footer: ${group.title}`}
-            className="flex flex-col gap-3 text-sm"
-          >
-            <p className="font-semibold text-accent-200">{group.title}</p>
-            <ul className="flex flex-col gap-2">
-              {group.links.map((link) => (
-                <li key={link.href}>
-                  <NextLink
-                    href={link.href}
-                    className="text-brand-50 underline decoration-brand-400 underline-offset-4 hover:decoration-accent"
-                  >
-                    {link.label}
-                  </NextLink>
-                </li>
-              ))}
-            </ul>
-          </nav>
-        ))}
-      </div>
-      <div className="border-t border-brand-700">
-        <p className="mx-auto max-w-6xl px-4 py-5 text-xs text-brand-200 sm:px-6">
-          © {new Date().getFullYear()} Bambino · Kigali, Rwanda ·{' '}
-          <NextLink href="/design" className="underline underline-offset-4">
-            Design system
-          </NextLink>
+    <footer className="mt-auto border-t border-border bg-background">
+      <div className="retail-container flex flex-col gap-3 py-5 md:flex-row md:items-center md:gap-6">
+        <NextLink href="/" aria-label="Bambino home" className="w-fit shrink-0 rounded-md">
+          <Logo className="h-6" />
+        </NextLink>
+        <nav aria-label="Footer" className="md:mr-auto">
+          <ul className="-mx-2 flex flex-wrap">
+            {FOOTER_LINKS.map((link) => (
+              <li key={link.href}>
+                <NextLink
+                  href={link.href}
+                  className="inline-flex min-h-10 items-center rounded-md px-2 text-sm underline-offset-4 hover:underline"
+                >
+                  {link.label}
+                </NextLink>
+              </li>
+            ))}
+          </ul>
+        </nav>
+        <p className="shrink-0 text-sm text-foreground-muted">
+          © {new Date().getFullYear()} Bambino, Kigali, Rwanda
         </p>
       </div>
     </footer>
@@ -287,19 +223,36 @@ function SkipLink() {
   );
 }
 
-/** Website frame: skip link, preview notice, sticky navbar, main landmark, footer and the phone bottom bar. */
-export function SiteChrome({ children }: { children: ReactNode }) {
+/** Website frame: skip link, preview notice, sticky header, main landmark, footer and the side panel. */
+function ChromeContent({ children }: { children: ReactNode }) {
+  const { ready } = useStorefront();
   return (
-    <div className="flex min-h-dvh flex-col bg-background text-foreground">
+    <div
+      data-storefront-ready={ready}
+      className={cn('storefront flex min-h-dvh flex-col bg-background text-foreground')}
+    >
       <SkipLink />
       <PreviewBanner />
-      <Navbar />
-      {/* Bottom padding on phones keeps content clear of the fixed bottom bar. */}
-      <main id="main" tabIndex={-1} className="flex-1 pb-20 focus:outline-none lg:pb-0">
+      <Header />
+      <main id="main" tabIndex={-1} className="flex-1 focus:outline-none">
         {children}
       </main>
       <Footer />
-      <MobileNav />
+      <StorefrontDrawer />
     </div>
+  );
+}
+
+export function SiteChrome({
+  children,
+  categories = [],
+}: {
+  children: ReactNode;
+  categories?: CategorySummary[];
+}) {
+  return (
+    <StorefrontProvider categories={categories}>
+      <ChromeContent>{children}</ChromeContent>
+    </StorefrontProvider>
   );
 }
