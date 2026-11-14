@@ -186,8 +186,11 @@ const FOOTER_LINKS = [
 function Footer() {
   return (
     <footer className="mt-auto border-t border-border bg-background">
-      <div className="retail-container flex flex-col gap-3 py-5 md:flex-row md:items-center md:justify-between">
-        <nav aria-label="Footer">
+      <div className="retail-container flex flex-col gap-3 py-5 md:flex-row md:items-center md:gap-6">
+        <NextLink href="/" aria-label="Bambino home" className="w-fit shrink-0 rounded-md">
+          <Logo className="h-6" />
+        </NextLink>
+        <nav aria-label="Footer" className="md:mr-auto">
           <ul className="-mx-2 flex flex-wrap">
             {FOOTER_LINKS.map((link) => (
               <li key={link.href}>
