@@ -39,22 +39,31 @@ export async function addShoppingItem(page: Page) {
   }>(
     '{ products(filter: { oneTimeEligible: true, inStockOnly: true }, first: 50) { edges { node { slug name variants { id sku color inStock } } } } }',
   );
-  const product = products.edges.map((edge) => edge.node).find((p) => p.variants.some((v) => v.inStock));
+  const inStock = products.edges.map((edge) => edge.node).filter((p) => p.variants.some((v) => v.inStock));
+  // Prefer a product sold in several colours, so the colour choice is exercised whatever order the catalogue
+  // comes back in.
+  const product = inStock.find((p) => new Set(p.variants.map((v) => v.color)).size > 1) ?? inStock[0];
   const variant = product?.variants.find((v) => v.inStock);
   if (!product || !variant) throw new Error('No purchasable test stock');
   await page.goto(`/shop/${product.slug}`, { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('button', { name: 'Choose a size', exact: true })).toBeDisabled();
-  const color = page.locator('input[name="color"]');
-  if (await color.count()) {
-    await page
+  // The product page streams in: until that settles, a hidden copy of its controls can exist next to the real
+  // ones. A shopper only ever uses the ones in the page itself.
+  const form = page.getByRole('main');
+  await expect(form.getByRole('button', { name: 'Choose a size', exact: true })).toBeDisabled();
+  if (await form.locator('input[name="color"]').count()) {
+    await form
       .locator('label')
       .filter({ has: page.locator(`input[name="color"][value="${variant.color}"]`) })
       .click();
+    await expect(form.locator(`input[name="color"][value="${variant.color}"]`)).toBeChecked();
   }
-  const chosen = page.locator(`input[name="variant"][value="${variant.id}"]`);
+  const chosen = form.locator(`input[name="variant"][value="${variant.id}"]`);
   await expect(chosen).toBeEnabled();
-  await page.locator('label').filter({ has: chosen }).click();
-  await expect(page.locator(`input[name="variant"][value="${variant.id}"]`)).toBeChecked();
+  await form
+    .locator('label')
+    .filter({ has: page.locator(`input[name="variant"][value="${variant.id}"]`) })
+    .click();
+  await expect(chosen).toBeChecked();
   await page.getByRole('button', { name: 'Add to bag', exact: true }).click();
   await expect(page.getByText('Added to your bag', { exact: true })).toBeVisible();
   // Adding opens the bag panel with the item in it.

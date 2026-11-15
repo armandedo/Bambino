@@ -202,14 +202,20 @@ test('retail size selection, bag drawer, cart updates and delivery quoting keep 
   });
   await page.goto(`/shop/${product.slug}`);
   await page.locator('[data-storefront-ready="true"]').waitFor();
-  await expect(page.getByRole('button', { name: 'Choose a size', exact: true })).toBeDisabled();
-  const radio = page.locator(`input[name="variant"][value="${variant.id}"]`);
-  if (await page.locator('input[name="color"]').count())
-    await page
+  // Use the controls in the page itself: while the page streams in, a hidden copy can exist beside them.
+  const form = page.getByRole('main');
+  await expect(form.getByRole('button', { name: 'Choose a size', exact: true })).toBeDisabled();
+  const radio = form.locator(`input[name="variant"][value="${variant.id}"]`);
+  if (await form.locator('input[name="color"]').count())
+    await form
       .locator('label')
       .filter({ has: page.locator(`input[name="color"][value="${variant.color}"]`) })
       .click();
-  await page.locator('label').filter({ has: radio }).click();
+  await form
+    .locator('label')
+    .filter({ has: page.locator(`input[name="variant"][value="${variant.id}"]`) })
+    .click();
+  await expect(radio).toBeChecked();
   await page.getByRole('button', { name: 'Add to bag', exact: true }).click();
   await expect(page.getByRole('dialog')).toContainText(product.name);
   await page.keyboard.press('Escape');
