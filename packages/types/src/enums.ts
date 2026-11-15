@@ -156,6 +156,22 @@ export const PAYMENT_STATUSES = [
 ] as const;
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
+/**
+ * Why a payment needs a person to look at it. ORDER_CANCELLED / ORDER_NOT_AWAITING_PAYMENT: the provider collected
+ * the money but the order could not take it (cancelled, or already paid), so it was not fulfilled and a refund is
+ * due. OUTCOME_UNCONFIRMED: the provider never gave a final answer for a request we had stopped waiting for.
+ */
+export const PAYMENT_REVIEW_REASONS = [
+  'ORDER_CANCELLED',
+  'ORDER_NOT_AWAITING_PAYMENT',
+  'OUTCOME_UNCONFIRMED',
+] as const;
+export type PaymentReviewReason = (typeof PAYMENT_REVIEW_REASONS)[number];
+
+/** How staff closed a payment review. */
+export const PAYMENT_REVIEW_RESOLUTIONS = ['REFUNDED', 'NO_MONEY_RECEIVED', 'OTHER'] as const;
+export type PaymentReviewResolution = (typeof PAYMENT_REVIEW_RESOLUTIONS)[number];
+
 export const PAYMENT_TRANSACTION_TYPES = [
   'INITIATION',
   'STATUS_CHECK',
@@ -257,6 +273,8 @@ export const NOTIFICATION_TYPES = [
   'EXCHANGE_COMPLETED',
   'REFUND_SUCCEEDED',
   'REFUND_REJECTED',
+  /** For staff: money arrived that could not be applied to its order, or an outcome was never confirmed. */
+  'PAYMENT_REVIEW_REQUIRED',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 

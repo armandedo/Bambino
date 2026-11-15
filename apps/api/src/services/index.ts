@@ -47,6 +47,8 @@ export interface ServiceDependencies {
     accessTokenTtlSeconds: number;
     refreshTokenTtlDays: number;
     webOrigin: string;
+    /** Where staff emails link to. Optional for scripts that never send them. */
+    adminOrigin?: string;
     marketCode: string;
     subscriptionsEnabled?: boolean;
   };
@@ -138,6 +140,8 @@ export function createServices(deps: ServiceDependencies): Services {
     marketCode,
     currency,
     allowMockProvider: deps.payments?.allowMockProvider ?? false,
+    email: deps.email,
+    ...(deps.config.adminOrigin ? { adminOrigin: deps.config.adminOrigin } : {}),
     now,
   });
 

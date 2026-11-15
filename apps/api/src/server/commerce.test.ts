@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { schema } from '@bambino/database';
 import { and, eq } from '@bambino/database/orm';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { MOCK_SIGNATURE_HEADER, MOCK_WALLETS } from '../providers/payments';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { MOCK_SIGNATURE_HEADER, MOCK_WALLETS, type PaymentProvider } from '../providers/payments';
 import { type TestApp, createTestApp, errorCode, errorReason } from '../testing/test-app';
 
 let t: TestApp;
@@ -513,6 +513,159 @@ describe('payments', () => {
     const [cancelled] = await t.db.select().from(schema.orders).where(eq(schema.orders.id, order.id));
     expect(cancelled?.status).toBe('CANCELLED');
     expect((await availability(variant.id))?.quantityReserved).toBe(reserved - 1);
+  });
+
+  it('does not let a forged webhook take the id of the real one', async () => {
+    const customer = await shopper();
+    const { order } = await placeOrder(customer);
+    const payment = await pay(customer, order.id);
+    const [row] = await t.db.select().from(schema.payments).where(eq(schema.payments.id, payment.id));
+    const body = JSON.stringify({ eventId: `evt-race-${payment.id}`, reference: row?.providerReference });
+    const send = (signature: string) =>
+      t.app.handleWebhook(
+        new Request('http://api.test/webhooks/payments/mock', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', [MOCK_SIGNATURE_HEADER]: signature },
+          body,
+        }),
+      );
+
+    expect((await send('0'.repeat(64))).status).toBe(401);
+    const stored = await t.db
+      .select()
+      .from(schema.webhookEvents)
+      .where(eq(schema.webhookEvents.providerEventId, `evt-race-${payment.id}`));
+    expect(stored).toHaveLength(0);
+    const [unpaid] = await t.db.select().from(schema.orders).where(eq(schema.orders.id, order.id));
+    expect(unpaid?.status).toBe('PENDING_PAYMENT');
+
+    expect((await send(t.mockPayments.sign(body))).status).toBe(200);
+    const [paid] = await t.db.select().from(schema.orders).where(eq(schema.orders.id, order.id));
+    expect(paid?.status).toBe('PAID');
+  });
+
+  it('never marks an order paid from a signed webhook alone when the provider still says pending', async () => {
+    const customer = await shopper();
+    const { order } = await placeOrder(customer);
+    const payment = await pay(customer, order.id, MOCK_WALLETS.neverAnswers);
+    const [row] = await t.db.select().from(schema.payments).where(eq(schema.payments.id, payment.id));
+    const body = JSON.stringify({
+      eventId: `evt-claims-paid-${payment.id}`,
+      reference: row?.providerReference,
+      status: 'SUCCEEDED',
+    });
+    const response = await t.app.handleWebhook(
+      new Request('http://api.test/webhooks/payments/mock', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', [MOCK_SIGNATURE_HEADER]: t.mockPayments.sign(body) },
+        body,
+      }),
+    );
+    expect(response.status).toBe(200);
+    const [after] = await t.db.select().from(schema.payments).where(eq(schema.payments.id, payment.id));
+    expect(after?.status).toBe('PENDING');
+    const [unpaid] = await t.db.select().from(schema.orders).where(eq(schema.orders.id, order.id));
+    expect(unpaid).toMatchObject({ status: 'PENDING_PAYMENT', paidAt: null });
+  });
+
+  it('keeps reconciling other payments when the provider cannot answer for one', async () => {
+    const customer = await shopper();
+    const broken = await placeOrder(customer);
+    const brokenPayment = await pay(customer, broken.order.id, MOCK_WALLETS.neverAnswers);
+    const healthy = await placeOrder(customer);
+    const healthyPayment = await pay(customer, healthy.order.id);
+    const [brokenRow] = await t.db
+      .select()
+      .from(schema.payments)
+      .where(eq(schema.payments.id, brokenPayment.id));
+
+    const original = t.mockPayments.getStatus.bind(t.mockPayments);
+    const spy = vi.spyOn(t.mockPayments, 'getStatus').mockImplementation(async (reference) => {
+      if (reference === brokenRow?.providerReference) throw new Error('provider is down for this one');
+      return original(reference);
+    });
+    try {
+      t.advanceClock(3 * 60_000);
+      await expect(t.app.runJobs()).resolves.toBeDefined();
+    } finally {
+      spy.mockRestore();
+    }
+    const [paid] = await t.db.select().from(schema.payments).where(eq(schema.payments.id, healthyPayment.id));
+    expect(paid?.status).toBe('SUCCEEDED');
+    const [stillOpen] = await t.db
+      .select()
+      .from(schema.payments)
+      .where(eq(schema.payments.id, brokenPayment.id));
+    expect(stillOpen?.status).toBe('PENDING');
+  });
+
+  /** A payment row as it is left when the process stops between saving it and hearing back from the provider. */
+  async function strandedPayment(
+    order: { id: string; totals: { total: { amount: number } } },
+    userId: string,
+  ) {
+    const [row] = await t.db
+      .insert(schema.payments)
+      .values({
+        userId,
+        orderId: order.id,
+        provider: 'MOCK',
+        status: 'INITIATED',
+        amount: order.totals.total.amount,
+        currency: 'RWF',
+        idempotencyKey: randomUUID(),
+        payerMsisdn: MOCK_WALLETS.approves,
+        initiatedAt: t.now(),
+      })
+      .returning();
+    if (!row) throw new Error('no payment row');
+    return row;
+  }
+
+  it('gives up a payment whose request was never answered, so the order is not blocked for ever', async () => {
+    const customer = await shopper();
+    const { order, variant } = await placeOrder(customer);
+    const reserved = (await availability(variant.id))?.quantityReserved ?? 0;
+    const stranded = await strandedPayment(order, customer.userId);
+
+    t.advanceClock(5 * 60_000);
+    await t.app.runJobs();
+    const [waiting] = await t.db.select().from(schema.payments).where(eq(schema.payments.id, stranded.id));
+    expect(waiting?.status).toBe('INITIATED');
+
+    t.advanceClock(11 * 60_000);
+    await t.app.runJobs();
+    const [givenUp] = await t.db.select().from(schema.payments).where(eq(schema.payments.id, stranded.id));
+    expect(givenUp).toMatchObject({ status: 'FAILED', failureCode: 'EXPIRED' });
+    const [unpaid] = await t.db.select().from(schema.orders).where(eq(schema.orders.id, order.id));
+    expect(unpaid).toMatchObject({ status: 'PENDING_PAYMENT', paidAt: null });
+
+    t.advanceClock(25 * 3_600_000);
+    await t.app.runJobs();
+    const [cancelled] = await t.db.select().from(schema.orders).where(eq(schema.orders.id, order.id));
+    expect(cancelled?.status).toBe('CANCELLED');
+    expect((await availability(variant.id))?.quantityReserved).toBe(reserved - 1);
+  });
+
+  it('finds an unanswered request again at a provider with derived references, and applies its answer', async () => {
+    const customer = await shopper();
+    const { order } = await placeOrder(customer);
+    const stranded = await strandedPayment(order, customer.userId);
+    const provider = t.mockPayments as PaymentProvider;
+    provider.referenceFor = (reference) => `mock-approved-${reference}`;
+    try {
+      t.advanceClock(3 * 60_000);
+      await t.app.runJobs();
+    } finally {
+      delete provider.referenceFor;
+    }
+    const [recovered] = await t.db.select().from(schema.payments).where(eq(schema.payments.id, stranded.id));
+    expect(recovered).toMatchObject({
+      status: 'SUCCEEDED',
+      providerReference: `mock-approved-${stranded.idempotencyKey}`,
+    });
+    const [paid] = await t.db.select().from(schema.orders).where(eq(schema.orders.id, order.id));
+    expect(paid?.status).toBe('PAID');
   });
 
   it('says plainly that MTN MoMo is not integrated yet', async () => {

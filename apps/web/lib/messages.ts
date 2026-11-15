@@ -87,6 +87,7 @@ const NOTIFICATIONS: Record<NotificationType, string> = {
   ACCOUNT_CREATED: 'Welcome to Bambino.',
   PAYMENT_SUCCEEDED: 'Payment received.',
   PAYMENT_FAILED: 'A payment did not go through.',
+  PAYMENT_REVIEW_REQUIRED: 'A payment needs review in the admin.',
   SUBSCRIPTION_STARTED: 'Your subscription has started.',
   SUBSCRIPTION_RENEWED: 'Your subscription renewed.',
   SUBSCRIPTION_RENEWAL_REMINDER: 'Your subscription renews soon.',

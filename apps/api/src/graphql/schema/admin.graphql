@@ -45,8 +45,51 @@ type AdminSubscription {
   renewalAttempts: Int!
 }
 
+enum PaymentReviewReason {
+  "The provider collected the money after the order was cancelled. Nothing was fulfilled; a refund is due."
+  ORDER_CANCELLED
+  "The provider collected the money for an order that was already paid or past payment. A refund is due."
+  ORDER_NOT_AWAITING_PAYMENT
+  "The provider never gave a final answer for a request we had stopped waiting for."
+  OUTCOME_UNCONFIRMED
+}
+
+enum PaymentReviewResolution {
+  REFUNDED
+  NO_MONEY_RECEIVED
+  OTHER
+}
+
+"A payment a person must look at. Opened by the system; staff only record how it ended."
+type PaymentReview {
+  id: ID!
+  reason: PaymentReviewReason!
+  open: Boolean!
+  resolution: PaymentReviewResolution
+  resolutionNote: String
+  createdAt: DateTime!
+  resolvedAt: DateTime
+  payment: AdminPayment!
+  order: Order
+}
+
+type PaymentReviewPage {
+  items: [PaymentReview!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+input ResolvePaymentReviewInput {
+  id: ID!
+  resolution: PaymentReviewResolution!
+  "What was done, for the audit log."
+  note: String!
+}
+
 type AdminPayment {
   payment: Payment!
+  "The provider collected this money but it was not applied to the order. See its payment review."
+  unapplied: Boolean!
   customer: AdminCustomer!
   providerReference: String
   transactions: [PaymentTransaction!]!
@@ -431,6 +474,9 @@ extend type Query {
   adminSubscriptionPlans: [SubscriptionPlan!]! @requires(permission: "subscription:read")
   adminPayments(status: PaymentStatus, page: PageInput): AdminPaymentPage!
     @requires(permission: "payment:read")
+  "Payments that need a person: late money for a closed order, or an outcome the provider never confirmed."
+  adminPaymentReviews(open: Boolean, page: PageInput): PaymentReviewPage!
+    @requires(permission: "payment:read")
   adminRefunds(status: RefundStatus, page: PageInput): AdminRefundPage! @requires(permission: "refund:read")
   adminReturns(status: ReturnStatus, page: PageInput): AdminReturnPage! @requires(permission: "return:read")
   adminReturn(id: ID!): AdminReturn @requires(permission: "return:read")
@@ -478,6 +524,9 @@ extend type Mutation {
 
   "Asks the provider for the payment's true status and applies it. Never sets a status by hand."
   adminReconcilePayment(id: ID!): Payment! @requires(permission: "payment:write")
+  "Records how a payment review ended. It moves no money: refunds use adminRequestRefund."
+  adminResolvePaymentReview(input: ResolvePaymentReviewInput!): PaymentReview!
+    @requires(permission: "payment:write")
   "Starts REQUESTED; nothing is paid out until a refund is approved."
   adminRequestRefund(input: RefundInput!): AdminRefund! @requires(permission: "refund:write")
   "Approves and sends the refund to the provider (or adds the credit). It succeeds when the provider confirms."

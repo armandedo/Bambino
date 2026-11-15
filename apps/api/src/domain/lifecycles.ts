@@ -48,9 +48,10 @@ export const paymentLifecycle = defineStateMachine<PaymentStatus>('Payment', 'IN
   INITIATED: ['PENDING', 'FAILED', 'CANCELLED'],
   PENDING: ['SUCCEEDED', 'FAILED', 'CANCELLED', 'EXPIRED'],
   SUCCEEDED: ['REFUNDED'],
-  FAILED: [],
-  CANCELLED: [],
-  EXPIRED: [],
+  // We stopped waiting, but the provider decides: a late approval still means the money was collected.
+  FAILED: ['SUCCEEDED'],
+  CANCELLED: ['SUCCEEDED'],
+  EXPIRED: ['SUCCEEDED'],
   REFUNDED: [],
 });
 

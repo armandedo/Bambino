@@ -155,6 +155,8 @@ export async function createTestApp(
     gql,
     registerCustomer,
     registerStaff,
+    /** The current time of the adjustable test clock. */
+    now: () => clock,
     advanceClock: (ms: number) => {
       clock = new Date(clock.getTime() + ms);
     },

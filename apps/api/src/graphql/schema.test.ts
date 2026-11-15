@@ -101,6 +101,8 @@ describe('enum parity with @bambino/types', () => {
     PaymentStatus: types.PAYMENT_STATUSES,
     RefundStatus: types.REFUND_STATUSES,
     RefundMethod: types.REFUND_METHODS,
+    PaymentReviewReason: types.PAYMENT_REVIEW_REASONS,
+    PaymentReviewResolution: types.PAYMENT_REVIEW_RESOLUTIONS,
     DeliveryStatus: types.DELIVERY_STATUSES,
     DeliveryDirection: types.DELIVERY_DIRECTIONS,
     ReturnStatus: types.RETURN_STATUSES,
