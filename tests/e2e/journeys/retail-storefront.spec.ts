@@ -8,7 +8,7 @@ test.beforeEach(async ({ page }) => {
   await page.route('**/_next/image*', (route) => route.abort());
 });
 
-test('favourites persist, the bag asks a visitor to sign in, and search and age tabs navigate @mobile', async ({
+test('favourites persist, a visitor has an empty bag, and search and age tabs navigate @mobile', async ({
   page,
 }) => {
   await page.route('**/graphql', async (route) => {
@@ -43,7 +43,9 @@ test('favourites persist, the bag asks a visitor to sign in, and search and age 
   await expect(favourites).toBeVisible();
 
   await page.getByRole('link', { name: 'Bag, 0 items', exact: true }).click();
-  await expect(page.getByRole('dialog')).toContainText('Sign in to see your bag');
+  // A visitor has a bag of their own: empty here, and nothing asks them to sign in to see it.
+  await expect(page.getByRole('dialog')).toContainText('Your bag is empty');
+  await expect(page.getByRole('dialog').getByRole('link', { name: 'Sign in' })).toHaveCount(0);
   await page.keyboard.press('Escape');
   await expectNoHorizontalScroll(page);
 

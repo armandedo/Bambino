@@ -92,6 +92,8 @@ export const commerceResolvers = {
     product: (_: unknown, args: { slug: string }, context: Ctx) =>
       context.services.catalogue.getProductBySlug(args.slug),
     myCart: (_: unknown, __: unknown, context: Ctx) => context.services.cart.getCart(context),
+    guestBag: (_: unknown, args: { items: unknown }, context: Ctx) =>
+      context.services.cart.previewGuestBag(args.items),
     checkoutPreview: (_: unknown, args: { input: unknown }, context: Ctx) =>
       context.services.orders.preview(context, args.input),
     myOrders: async (_: unknown, args: PageRequest, context: Ctx) => {
@@ -229,6 +231,8 @@ export const commerceResolvers = {
       context.services.cart.updateCartItem(context, args.itemId, args.quantity),
     removeFromCart: (_: unknown, args: { itemId: string }, context: Ctx) =>
       context.services.cart.removeFromCart(context, args.itemId),
+    mergeGuestBag: (_: unknown, args: { input: unknown }, context: Ctx) =>
+      context.services.cart.mergeGuestBag(context, args.input),
     createOrder: (_: unknown, args: { input: unknown }, context: Ctx) =>
       context.services.orders.createOrder(context, args.input),
     confirmPayOnDelivery: (_: unknown, args: { input: unknown }, context: Ctx) =>

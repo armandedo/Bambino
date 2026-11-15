@@ -172,6 +172,19 @@ export type PaymentReviewReason = (typeof PAYMENT_REVIEW_REASONS)[number];
 export const PAYMENT_REVIEW_RESOLUTIONS = ['REFUNDED', 'NO_MONEY_RECEIVED', 'OTHER'] as const;
 export type PaymentReviewResolution = (typeof PAYMENT_REVIEW_RESOLUTIONS)[number];
 
+/**
+ * Why a bag line is not what the shopper asked for. UNAVAILABLE: no longer sold. OUT_OF_STOCK: none left.
+ * LIMITED_STOCK: fewer left than asked for. QUANTITY_LIMIT: more than one order may hold. BAG_FULL: too many lines.
+ */
+export const BAG_ADJUSTMENT_REASONS = [
+  'UNAVAILABLE',
+  'OUT_OF_STOCK',
+  'LIMITED_STOCK',
+  'QUANTITY_LIMIT',
+  'BAG_FULL',
+] as const;
+export type BagAdjustmentReason = (typeof BAG_ADJUSTMENT_REASONS)[number];
+
 export const PAYMENT_TRANSACTION_TYPES = [
   'INITIATION',
   'STATUS_CHECK',

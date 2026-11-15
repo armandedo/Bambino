@@ -35,7 +35,8 @@ beforeAll(async () => {
   cpSync(migrationsFolder, previousFolder, { recursive: true });
   const journalPath = join(previousFolder, 'meta', '_journal.json');
   const journal = JSON.parse(readFileSync(journalPath, 'utf8')) as { entries: { tag: string }[] };
-  journal.entries = journal.entries.filter((entry) => entry.tag !== '0011_payment_reviews');
+  const cut = journal.entries.findIndex((entry) => entry.tag === '0011_payment_reviews');
+  journal.entries = journal.entries.slice(0, cut);
   writeFileSync(journalPath, JSON.stringify(journal));
   await migrate(db, { migrationsFolder: previousFolder });
 

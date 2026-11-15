@@ -1,27 +1,20 @@
 'use client';
 
-import { type Cart, RemoveFromCartMutation, UpdateCartItemMutation } from '@bambino/api-client';
+import type { CartLine } from '@bambino/api-client';
 import { Alert, Button, EmptyState, MoneyText, Skeleton, buttonClasses } from '@bambino/ui';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import NextLink from 'next/link';
-import { CART_KEY, useCart } from '@/components/header-actions';
+import { BagNotices, GUEST_CHECKOUT_HREF, useBag } from '@/components/bag';
 import { ProductPhoto } from '@/components/storefront/product-photo';
-import { RequireAuth } from '@/components/require-auth';
-import { api } from '@/lib/browser-api';
+import { MAX_BAG_QUANTITY } from '@/lib/guest-bag';
 import { errorMessage } from '@/lib/messages';
 import { displaySizeLabel } from '@/lib/size-label';
 
-const MAX_QUANTITY = 10;
-
 function CartContents() {
-  const cart = useCart(true);
-  const queryClient = useQueryClient();
+  const cart = useBag();
   const update = useMutation({
-    mutationFn: async (change: { itemId: string; quantity: number }) =>
-      change.quantity <= 0
-        ? (await api.request(RemoveFromCartMutation, { itemId: change.itemId })).removeFromCart
-        : (await api.request(UpdateCartItemMutation, change)).updateCartItem,
-    onSuccess: (next: Cart) => queryClient.setQueryData(CART_KEY, next),
+    mutationFn: (change: { line: CartLine; quantity: number }) =>
+      cart.setQuantity(change.line, change.quantity),
   });
 
   if (cart.isPending) {
@@ -39,18 +32,21 @@ function CartContents() {
       </Alert>
     );
   }
-  const data = cart.data;
+  const data = cart.cart;
   if (!data || data.items.length === 0) {
     return (
-      <EmptyState
-        title="Your bag is empty"
-        description="Clothes you add wait here until you check out."
-        action={
-          <NextLink href="/shop" className={buttonClasses()}>
-            Keep shopping
-          </NextLink>
-        }
-      />
+      <>
+        <BagNotices className="flex flex-col gap-3" />
+        <EmptyState
+          title="Your bag is empty"
+          description="Clothes you add wait here until you check out."
+          action={
+            <NextLink href="/shop" className={buttonClasses()}>
+              Keep shopping
+            </NextLink>
+          }
+        />
+      </>
     );
   }
 
@@ -60,6 +56,7 @@ function CartContents() {
         <h2 id="items" className="sr-only">
           Items
         </h2>
+        <BagNotices className="mb-3 flex flex-col gap-3" />
         {update.isError ? (
           <Alert tone="danger" live className="mb-3">
             {errorMessage(update.error)}
@@ -108,7 +105,7 @@ function CartContents() {
                       variant="ghost"
                       aria-label="Decrease quantity"
                       disabled={update.isPending}
-                      onClick={() => update.mutate({ itemId: item.id, quantity: item.quantity - 1 })}
+                      onClick={() => update.mutate({ line: item, quantity: item.quantity - 1 })}
                     >
                       −
                     </Button>
@@ -119,8 +116,8 @@ function CartContents() {
                       size="sm"
                       variant="ghost"
                       aria-label="Increase quantity"
-                      disabled={update.isPending || item.quantity >= MAX_QUANTITY}
-                      onClick={() => update.mutate({ itemId: item.id, quantity: item.quantity + 1 })}
+                      disabled={update.isPending || item.quantity >= MAX_BAG_QUANTITY}
+                      onClick={() => update.mutate({ line: item, quantity: item.quantity + 1 })}
                     >
                       +
                     </Button>
@@ -129,7 +126,7 @@ function CartContents() {
                     size="sm"
                     variant="ghost"
                     disabled={update.isPending}
-                    onClick={() => update.mutate({ itemId: item.id, quantity: 0 })}
+                    onClick={() => update.mutate({ line: item, quantity: 0 })}
                   >
                     Remove<span className="sr-only"> {item.product.name}</span>
                   </Button>
@@ -150,12 +147,16 @@ function CartContents() {
             </span>
             <MoneyText value={data.subtotal} className="font-semibold" />
           </div>
-          <p className="text-sm text-foreground-muted">Choose delivery and review your total at checkout.</p>
+          <p className="text-sm text-foreground-muted">
+            {cart.isGuest
+              ? 'Sign in or create an account to check out. Your bag comes with you, and you choose delivery and review your total there.'
+              : 'Choose delivery and review your total at checkout.'}
+          </p>
           <NextLink
-            href="/checkout"
+            href={cart.isGuest ? GUEST_CHECKOUT_HREF : '/checkout'}
             className={buttonClasses({ fullWidth: true, size: 'lg', className: 'cta' })}
           >
-            Go to checkout
+            {cart.isGuest ? 'Sign in to check out' : 'Go to checkout'}
           </NextLink>
           <NextLink
             href="/shop"
@@ -169,6 +170,7 @@ function CartContents() {
   );
 }
 
+/** The bag page, for visitors and customers alike. Checking out is what needs an account. */
 export function CartView() {
-  return <RequireAuth>{() => <CartContents />}</RequireAuth>;
+  return <CartContents />;
 }

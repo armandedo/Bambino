@@ -50,6 +50,55 @@ type CartItem {
   lineTotal: Money!
 }
 
+"Which piece and how many. A guest bag holds nothing else: no price, no name, no person."
+input BagItemInput {
+  variantId: ID!
+  quantity: Int!
+}
+
+enum BagAdjustmentReason {
+  "No longer sold."
+  UNAVAILABLE
+  "None left."
+  OUT_OF_STOCK
+  "Fewer left than asked for."
+  LIMITED_STOCK
+  "More than one order may hold."
+  QUANTITY_LIMIT
+  "The bag already has as many different pieces as it can hold."
+  BAG_FULL
+}
+
+"A bag line that is not what was asked for."
+type BagAdjustment {
+  variantId: ID!
+  "Null when the product can no longer be seen."
+  productName: String
+  requested: Int!
+  "What the bag holds for this piece after the adjustment (0 when it was left out)."
+  quantity: Int!
+  reason: BagAdjustmentReason!
+}
+
+"A visitor's bag priced from the current catalogue. Nothing is saved and no stock is held."
+type GuestBag {
+  bag: Cart!
+  adjustments: [BagAdjustment!]!
+}
+
+input MergeGuestBagInput {
+  "Made by the device that held the bag. Sending the same key again adds nothing twice."
+  mergeKey: String!
+  items: [BagItemInput!]!
+}
+
+type GuestBagMerge {
+  cart: Cart!
+  adjustments: [BagAdjustment!]!
+  "True when this bag had already been merged: nothing was changed."
+  alreadyMerged: Boolean!
+}
+
 type DeliveryOption {
   code: ID!
   name: String!
@@ -193,6 +242,8 @@ input ConfirmPayOnDeliveryInput {
 
 extend type Query {
   myCart: Cart @authenticated
+  "Prices and checks a visitor's bag against the catalogue and stock, without signing in."
+  guestBag(items: [BagItemInput!]!): GuestBag!
   deliveryOptions: [DeliveryOption!]!
   "What the caller's cart would cost with these choices. Nothing is created."
   checkoutPreview(input: CheckoutInput!): CheckoutPreview! @authenticated
@@ -206,6 +257,8 @@ extend type Mutation {
   addToCart(variantId: ID!, quantity: Int = 1): Cart! @authenticated
   updateCartItem(itemId: ID!, quantity: Int!): Cart! @authenticated
   removeFromCart(itemId: ID!): Cart! @authenticated
+  "Adds the bag a visitor filled before signing in to their cart, once per merge key."
+  mergeGuestBag(input: MergeGuestBagInput!): GuestBagMerge! @authenticated
   "Turns the caller's cart into an order in PENDING_PAYMENT and reserves stock."
   createOrder(input: CreateOrderInput!): Order! @authenticated
   "Accepts a PENDING_PAYMENT shop order as pay on delivery: stock committed, delivery created, the chosen wallet asked for payment at the door. Repeating it returns the confirmed order."

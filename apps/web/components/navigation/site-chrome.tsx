@@ -6,7 +6,7 @@ import { Heart, Search, ShoppingBag, UserRound } from 'lucide-react';
 import NextLink from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { type FormEvent, type ReactNode, Suspense, useId } from 'react';
-import { useCart } from '@/components/header-actions';
+import { useBag } from '@/components/bag';
 import { useSession } from '@/lib/session';
 import { type ShopState, readShopState, shopHref } from '@/lib/shop-url';
 import { Logo } from '../logo';
@@ -109,10 +109,10 @@ function useBagLink() {
 /** Compact top bar: logo, search, favourites, account and bag. The search takes its own row on phones. */
 function Header() {
   const { viewer, loading } = useSession();
-  const cart = useCart(viewer !== null);
+  const bag = useBag();
   const { ready, saved, openPanel } = useStorefront();
   const openBag = useBagLink();
-  const count = cart.data?.itemCount ?? 0;
+  const count = bag.count;
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background">

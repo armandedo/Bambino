@@ -101,6 +101,7 @@ describe('enum parity with @bambino/types', () => {
     PaymentStatus: types.PAYMENT_STATUSES,
     RefundStatus: types.REFUND_STATUSES,
     RefundMethod: types.REFUND_METHODS,
+    BagAdjustmentReason: types.BAG_ADJUSTMENT_REASONS,
     PaymentReviewReason: types.PAYMENT_REVIEW_REASONS,
     PaymentReviewResolution: types.PAYMENT_REVIEW_RESOLUTIONS,
     DeliveryStatus: types.DELIVERY_STATUSES,
@@ -138,6 +139,8 @@ describe('authorization declared in the contract', () => {
     'product',
     'categories',
     'deliveryOptions',
+    // A visitor's bag is priced before they sign in. It reads the public catalogue only and saves nothing.
+    'guestBag',
     'subscriptionPlans',
   ];
   const publicMutations = [

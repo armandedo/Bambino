@@ -12,6 +12,7 @@ import NextLink from 'next/link';
 import { useRouter } from 'next/navigation';
 import { type ReactNode, useCallback, useEffect, useState } from 'react';
 import { AddressPicker, DeliveryPicker, TotalsTable } from '@/components/checkout-parts';
+import { BagNotices, useBag } from '@/components/bag';
 import { CART_KEY, useCart } from '@/components/header-actions';
 import { PayOnDeliveryPanel } from '@/components/pay-on-delivery-panel';
 import { PaymentPanel } from '@/components/payment-panel';
@@ -45,6 +46,7 @@ function Checkout({ viewer }: { viewer: Viewer }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const cart = useCart(true);
+  const bag = useBag();
   const defaultAddress = viewer.addresses.find((a) => a.isDefault) ?? viewer.addresses[0];
   const [addressId, setAddressId] = useState<string | null>(defaultAddress?.id ?? null);
   const [deliveryCode, setDeliveryCode] = useState<string | null>(null);
@@ -96,7 +98,8 @@ function Checkout({ viewer }: { viewer: Viewer }) {
     if (order) router.push(`/dashboard/orders/${order.id}?placed=1`);
   }, [order, router, queryClient]);
 
-  if (cart.isPending) return <Skeleton className="h-64" />;
+  // A bag filled before signing in is on its way into the account: wait for it instead of calling the bag empty.
+  if (cart.isPending || bag.merging) return <Skeleton className="h-64" />;
   if (!order && (!cart.data || cart.data.items.length === 0)) {
     return (
       <Alert
@@ -157,6 +160,7 @@ function Checkout({ viewer }: { viewer: Viewer }) {
   return (
     <div className="flex flex-col gap-8">
       <CheckoutSteps current={0} />
+      <BagNotices className="flex flex-col gap-3" />
       <div className="grid gap-8 lg:grid-cols-[2fr_1fr]">
         <div className="flex flex-col gap-6">
           <Step number={1} title="Where should we deliver?">

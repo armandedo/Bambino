@@ -1,17 +1,14 @@
 'use client';
 
-import { AddToCartMutation, type ProductDetail } from '@bambino/api-client';
-import { Alert, Button, MoneyText, buttonClasses, cn, useToast } from '@bambino/ui';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { ProductDetail } from '@bambino/api-client';
+import { Alert, Button, MoneyText, cn, useToast } from '@bambino/ui';
+import { useMutation } from '@tanstack/react-query';
 import { Check } from 'lucide-react';
 import NextLink from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { api } from '@/lib/browser-api';
 import { errorMessage } from '@/lib/messages';
 import { displaySizeLabel } from '@/lib/size-label';
-import { useSession } from '@/lib/session';
-import { CART_KEY } from './header-actions';
+import { useBag } from './bag';
 import { useStorefront } from './storefront/storefront-context';
 
 type Variant = Pick<ProductDetail['variants'][number], 'id' | 'color' | 'inStock' | 'price' | 'size'>;
@@ -23,35 +20,21 @@ const CHOICE_ON = 'cursor-pointer border-primary bg-primary font-semibold text-p
 const CHOICE_OFF = 'cursor-pointer border-border-strong bg-surface font-medium hover:bg-accent-soft';
 const CHOICE_GONE = 'cursor-not-allowed border-dashed border-border bg-surface-muted text-foreground-muted';
 
-/** Puts one piece in the bag, shows the bag, and says so. Used by the product page, the options panel and cards. */
+/**
+ * Puts one piece in the bag, shows the bag, and says so. Used by the product page, the options panel and cards.
+ * Visitors do not need to sign in: their bag is kept on this device until they do.
+ */
 export function useAddToBag() {
   const { openPanel } = useStorefront();
   const toast = useToast();
-  const queryClient = useQueryClient();
+  const bag = useBag();
   return useMutation({
-    mutationFn: (variantId: string) => api.request(AddToCartMutation, { variantId, quantity: 1 }),
-    onSuccess: ({ addToCart }) => {
-      queryClient.setQueryData(CART_KEY, addToCart);
+    mutationFn: (variantId: string) => bag.add(variantId),
+    onSuccess: () => {
       toast.show({ title: 'Added to your bag', tone: 'success' });
       openPanel('cart');
     },
   });
-}
-
-/** Where to send a signed-out shopper, so they come back to the page (and filters) they were on. */
-export function useSignInHref() {
-  const pathname = usePathname();
-  const router = useRouter();
-  const { openPanel } = useStorefront();
-  return {
-    href: `/login?next=${encodeURIComponent(pathname)}`,
-    onClick(event: { preventDefault: () => void }) {
-      event.preventDefault();
-      openPanel(null);
-      const here = `${window.location.pathname}${window.location.search}`;
-      router.push(`/login?next=${encodeURIComponent(here)}`);
-    },
-  };
 }
 
 /**
@@ -68,8 +51,6 @@ export function AddToCart({
   oneTimeEligible: boolean;
   layout?: 'page' | 'panel';
 }) {
-  const { viewer } = useSession();
-  const signIn = useSignInHref();
   const colors = [...new Set(variants.map((v) => v.color))];
   const [color, setColor] = useState(colors[0] ?? '');
   const forColor = variants
@@ -181,7 +162,7 @@ export function AddToCart({
             </p>
           ) : soldOut ? (
             <p className="py-2 text-[15px] text-foreground-muted">Every size is sold out right now.</p>
-          ) : viewer ? (
+          ) : (
             <Button
               size="lg"
               fullWidth
@@ -192,14 +173,6 @@ export function AddToCart({
             >
               {selected ? 'Add to bag' : 'Choose a size'}
             </Button>
-          ) : (
-            <NextLink
-              href={signIn.href}
-              onClick={signIn.onClick}
-              className={buttonClasses({ size: 'lg', fullWidth: true, className: 'cta' })}
-            >
-              Sign in to buy
-            </NextLink>
           )}
         </div>
       </div>

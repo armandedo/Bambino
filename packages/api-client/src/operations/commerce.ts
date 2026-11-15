@@ -48,6 +48,42 @@ export const RemoveFromCartMutation = operation<{ removeFromCart: Cart }, { item
   `mutation RemoveFromCart($itemId: ID!) { removeFromCart(itemId: $itemId) { ${CART_FIELDS} } }`,
 );
 
+export type BagAdjustmentReason =
+  'UNAVAILABLE' | 'OUT_OF_STOCK' | 'LIMITED_STOCK' | 'QUANTITY_LIMIT' | 'BAG_FULL';
+
+/** A bag line that is not what was asked for; `quantity` is what the bag holds for it afterwards. */
+export interface BagAdjustment {
+  variantId: string;
+  productName: string | null;
+  requested: number;
+  quantity: number;
+  reason: BagAdjustmentReason;
+}
+
+/** What a guest bag stores and sends: a piece and how many. */
+export interface BagItemInput {
+  variantId: string;
+  quantity: number;
+}
+
+const ADJUSTMENT_FIELDS = 'variantId productName requested quantity reason';
+
+export const GuestBagQuery = operation<
+  { guestBag: { bag: Cart; adjustments: BagAdjustment[] } },
+  { items: BagItemInput[] }
+>(
+  'GuestBag',
+  `query GuestBag($items: [BagItemInput!]!) { guestBag(items: $items) { bag { ${CART_FIELDS} } adjustments { ${ADJUSTMENT_FIELDS} } } }`,
+);
+
+export const MergeGuestBagMutation = operation<
+  { mergeGuestBag: { cart: Cart; adjustments: BagAdjustment[]; alreadyMerged: boolean } },
+  { input: { mergeKey: string; items: BagItemInput[] } }
+>(
+  'MergeGuestBag',
+  `mutation MergeGuestBag($input: MergeGuestBagInput!) { mergeGuestBag(input: $input) { alreadyMerged cart { ${CART_FIELDS} } adjustments { ${ADJUSTMENT_FIELDS} } } }`,
+);
+
 export interface DeliveryOption {
   code: string;
   name: string;

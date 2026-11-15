@@ -85,6 +85,13 @@
       "when": 1794700800000,
       "tag": "0011_payment_reviews",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1794787200000,
+      "tag": "0012_guest_bag_merges",
+      "breakpoints": true
     }
   ]
 }

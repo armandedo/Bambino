@@ -5,8 +5,7 @@ import { X } from 'lucide-react';
 import NextLink from 'next/link';
 import { useEffect, useId, useRef, useState } from 'react';
 import { AddToCart } from '@/components/add-to-cart';
-import { useCart } from '@/components/header-actions';
-import { useSession } from '@/lib/session';
+import { BagNotices, GUEST_CHECKOUT_HREF, useBag } from '@/components/bag';
 import { ProductPhoto } from './product-photo';
 import { type Panel, useStorefront } from './storefront-context';
 
@@ -16,30 +15,16 @@ const EMPTY_TITLE = 'text-lg font-semibold';
 const META = 'text-sm text-foreground-muted';
 
 function CartContent() {
-  const { viewer, loading } = useSession();
   const { openPanel } = useStorefront();
-  const cart = useCart(viewer !== null);
+  const bag = useBag();
   const close = () => openPanel(null);
-  if (loading || (viewer && cart.isPending))
+  if (bag.isPending)
     return (
       <p className="p-5 text-foreground-muted" role="status">
         Opening your bag…
       </p>
     );
-  if (!viewer)
-    return (
-      <div className={EMPTY_PANEL}>
-        <p>Sign in to see your bag and check out.</p>
-        <NextLink
-          onClick={close}
-          href="/login?next=/cart"
-          className={buttonClasses({ fullWidth: true, className: 'cta mt-2' })}
-        >
-          Sign in
-        </NextLink>
-      </div>
-    );
-  if (cart.isError)
+  if (bag.isError)
     return (
       <div className={EMPTY_PANEL}>
         <p role="alert">We couldn’t load your bag. Open the bag page to try again.</p>
@@ -48,9 +33,10 @@ function CartContent() {
         </NextLink>
       </div>
     );
-  if (!cart.data?.items.length)
+  if (!bag.cart?.items.length)
     return (
       <div className={EMPTY_PANEL}>
+        <BagNotices className="flex w-full flex-col gap-3" />
         <p className={EMPTY_TITLE}>Your bag is empty</p>
         <p className="text-foreground-muted">Clothes you add wait here until you check out.</p>
         <NextLink href="/shop" onClick={close} className={buttonClasses({ className: 'mt-2' })}>
@@ -58,8 +44,10 @@ function CartContent() {
         </NextLink>
       </div>
     );
+  const cart = { data: bag.cart };
   return (
     <>
+      <BagNotices className="flex flex-col gap-3 px-5 pt-4" />
       <ul className="divide-y divide-border px-5">
         {cart.data.items.map((item) => (
           <li key={item.id} className="flex gap-3 py-4">
@@ -94,13 +82,17 @@ function CartContent() {
           <span>Subtotal</span>
           <MoneyText value={cart.data.subtotal} />
         </p>
-        <p className={META}>Delivery options and your total are shown at checkout.</p>
+        <p className={META}>
+          {bag.isGuest
+            ? 'Sign in to check out. Your bag comes with you, and delivery options and your total are shown there.'
+            : 'Delivery options and your total are shown at checkout.'}
+        </p>
         <NextLink
-          href="/checkout"
+          href={bag.isGuest ? GUEST_CHECKOUT_HREF : '/checkout'}
           onClick={close}
           className={buttonClasses({ fullWidth: true, size: 'lg', className: 'cta' })}
         >
-          Checkout
+          {bag.isGuest ? 'Sign in to check out' : 'Checkout'}
         </NextLink>
         <NextLink
           href="/cart"

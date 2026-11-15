@@ -57,6 +57,23 @@ export const carts = pgTable(
   ],
 );
 
+/**
+ * One row per guest bag that was merged into a customer's cart when they signed in. The key comes from the device
+ * that held the bag, so sending the same bag again (a retry, a second tab) adds nothing twice.
+ */
+export const guestBagMerges = pgTable(
+  'guest_bag_merges',
+  {
+    id: id(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    mergeKey: text('merge_key').notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex('guest_bag_merges_user_key_uq').on(t.userId, t.mergeKey)],
+);
+
 /** Holds no price: totals are always recomputed from current variant prices on the server. */
 export const cartItems = pgTable(
   'cart_items',

@@ -5,7 +5,6 @@ import { MoneyText, buttonClasses, cn } from '@bambino/ui';
 import { Heart } from 'lucide-react';
 import NextLink from 'next/link';
 import { useAddToBag } from '@/components/add-to-cart';
-import { useSession } from '@/lib/session';
 import { ProductPhoto } from './storefront/product-photo';
 import { useStorefront } from './storefront/storefront-context';
 
@@ -16,7 +15,6 @@ const ACTION = 'mt-1.5 min-h-10 text-sm font-semibold';
  * bag; anything with a choice to make opens the options panel, so the shopper stays on the grid.
  */
 export function ProductCard({ product, priority = false }: { product: ProductCardData; priority?: boolean }) {
-  const { viewer } = useSession();
   const { saved, toggleSaved, openOptions } = useStorefront();
   const add = useAddToBag();
   const isSaved = saved.some((item) => item.id === product.id);
@@ -71,19 +69,20 @@ export function ProductCard({ product, priority = false }: { product: ProductCar
       {inStock.length === 0 ? (
         <NextLink
           href={href}
+          aria-label={`View details: ${product.name}`}
           className={buttonClasses({ variant: 'outline', size: 'sm', fullWidth: true, className: ACTION })}
         >
-          View details<span className="sr-only">: {product.name}</span>
+          View details
         </NextLink>
       ) : (
         <button
           type="button"
           disabled={add.isPending}
-          onClick={() => (single && viewer ? add.mutate(single.id) : openOptions(product))}
+          aria-label={`${single ? 'Add to bag' : 'Choose options'}: ${product.name}`}
+          onClick={() => (single ? add.mutate(single.id) : openOptions(product))}
           className={buttonClasses({ variant: 'outline', size: 'sm', fullWidth: true, className: ACTION })}
         >
           {single ? (add.isPending ? 'Adding…' : 'Add to bag') : 'Choose options'}
-          <span className="sr-only">: {product.name}</span>
         </button>
       )}
     </article>
