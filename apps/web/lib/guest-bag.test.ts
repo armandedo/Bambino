@@ -1,3 +1,4 @@
+import { BAG_POLICY } from '@bambino/config';
 import { describe, expect, it } from 'vitest';
 import { describeAdjustment, describeAdjustments } from './bag-notices';
 import {
@@ -45,10 +46,16 @@ describe('the guest bag', () => {
     let state = added(EMPTY_GUEST_BAG, A, 4);
     state = added(state, A, 5);
     expect(state.items).toEqual([{ variantId: A, quantity: 9 }]);
-    expect(added(state, A, 1).items[0]?.quantity).toBe(MAX_BAG_QUANTITY);
-    const over = addToGuestBag(added(state, A, 1), A, 1, key);
+    const full = added(state, A, MAX_BAG_QUANTITY - 9);
+    expect(full.items[0]?.quantity).toBe(MAX_BAG_QUANTITY);
+    const over = addToGuestBag(full, A, 1, key);
     expect(over).toMatchObject({ ok: false, reason: 'QUANTITY_LIMIT' });
     expect(guestBagCount(over.state)).toBe(MAX_BAG_QUANTITY);
+  });
+
+  it('uses the limits the server enforces', () => {
+    expect(MAX_BAG_QUANTITY).toBe(BAG_POLICY.maxQuantityPerItem);
+    expect(MAX_BAG_LINES).toBe(BAG_POLICY.maxLines);
   });
 
   it('refuses another line when it is full', () => {

@@ -1,3 +1,4 @@
+import { BAG_POLICY } from '@bambino/config';
 import { type Database, type Executor, schema } from '@bambino/database';
 import { and, asc, eq, inArray, isNull } from '@bambino/database/orm';
 import type { BagAdjustmentReason } from '@bambino/types';
@@ -7,8 +8,8 @@ import { type ServiceContext, requireUser } from './context';
 import { AppError, parseInput } from './errors';
 import type { InventoryService } from './inventory-service';
 
-export const MAX_LINE_QUANTITY = 20;
-export const MAX_CART_LINES = 50;
+export const MAX_LINE_QUANTITY = BAG_POLICY.maxQuantityPerItem;
+export const MAX_CART_LINES = BAG_POLICY.maxLines;
 
 export interface CartLine {
   id: string;

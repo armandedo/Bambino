@@ -8,19 +8,20 @@ import { useSession } from '@/lib/session';
 
 /** Signed-in pages: sends visitors to sign in and brings them back here afterwards. */
 export function RequireAuth({ children }: { children: (viewer: Viewer) => ReactNode }) {
-  const { viewer, loading } = useSession();
+  const { viewer, loading, signingOut } = useSession();
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    if (!loading && !viewer) router.replace(`/login?next=${encodeURIComponent(pathname)}`);
-  }, [loading, viewer, router, pathname]);
+    // Someone signing out is on their way elsewhere: do not ask them to sign back in to the page they are leaving.
+    if (!loading && !viewer && !signingOut) router.replace(`/login?next=${encodeURIComponent(pathname)}`);
+  }, [loading, viewer, signingOut, router, pathname]);
 
   if (!viewer) {
     return (
       <div className="flex justify-center py-24">
         <Spinner
-          label={loading ? 'Checking your session' : 'Taking you to sign in'}
+          label={loading ? 'Checking your session' : signingOut ? 'Signing you out' : 'Taking you to sign in'}
           size="lg"
           className="text-primary"
         />

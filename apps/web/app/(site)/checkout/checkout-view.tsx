@@ -102,17 +102,20 @@ function Checkout({ viewer }: { viewer: Viewer }) {
   if (cart.isPending || bag.merging) return <Skeleton className="h-64" />;
   if (!order && (!cart.data || cart.data.items.length === 0)) {
     return (
-      <Alert
-        tone="info"
-        title="Your bag is empty"
-        action={
-          <NextLink href="/shop" className={buttonClasses({ size: 'sm' })}>
-            Go to the shop
-          </NextLink>
-        }
-      >
-        Add something before checking out.
-      </Alert>
+      <div className="flex flex-col gap-3">
+        <BagNotices className="flex flex-col gap-3" />
+        <Alert
+          tone="info"
+          title="Your bag is empty"
+          action={
+            <NextLink href="/shop" className={buttonClasses({ size: 'sm' })}>
+              Go to the shop
+            </NextLink>
+          }
+        >
+          Add something before checking out.
+        </Alert>
+      </div>
     );
   }
 

@@ -46,6 +46,8 @@ export async function addShoppingItem(page: Page) {
   const variant = product?.variants.find((v) => v.inStock);
   if (!product || !variant) throw new Error('No purchasable test stock');
   await page.goto(`/shop/${product.slug}`, { waitUntil: 'domcontentloaded' });
+  // A choice made before the page is interactive is lost when it becomes so: wait, as the size picker needs script.
+  await page.locator('[data-storefront-ready="true"]').waitFor();
   // The product page streams in: until that settles, a hidden copy of its controls can exist next to the real
   // ones. A shopper only ever uses the ones in the page itself.
   const form = page.getByRole('main');

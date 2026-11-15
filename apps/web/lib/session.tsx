@@ -10,6 +10,7 @@ import {
 } from '@bambino/api-client';
 import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from '@tanstack/react-query';
 import { type ReactNode, createContext, useCallback, useContext, useMemo, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { api, markSignedIn, probablySignedIn, renewSession } from './browser-api';
 
 export const ME_KEY = ['me'] as const;
@@ -32,6 +33,11 @@ interface SessionApi {
   signIn: (email: string, password: string) => Promise<Viewer>;
   register: (input: RegisterInput) => Promise<Viewer>;
   signOut: () => Promise<void>;
+  /**
+   * True from the moment sign-out starts until the page changes. A signed-in page uses it to let the sign-out
+   * finish and go where it was sent, instead of sending the shopper to sign in again.
+   */
+  signingOut: boolean;
 }
 
 export type RegisterInput = VariablesOf<typeof RegisterMutation>['input'];
@@ -66,7 +72,15 @@ function SessionProvider({ children }: { children: ReactNode }) {
     [queryClient],
   );
 
+  // Remembered by page: once the shopper is somewhere else, the sign-out is over.
+  const pathname = usePathname();
+  const [leftFrom, setLeftFrom] = useState<string | null>(null);
+  // Forgotten as soon as they are on another page, so coming back later asks them to sign in as usual.
+  if (leftFrom !== null && leftFrom !== pathname) setLeftFrom(null);
+  const signingOut = leftFrom !== null && leftFrom === pathname;
+
   const signOut = useCallback(async () => {
+    setLeftFrom(pathname);
     try {
       await api.request(LogoutMutation, {});
     } finally {
@@ -76,11 +90,11 @@ function SessionProvider({ children }: { children: ReactNode }) {
       queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== ME_KEY[0] });
       queryClient.setQueryData(ME_KEY, null);
     }
-  }, [queryClient]);
+  }, [queryClient, pathname]);
 
   const value = useMemo(
-    () => ({ viewer: data ?? null, loading: isPending, signIn, register, signOut }),
-    [data, isPending, signIn, register, signOut],
+    () => ({ viewer: data ?? null, loading: isPending, signIn, register, signOut, signingOut }),
+    [data, isPending, signIn, register, signOut, signingOut],
   );
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

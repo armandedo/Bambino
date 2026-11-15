@@ -1,6 +1,15 @@
 import { expect, test } from '@playwright/test';
 import { customerApi } from '../support/api';
-import { birthDateMonthsAgo, expectNoHorizontalScroll, registerThroughUi } from '../support/ui';
+import {
+  birthDateMonthsAgo,
+  expectNoHorizontalScroll,
+  registerThroughUi,
+  signInThroughUi,
+} from '../support/ui';
+
+// The seeded customer: used where a journey needs someone signed in but not a new account.
+const CUSTOMER_EMAIL = process.env.E2E_CUSTOMER_EMAIL ?? 'parent@seed.test';
+const CUSTOMER_PASSWORD = process.env.E2E_CUSTOMER_PASSWORD ?? process.env.SEED_CUSTOMER_PASSWORD;
 
 test('journey B: a parent finds a size and shops that size', async ({ page }) => {
   await registerThroughUi(page, 'sizing');
@@ -48,7 +57,7 @@ for (const [path, target] of [
 }
 
 test('direct subscription activation is disabled on the deployed API', async ({ page }) => {
-  await registerThroughUi(page, 'disabled', '/shop');
+  await signInThroughUi(page, CUSTOMER_EMAIL, CUSTOMER_PASSWORD ?? '');
   const { subscriptionPlans } = await customerApi(page)<{ subscriptionPlans: unknown[] }>(
     '{ subscriptionPlans { id } }',
   );

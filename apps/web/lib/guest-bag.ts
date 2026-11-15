@@ -5,6 +5,7 @@
  *
  * The functions in the first half are pure, so the rules can be tested without a browser.
  */
+import { BAG_POLICY } from '@bambino/config';
 import { useSyncExternalStore } from 'react';
 
 export interface GuestBagItem {
@@ -19,9 +20,9 @@ export interface GuestBagState {
 }
 
 export const GUEST_BAG_STORAGE_KEY = 'bambino.guest-bag.v1';
-/** The most of one piece the bag page lets a shopper choose (the server allows no more than 20 per order). */
-export const MAX_BAG_QUANTITY = 10;
-export const MAX_BAG_LINES = 50;
+/** The same limits the server enforces (BAG_POLICY), so the controls never offer what would be refused. */
+export const MAX_BAG_QUANTITY = BAG_POLICY.maxQuantityPerItem;
+export const MAX_BAG_LINES = BAG_POLICY.maxLines;
 
 export const EMPTY_GUEST_BAG: GuestBagState = { items: [], mergeKey: null };
 

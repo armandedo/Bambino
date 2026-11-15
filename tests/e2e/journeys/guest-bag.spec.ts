@@ -1,6 +1,6 @@
 import { type Page, expect, test } from '@playwright/test';
 import { customerApi, staffApi } from '../support/api';
-import { expectNoHorizontalScroll } from '../support/ui';
+import { expectNoHorizontalScroll, registerThroughUi, signInThroughUi } from '../support/ui';
 
 /**
  * Shopping without an account: a visitor fills a bag that lives on their device, and it joins their account once
@@ -258,4 +258,152 @@ test('a failed sign-in keeps the bag; signing in merges it once and returns to c
   for (const item of (await cart()).items) {
     await customerApi(page)('mutation ($id: ID!) { removeFromCart(itemId: $id) { id } }', { id: item.id });
   }
+});
+
+const CART = '{ myCart { itemCount items { id quantity variant { id } } } }';
+interface AccountCart {
+  itemCount: number;
+  items: { id: string; quantity: number; variant: { id: string } }[];
+}
+const accountCart = async (page: Page) =>
+  (await customerApi(page)<{ myCart: AccountCart | null }>(CART)).myCart ?? { itemCount: 0, items: [] };
+async function emptyAccountCart(page: Page) {
+  for (const item of (await accountCart(page)).items) {
+    await customerApi(page)('mutation ($id: ID!) { removeFromCart(itemId: $id) { id } }', { id: item.id });
+  }
+}
+function requireCustomerPassword(): string {
+  if (!CUSTOMER_PASSWORD) {
+    throw new Error(
+      'Set SEED_CUSTOMER_PASSWORD (or E2E_CUSTOMER_PASSWORD) and run `pnpm --filter @bambino/api db:seed`.',
+    );
+  }
+  return CUSTOMER_PASSWORD;
+}
+
+test('a merge that fails keeps the bag on the device, and trying again adds it once', async ({ page }) => {
+  const password = requireCustomerPassword();
+  const products = await purchasable(page);
+  const product = products[2] ?? products[0];
+  if (!product) throw new Error('No purchasable test stock');
+  const { variant } = await addFromProductPage(page, product);
+  await page.keyboard.press('Escape');
+  const stored = await storedBag(page);
+  expect(stored?.items).toEqual([{ variantId: variant.id, quantity: 1 }]);
+
+  // The first merge request never reaches the API (the connection drops); later ones go through untouched.
+  const merges: string[] = [];
+  await page.route('**/graphql', async (route) => {
+    const body = route.request().postDataJSON() as { operationName?: string } | null;
+    if (body?.operationName !== 'MergeGuestBag') return route.continue();
+    merges.push(merges.length === 0 ? 'dropped' : 'sent');
+    if (merges.length === 1) return route.abort('connectionfailed');
+    return route.continue();
+  });
+
+  await signInThroughUi(page, CUSTOMER_EMAIL, password, '/checkout');
+  const failure = page.getByRole('alert').filter({ hasText: 'We couldn’t add the bag from this device' });
+  await expect(failure).toBeVisible();
+  await expect(failure).toContainText('The items are still saved on this device.');
+  // Nothing was lost and nothing was added: the bag is still on the device, and the account has none of it.
+  expect(await storedBag(page)).toEqual(stored);
+  expect((await accountCart(page)).items.find((item) => item.variant.id === variant.id)).toBeUndefined();
+  expect(merges).toEqual(['dropped']);
+
+  await failure.getByRole('button', { name: 'Try again' }).click();
+  await expect(page.getByText('Your bag was added to your account', { exact: true })).toBeVisible();
+  await expect(failure).toHaveCount(0);
+  await expect.poll(() => storedBag(page)).toBeNull();
+  expect(merges).toEqual(['dropped', 'sent']);
+  const cart = await accountCart(page);
+  expect(cart.items.find((item) => item.variant.id === variant.id)?.quantity).toBe(1);
+  await expect(page.getByRole('heading', { name: 'Checkout', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Place order and pay' })).toBeVisible();
+
+  // The same bag sent yet again changes nothing.
+  const again = await customerApi(page)<{
+    mergeGuestBag: { alreadyMerged: boolean; cart: { itemCount: number } };
+  }>(
+    'mutation ($input: MergeGuestBagInput!) { mergeGuestBag(input: $input) { alreadyMerged cart { itemCount } } }',
+    { input: { mergeKey: stored?.mergeKey, items: stored?.items } },
+  );
+  expect(again.mergeGuestBag).toEqual({ alreadyMerged: true, cart: { itemCount: cart.itemCount } });
+  await emptyAccountCart(page);
+});
+
+test('signing out leaves the account bag behind: the device shows an empty bag, and the account keeps its own', async ({
+  page,
+}) => {
+  const password = requireCustomerPassword();
+  const products = await purchasable(page);
+  const product = products[3] ?? products[0];
+  const variant = product?.variants.find((v) => v.inStock);
+  if (!product || !variant) throw new Error('No purchasable test stock');
+
+  await signInThroughUi(page, CUSTOMER_EMAIL, password);
+  await emptyAccountCart(page);
+  await customerApi(page)('mutation ($id: ID!) { addToCart(variantId: $id, quantity: 2) { id } }', {
+    id: variant.id,
+  });
+  await page.goto('/cart', { waitUntil: 'domcontentloaded' });
+  const main = page.getByRole('main');
+  await expect(main.getByText('Subtotal (2 items)', { exact: true })).toBeVisible();
+  await expect(main.getByText(product.name).first()).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Bag, 2 items', exact: true })).toBeVisible();
+
+  await page.goto('/account', { waitUntil: 'domcontentloaded' });
+  await page.getByRole('button', { name: 'Sign out' }).click();
+  await expect(page).toHaveURL(/\/$/, { timeout: 60_000 });
+
+  // Whoever uses this device next sees no trace of that bag: not in the header, the panel, the bag page or storage.
+  await expect(page.getByRole('link', { name: 'Bag, 0 items', exact: true })).toBeVisible();
+  await page.getByRole('link', { name: 'Bag, 0 items', exact: true }).click();
+  const panel = page.getByRole('dialog');
+  await expect(panel).toContainText('Your bag is empty');
+  await expect(panel).not.toContainText(product.name);
+  await page.keyboard.press('Escape');
+  await page.goto('/cart', { waitUntil: 'domcontentloaded' });
+  await expect(main.getByText('Your bag is empty', { exact: true })).toBeVisible();
+  await expect(main.getByText(product.name)).toHaveCount(0);
+  expect(await storedBag(page)).toBeNull();
+  // The API agrees: without the session there is no cart to read, and a visitor's bag query knows nothing of it.
+  await expect(customerApi(page)(CART)).rejects.toThrow(/UNAUTHENTICATED/);
+  await page.reload();
+  await expect(main.getByText('Your bag is empty', { exact: true })).toBeVisible();
+
+  // The account still has it.
+  await signInThroughUi(page, CUSTOMER_EMAIL, password, '/cart');
+  await expect(main.getByText('Subtotal (2 items)', { exact: true })).toBeVisible();
+  expect((await accountCart(page)).items).toEqual([
+    expect.objectContaining({ quantity: 2, variant: { id: variant.id } }),
+  ]);
+  await emptyAccountCart(page);
+});
+
+test('creating an account with a guest bag brings the bag into the new account', async ({ page }) => {
+  const products = await purchasable(page);
+  const product = products[4] ?? products[0];
+  if (!product) throw new Error('No purchasable test stock');
+  const { variant } = await addFromProductPage(page, product);
+  await page.keyboard.press('Escape');
+  await page.goto('/cart', { waitUntil: 'domcontentloaded' });
+  await page
+    .getByRole('main')
+    .getByRole('group', { name: `Quantity of ${product.name}` })
+    .getByRole('button', { name: 'Increase quantity' })
+    .click();
+  await expect(page.getByRole('main').getByText('Subtotal (2 items)', { exact: true })).toBeVisible();
+  const stored = await storedBag(page);
+  expect(stored?.items).toEqual([{ variantId: variant.id, quantity: 2 }]);
+
+  await registerThroughUi(page, 'guest-bag', '/checkout');
+  await expect(page.getByText('Your bag was added to your account', { exact: true })).toBeVisible();
+  await expect.poll(() => storedBag(page)).toBeNull();
+  // A new account had nothing: its bag is exactly the guest bag, and checkout can go on.
+  expect((await accountCart(page)).items).toEqual([
+    expect.objectContaining({ quantity: 2, variant: { id: variant.id } }),
+  ]);
+  await expect(page.getByRole('heading', { name: 'Checkout', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Bag, 2 items', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Place order and pay' })).toBeVisible();
 });
