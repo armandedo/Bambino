@@ -14,7 +14,7 @@ export async function guardTestPayments(page: Page) {
       if (
         input?.provider !== 'MOCK' ||
         input.paymentMethodId ||
-        !['+250780000001', '+250780000002'].includes(input.msisdn ?? '')
+        !['+250780000001', '+250780000002', '+250780000004'].includes(input.msisdn ?? '')
       ) {
         await route.abort('blockedbyclient');
         throw new Error('Browser journey blocked a non-test payment');
@@ -55,15 +55,24 @@ export async function addShoppingItem(page: Page) {
   await expect(chosen).toBeEnabled();
   await page.locator('label').filter({ has: chosen }).click();
   await expect(page.locator(`input[name="variant"][value="${variant.id}"]`)).toBeChecked();
-  await page.getByRole('button', { name: 'Add to cart', exact: true }).click();
-  await expect(page.getByText('Added to your cart', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Add to bag', exact: true }).click();
+  await expect(page.getByText('Added to your bag', { exact: true })).toBeVisible();
+  // Adding opens the bag panel with the item in it.
+  const bag = page.getByRole('dialog');
+  await expect(bag).toContainText(product.name);
+  await page.keyboard.press('Escape');
+  await expect(bag).toBeHidden();
   return { product, variant };
 }
 
 export async function chooseDeliveryAndPlaceOrder(page: Page) {
   await page.getByRole('link', { name: 'Go to checkout', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Place order and pay' })).toBeDisabled();
-  await addAddressThroughUi(page);
+  const newAddress = page.getByRole('form', { name: 'New address' });
+  const savedAddress = page.locator('input[name="address"]').first();
+  await expect(newAddress.or(savedAddress)).toBeVisible();
+  if (await newAddress.isVisible()) await addAddressThroughUi(page);
+  else await savedAddress.check();
   const delivery = page.getByRole('group', { name: 'Delivery', exact: true }).getByRole('radio');
   expect(await delivery.count()).toBeGreaterThan(0);
   await delivery.first().check();

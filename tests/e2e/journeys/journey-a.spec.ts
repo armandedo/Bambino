@@ -27,8 +27,8 @@ test('journey A: choose a size, update the bag, select delivery and pay with a t
     await quantity.getByRole('button', { name: 'Decrease quantity' }).click();
     await expect(page.getByText('Subtotal (1 item)', { exact: true })).toBeVisible();
   }
-  await page.getByRole('button', { name: 'Remove', exact: true }).click();
-  await expect(page.getByText('Your cart is empty', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: `Remove ${product.name}`, exact: true }).click();
+  await expect(page.getByRole('main').getByText('Your bag is empty', { exact: true })).toBeVisible();
   await addShoppingItem(page);
   await page.goto('/cart', { waitUntil: 'domcontentloaded' });
   await expectNoHorizontalScroll(page);

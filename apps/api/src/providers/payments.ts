@@ -68,14 +68,19 @@ export const MOCK_WALLETS = {
   approves: '+250780000001',
   declines: '+250780000002',
   neverAnswers: '+250780000003',
+  /** Approves shortly after our own deadline, as a customer who enters their PIN late does. */
+  approvesLate: '+250780000004',
 } as const;
+
+/** How long after the request expires the `approvesLate` wallet approves it. */
+export const MOCK_LATE_APPROVAL_MS = 15_000;
 
 export const MOCK_SIGNATURE_HEADER = 'x-mock-signature';
 
 /**
  * MOCKED provider for development and tests. Outcome is decided by the wallet number:
- * the `declines` number fails, `neverAnswers` stays pending, anything else succeeds on the
- * first status check. The outcome travels in the reference it hands back, so it holds no state: any instance
+ * the `declines` number fails, `neverAnswers` stays pending, `approvesLate` stays pending until just after the
+ * request has expired and then succeeds, and anything else succeeds on the first status check. The outcome travels in the reference it hands back, so it holds no state: any instance
  * (another Cloudflare isolate, a restarted server) gives the same answer for the same reference.
  * Refunds are accepted and succeed when next checked. Webhooks (payments and refunds alike) are signed with
  * HMAC-SHA256 of the raw body. Refused in production by configuration.
@@ -91,22 +96,27 @@ export class MockPaymentProvider implements PaymentProvider {
   ) {}
 
   async initiate(request: InitiatePaymentRequest) {
+    const expiresAt = new Date(this.now().getTime() + this.expiryMinutes * 60_000);
     const outcome =
       request.payerMsisdn === MOCK_WALLETS.declines
         ? 'declined'
         : request.payerMsisdn === MOCK_WALLETS.neverAnswers
           ? 'waiting'
-          : 'approved';
-    return {
-      providerReference: `mock-${outcome}-${randomUUID()}`,
-      expiresAt: new Date(this.now().getTime() + this.expiryMinutes * 60_000),
-    };
+          : request.payerMsisdn === MOCK_WALLETS.approvesLate
+            ? // The approval time travels in the reference, like every other mock outcome.
+              `late-${expiresAt.getTime() + MOCK_LATE_APPROVAL_MS}`
+            : 'approved';
+    return { providerReference: `mock-${outcome}-${randomUUID()}`, expiresAt };
   }
 
   async getStatus(providerReference: string): Promise<ProviderPaymentStatus> {
     if (providerReference.startsWith('mock-approved-')) return { status: 'SUCCEEDED' };
     if (providerReference.startsWith('mock-declined-')) return { status: 'FAILED', failureCode: 'DECLINED' };
     if (providerReference.startsWith('mock-waiting-')) return { status: 'PENDING' };
+    const late = /^mock-late-(\d+)-/.exec(providerReference);
+    if (late) {
+      return this.now().getTime() >= Number(late[1]) ? { status: 'SUCCEEDED' } : { status: 'PENDING' };
+    }
     return { status: 'PENDING', unknown: true };
   }
 

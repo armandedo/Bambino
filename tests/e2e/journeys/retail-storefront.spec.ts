@@ -8,7 +8,9 @@ test.beforeEach(async ({ page }) => {
   await page.route('**/_next/image*', (route) => route.abort());
 });
 
-test('retail collections, persistent favourites and navigation work @mobile', async ({ page }) => {
+test('favourites persist, the bag asks a visitor to sign in, and search and age tabs navigate @mobile', async ({
+  page,
+}) => {
   await page.route('**/graphql', async (route) => {
     const headers = {
       'access-control-allow-origin': new URL(process.env.E2E_WEB_URL ?? 'http://localhost:3000').origin,
@@ -23,39 +25,47 @@ test('retail collections, persistent favourites and navigation work @mobile', as
   });
   await page.goto('/');
   await page.locator('[data-storefront-ready="true"]').waitFor();
-  await page.getByRole('button', { name: 'Next collection', exact: true }).click();
-  await expect(page.locator('h1')).toContainText('Dream big.');
-  await page.getByRole('button', { name: 'Previous collection', exact: true }).click();
+
   const save = page.getByRole('button', { name: /^Save / }).first();
   const productName = (await save.getAttribute('aria-label'))?.slice(5) ?? '';
   expect(productName).not.toBe('');
   await save.click();
+  await expect(
+    page.getByRole('button', { name: `Unsave ${productName}`, exact: true }).first(),
+  ).toBeVisible();
   const favourites = page.getByRole('button', { name: 'Your favourites, 1 saved', exact: true });
   await favourites.click();
   await expect(page.getByRole('dialog')).toContainText(productName);
   await page.keyboard.press('Escape');
   await expect(favourites).toBeFocused();
   await page.reload();
+  await page.locator('[data-storefront-ready="true"]').waitFor();
   await expect(favourites).toBeVisible();
-  if (test.info().project.name === 'mobile') {
-    await page.getByRole('button', { name: 'Open shopping menu' }).click();
-    await expect(page.getByRole('dialog')).toContainText('Find their little stage');
-    await page.keyboard.press('Escape');
-  } else {
-    await page.locator('summary').filter({ hasText: 'Shop by age' }).focus();
-    await page.keyboard.press('Enter');
-    await expect(page.locator('details.retail-mega')).toHaveAttribute('open', '');
-    await page.keyboard.press('Escape');
-    await expect(page.locator('details.retail-mega')).not.toHaveAttribute('open', '');
-  }
+
   await page.getByRole('link', { name: 'Bag, 0 items', exact: true }).click();
   await expect(page.getByRole('dialog')).toContainText('Sign in to see your bag');
   await page.keyboard.press('Escape');
   await expectNoHorizontalScroll(page);
+
+  // The age row: the arrow keys move between its links, and choosing one keeps the choice in the address.
+  const ages = page.getByRole('navigation', { name: 'Age groups', exact: true }).getByRole('link');
+  await ages.first().focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(ages.nth(1)).toBeFocused();
+  await page.keyboard.press('End');
+  await expect(ages.last()).toBeFocused();
+  await page.keyboard.press('Home');
+  await expect(ages.first()).toBeFocused();
+  await ages.nth(1).click();
+  await expect(page).toHaveURL(/\/shop\?age=newborn$/);
+  await expect(ages.nth(1)).toHaveAttribute('aria-current', 'page');
+  await expectNoHorizontalScroll(page);
+
   const search = page.getByRole('search', { name: 'Search catalogue' });
   await search.getByRole('searchbox').fill('romper');
   await search.getByRole('button', { name: 'Search products' }).click();
-  await expect(page).toHaveURL(/\/shop\?q=romper/);
+  await expect(page).toHaveURL(/\/shop\?.*q=romper/);
+  expect(new URL(page.url()).searchParams.get('age')).toBe('newborn');
 });
 
 /** Controlled responses exercise the existing client contracts without orders or payment calls. */
@@ -200,7 +210,7 @@ test('retail size selection, bag drawer, cart updates and delivery quoting keep 
       .filter({ has: page.locator(`input[name="color"][value="${variant.color}"]`) })
       .click();
   await page.locator('label').filter({ has: radio }).click();
-  await page.getByRole('button', { name: 'Add to cart', exact: true }).click();
+  await page.getByRole('button', { name: 'Add to bag', exact: true }).click();
   await expect(page.getByRole('dialog')).toContainText(product.name);
   await page.keyboard.press('Escape');
   await page.goto('/cart');

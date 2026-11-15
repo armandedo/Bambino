@@ -1,6 +1,6 @@
 import { money } from '@bambino/utils';
 import { describe, expect, it } from 'vitest';
-import { MOCK_WALLETS, MockPaymentProvider } from './payments';
+import { MOCK_LATE_APPROVAL_MS, MOCK_WALLETS, MockPaymentProvider } from './payments';
 
 const provider = () =>
   new MockPaymentProvider('a-test-webhook-secret', 10, () => new Date('2026-10-21T10:00:00Z'));
@@ -24,6 +24,17 @@ describe('MockPaymentProvider', () => {
     });
     expect(await provider().getStatus(waiting.providerReference)).toEqual({ status: 'PENDING' });
     expect(await provider().getStatus('mock-unknown')).toEqual({ status: 'PENDING', unknown: true });
+  });
+
+  it('has a wallet that approves only after the request has expired', async () => {
+    let clock = new Date('2026-10-21T10:00:00Z');
+    const at = () => new MockPaymentProvider('a-test-webhook-secret', 10, () => clock);
+    const started = await at().initiate(request(MOCK_WALLETS.approvesLate));
+    expect(await at().getStatus(started.providerReference)).toEqual({ status: 'PENDING' });
+    clock = started.expiresAt;
+    expect(await at().getStatus(started.providerReference)).toEqual({ status: 'PENDING' });
+    clock = new Date(started.expiresAt.getTime() + MOCK_LATE_APPROVAL_MS);
+    expect(await at().getStatus(started.providerReference)).toEqual({ status: 'SUCCEEDED' });
   });
 
   it('treats a repeated refund request as the same refund on any instance', async () => {

@@ -146,10 +146,9 @@ function Header() {
               )}
             </NextLink>
           )}
-          <NextLink href="/cart" onClick={openBag} className={ACTION}>
+          <NextLink href="/cart" onClick={openBag} aria-label={`Bag, ${itemCount(count)}`} className={ACTION}>
             <ShoppingBag aria-hidden="true" className="size-[22px]" strokeWidth={STROKE} />
             <span className="max-lg:sr-only">Bag</span>
-            <span className="sr-only">, {itemCount(count)}</span>
             <Count key={count} value={count} />
           </NextLink>
         </div>

@@ -33,9 +33,12 @@ for (const [path, target] of [
   ['/dashboard/subscription/new', '/shop'],
   ['/account/subscription/old', '/shop'],
   ['/dashboard/wardrobe', '/dashboard/orders'],
-  ['/exchange', '/how-it-works'],
-  ['/dashboard/exchange', '/how-it-works'],
-  ['/sustainability', '/about'],
+  ['/exchange', '/delivery-returns'],
+  ['/dashboard/exchange', '/delivery-returns'],
+  ['/account/exchanges', '/delivery-returns'],
+  ['/how-it-works', '/delivery-returns'],
+  ['/sustainability', '/shop'],
+  ['/about', '/shop'],
 ]) {
   test(`legacy ${path} redirects to ${target}`, async ({ request }) => {
     const response = await request.get(path ?? '/', { maxRedirects: 0 });
