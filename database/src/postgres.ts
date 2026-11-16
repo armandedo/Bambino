@@ -19,3 +19,26 @@ export async function connectOnce(
   await client.connect();
   return { db: drizzle(client, { schema }) as unknown as Database, close: () => client.end() };
 }
+
+/**
+ * A small pool for a serverless function that stays warm between requests (Vercel). Point it at the database's
+ * pooled endpoint (for Neon, the "-pooler" host): each function instance then holds a few cheap pooler
+ * connections, and the pooler holds the real ones. Idle connections are dropped quickly so a paused instance
+ * does not sit on them.
+ */
+export function connectPool(
+  connectionString: string,
+  options: { max?: number; idleTimeoutMillis?: number } = {},
+): { db: Database; close: () => Promise<void> } {
+  const pool = new pg.Pool({
+    connectionString,
+    max: options.max ?? 3,
+    idleTimeoutMillis: options.idleTimeoutMillis ?? 5_000,
+    connectionTimeoutMillis: 10_000,
+  });
+  // See connectOnce: a connection closed by the server must not become an uncaught exception.
+  pool.on('error', (error) => {
+    console.warn(`database pool: an idle connection was closed (${error.message})`);
+  });
+  return { db: drizzle(pool, { schema }) as unknown as Database, close: () => pool.end() };
+}

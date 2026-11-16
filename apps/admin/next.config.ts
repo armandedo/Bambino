@@ -16,6 +16,16 @@ const config: NextConfig = {
   output: 'standalone',
   outputFileTracingRoot: resolve(process.cwd(), '../..'),
   reactStrictMode: true,
+  // Same as the website: on unrelated hosts the dashboard calls the API through its own origin
+  // (NEXT_PUBLIC_API_URL=<admin>/admin/api/graphql), so the staff session cookie is first-party.
+  async rewrites() {
+    const target = process.env.API_PROXY_TARGET;
+    return target ? [{ source: '/api/graphql', destination: target }] : [];
+  },
+  // The dashboard lives under /admin; the bare host goes there.
+  async redirects() {
+    return [{ source: '/', destination: '/admin', basePath: false, permanent: false }];
+  },
   async headers() {
     return [
       {

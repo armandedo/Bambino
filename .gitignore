@@ -33,3 +33,6 @@ blob-report/
 
 # Expo (apps/mobile) bundle check output
 .expo-export/
+
+# Vercel CLI project link and local build output
+.vercel/

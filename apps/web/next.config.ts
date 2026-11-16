@@ -37,6 +37,12 @@ const config: NextConfig = {
   async headers() {
     return [{ source: '/:path*', headers: staticSecurityHeaders(process.env.NODE_ENV === 'production') }];
   },
+  // Where the website and the API are on unrelated hosts (Vercel's *.vercel.app), the browser calls the API
+  // through this origin so its sign-in cookies are first-party. Set NEXT_PUBLIC_API_URL to <site>/api/graphql.
+  async rewrites() {
+    const target = process.env.API_PROXY_TARGET;
+    return target ? [{ source: '/api/graphql', destination: target }] : [];
+  },
   // Earlier addresses keep working (emails, bookmarks, the tests) after the move to the spec's route names.
   async redirects() {
     return [
