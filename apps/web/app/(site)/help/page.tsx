@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import NextLink from 'next/link';
 import { INFO_LINK, InfoPage } from '@/components/info-page';
+import { SupportContact } from '@/components/support-contact';
 
 export const metadata: Metadata = { title: 'Help' };
 
@@ -91,6 +92,8 @@ export default function HelpPage() {
           ),
         },
       ]}
-    />
+    >
+      <SupportContact />
+    </InfoPage>
   );
 }

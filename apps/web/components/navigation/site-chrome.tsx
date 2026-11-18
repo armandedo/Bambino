@@ -1,6 +1,7 @@
 'use client';
 
 import type { CategorySummary } from '@bambino/api-client';
+import { SUPPORT_CONTACT } from '@bambino/config';
 import { cn } from '@bambino/ui';
 import { Heart, Search, ShoppingBag, UserRound } from 'lucide-react';
 import NextLink from 'next/link';
@@ -185,6 +186,31 @@ const FOOTER_LINKS = [
 function Footer() {
   return (
     <footer className="mt-auto border-t border-border bg-background">
+      <div className="retail-container flex flex-col gap-x-5 gap-y-1 border-b border-border py-4 text-sm md:flex-row md:flex-wrap md:items-center">
+        <h2 className="font-semibold">Need help?</h2>
+        <ul className="-mx-2 flex flex-col md:flex-row md:flex-wrap">
+          <li>
+            <a
+              href={SUPPORT_CONTACT.whatsappHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-10 items-center rounded-md px-2 underline-offset-4 hover:underline"
+            >
+              WhatsApp {SUPPORT_CONTACT.whatsappNumber}
+              <span className="sr-only"> (opens in a new tab)</span>
+            </a>
+          </li>
+          <li>
+            <a
+              href={SUPPORT_CONTACT.emailHref}
+              className="inline-flex min-h-10 items-center rounded-md px-2 break-all underline-offset-4 hover:underline"
+            >
+              {SUPPORT_CONTACT.email}
+            </a>
+          </li>
+        </ul>
+        <p className="text-foreground-muted md:ml-auto">{SUPPORT_CONTACT.hoursShort}</p>
+      </div>
       <div className="retail-container flex flex-col gap-3 py-5 md:flex-row md:items-center md:gap-6">
         <NextLink href="/" aria-label="Bambino home" className="w-fit shrink-0 rounded-md">
           <Logo className="h-6" />
