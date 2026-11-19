@@ -1,7 +1,7 @@
 /**
- * The five shopping age groups. A group is a named run of the catalogue's size codes (`sizes.code`), so no
+ * The shopping age groups. A group is a named run of the catalogue's size codes (`sizes.code`), so no
  * product needs a separate "age group" field: a product belongs to every group whose sizes it is sold in.
- * Sizes are guidance only; actual fit varies by garment and by baby.
+ * Sizes are guidance only; actual fit varies by garment and by child.
  */
 export interface AgeGroup {
   /** Used in the URL: /shop?age=newborn */
@@ -49,10 +49,49 @@ export const AGE_GROUPS: readonly AgeGroup[] = [
     blurb: 'Playtime clothes and outerwear for little explorers.',
     sizeCodes: ['18-24M'],
   },
+  {
+    slug: 'preschool',
+    label: 'Preschool',
+    ages: '2-4 years',
+    blurb: 'Everyday clothes for growing children.',
+    sizeCodes: ['2-3Y', '3-4Y', '4-5Y'],
+  },
+  {
+    slug: 'kids',
+    label: 'Kids',
+    ages: '5-8 years',
+    blurb: 'Everyday clothes for growing children.',
+    sizeCodes: ['5-6Y', '6-7Y', '7-8Y', '8-9Y'],
+  },
+  {
+    slug: 'older-kids',
+    label: 'Older kids',
+    ages: '9-12 years',
+    blurb: 'Everyday clothes for growing children.',
+    sizeCodes: ['9-10Y', '10-11Y', '11-12Y', '12-13Y'],
+  },
+  {
+    slug: 'teens',
+    label: 'Teens',
+    ages: '13-17 years',
+    blurb: 'Everyday clothes for growing children.',
+    sizeCodes: ['13-14Y', '14-15Y', '15-16Y', '16-17Y', '17-18Y'],
+  },
 ];
 
 export function ageGroupBySlug(slug: string | undefined | null): AgeGroup | undefined {
-  return AGE_GROUPS.find((group) => group.slug === slug);
+  const group = AGE_GROUPS.find((group) => group.slug === slug);
+  if (group) return group;
+  const age = /^age-(\d+)$/.exec(slug ?? '');
+  const years = age ? Number(age[1]) : -1;
+  if (years < 2 || years > 17) return undefined;
+  return {
+    slug: `age-${years}`,
+    label: `${years} years`,
+    ages: `${years}-${years + 1} years`,
+    blurb: 'Everyday clothes for growing children.',
+    sizeCodes: [`${years}-${years + 1}Y`],
+  };
 }
 
 /** The age group a size code belongs to, if any. */

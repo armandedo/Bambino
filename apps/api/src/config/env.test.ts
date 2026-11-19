@@ -19,6 +19,7 @@ describe('environment validation', () => {
     const env = loadEnv(development);
     expect(env).toMatchObject({
       MARKET_CODE: 'RW',
+      SUBSCRIPTIONS_ENABLED: false,
       API_PORT: 4000,
       ACCESS_TOKEN_TTL_SECONDS: 900,
       TRUST_PROXY: false,
@@ -54,6 +55,73 @@ describe('environment validation', () => {
     expect(message).toMatch(/DATABASE_URL: must be a PostgreSQL server/);
     expect(message).toMatch(/EMAIL_PROVIDER/);
     expect(message).toMatch(/WEB_ORIGIN: must use https/);
+  });
+});
+
+describe('mock webhook secret', () => {
+  it('has no built-in value, and refuses a short one', () => {
+    expect(loadEnv(development).MOCK_PAYMENT_WEBHOOK_SECRET).toBeUndefined();
+    expect(
+      loadEnv({ ...development, MOCK_PAYMENT_WEBHOOK_SECRET: '' }).MOCK_PAYMENT_WEBHOOK_SECRET,
+    ).toBeUndefined();
+    expect(() => loadEnv({ ...development, MOCK_PAYMENT_WEBHOOK_SECRET: 'short' })).toThrow(
+      /MOCK_PAYMENT_WEBHOOK_SECRET/,
+    );
+  });
+});
+
+describe('payment configuration in production', () => {
+  const production = {
+    ...development,
+    NODE_ENV: 'production',
+    DATABASE_URL: 'postgresql://user:pass@db.example/bambino',
+    WEB_ORIGIN: 'https://shop.example',
+    ADMIN_ORIGIN: 'https://admin.example',
+    EMAIL_PROVIDER: 'resend',
+    RESEND_API_KEY: 'x'.repeat(20),
+  };
+  const momo = {
+    PAYMENT_PROVIDERS_ENABLED: 'mtn_momo',
+    MTN_MOMO_BASE_URL: 'https://proxy.momoapi.mtn.co.rw',
+    MTN_MOMO_TARGET_ENVIRONMENT: 'mtnrwanda',
+    MTN_MOMO_CURRENCY: 'RWF',
+    MTN_MOMO_COLLECTION_SUBSCRIPTION_KEY: 'k',
+    MTN_MOMO_COLLECTION_API_USER: 'u',
+    MTN_MOMO_COLLECTION_API_KEY: 'p',
+  };
+  const problems = (source: Record<string, string>) => {
+    try {
+      loadEnv(source);
+      return '';
+    } catch (error) {
+      return String(error);
+    }
+  };
+
+  it('accepts a complete live MTN MoMo configuration', () => {
+    expect(problems({ ...production, ...momo })).toBe('');
+  });
+
+  it('refuses the mock provider, no provider at all, and missing MTN credentials', () => {
+    expect(problems({ ...production, PAYMENT_PROVIDERS_ENABLED: 'mock' })).toMatch(/mock payment provider/);
+    expect(problems({ ...production, PAYMENT_PROVIDERS_ENABLED: '' })).toMatch(
+      /no payment provider is enabled/,
+    );
+    expect(problems({ ...production, PAYMENT_PROVIDERS_ENABLED: 'mtn_momo' })).toMatch(
+      /MTN_MOMO_COLLECTION_API_KEY: is required/,
+    );
+  });
+
+  it('refuses sandbox settings and a currency other than the one orders are priced in', () => {
+    expect(
+      problems({ ...production, ...momo, MTN_MOMO_BASE_URL: 'https://sandbox.momodeveloper.mtn.com' }),
+    ).toMatch(/MTN_MOMO_BASE_URL: the MTN sandbox cannot be used/);
+    expect(problems({ ...production, ...momo, MTN_MOMO_TARGET_ENVIRONMENT: 'sandbox' })).toMatch(
+      /MTN_MOMO_TARGET_ENVIRONMENT/,
+    );
+    expect(problems({ ...production, ...momo, MTN_MOMO_CURRENCY: 'EUR' })).toMatch(
+      /MTN_MOMO_CURRENCY: must be RWF/,
+    );
   });
 });
 

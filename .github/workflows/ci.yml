@@ -100,7 +100,10 @@ jobs:
       JWT_SECRET: ci-only-jwt-secret-not-used-anywhere-else-0000
       EMAIL_FROM: Bambino CI <ci@example.com>
       RECONCILE_INTERVAL_SECONDS: 10
+      # The late-approval journeys wait for a payment request to expire.
+      PAYMENT_EXPIRY_MINUTES: 1
       SEED_ADMIN_PASSWORD: ci-only-admin-password-2026
+      SEED_CUSTOMER_PASSWORD: ci-only-customer-password-2026
       API_URL: http://127.0.0.1:4000/graphql
       NEXT_PUBLIC_API_URL: http://localhost:4000/graphql
       NEXT_PUBLIC_SITE_URL: http://localhost:3000

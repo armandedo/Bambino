@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import NextLink from 'next/link';
 import { useState } from 'react';
 import { Pager, QueryState, RequirePermission, StatusFilter, useAction, usePager } from '@/components/kit';
+import { PaymentReviews } from '@/components/payment-reviews';
 import { RefundPanel } from '@/components/refund-panel';
 import { formatDate, fullName } from '@/lib/format';
 import { api, useStaff } from '@/lib/session';
@@ -32,6 +33,7 @@ function Payments() {
   });
   return (
     <div className="flex flex-col gap-4">
+      <PaymentReviews />
       <p className="text-sm text-foreground-muted">
         Statuses come only from the payment provider. “Check with provider” asks it again; nobody can mark a
         payment as paid by hand.
@@ -62,7 +64,14 @@ function Payments() {
                             {formatDate(payment.initiatedAt, true)}
                           </span>
                         </span>
-                        <StatusBadge status={payment.status} />
+                        <span className="flex flex-wrap items-center gap-2">
+                          {entry.unapplied ? (
+                            <span className="rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-semibold">
+                              Not applied to the order
+                            </span>
+                          ) : null}
+                          <StatusBadge status={payment.status} />
+                        </span>
                       </div>
                       <p className="text-sm text-foreground-muted">
                         Reference <span className="font-mono">{providerReference ?? '—'}</span>
@@ -95,7 +104,8 @@ function Payments() {
                           ))}
                         </ol>
                       </details>
-                      {can('payment:write') && ['INITIATED', 'PENDING'].includes(payment.status) ? (
+                      {can('payment:write') &&
+                      ['INITIATED', 'PENDING', 'EXPIRED', 'CANCELLED', 'FAILED'].includes(payment.status) ? (
                         <Button
                           size="sm"
                           variant="outline"

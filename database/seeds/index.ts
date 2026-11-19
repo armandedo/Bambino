@@ -137,6 +137,22 @@ export async function seedDevelopmentReference(db: Executor): Promise<void> {
     ])
     .onConflictDoNothing({ target: schema.sizes.code });
 
+  await db
+    .insert(schema.sizes)
+    .values(
+      Array.from({ length: 16 }, (_, index) => {
+        const age = index + 2;
+        return {
+          code: `${age}-${age + 1}Y`,
+          label: `${age}-${age + 1} years`,
+          sortOrder: age + 6,
+          minAgeDays: Math.round(age * 365.25),
+          maxAgeDays: Math.round((age + 1) * 365.25),
+        };
+      }),
+    )
+    .onConflictDoNothing({ target: schema.sizes.code });
+
   const categories = [
     'Bodysuits',
     'Rompers',

@@ -15,7 +15,7 @@ export default async function LoginPage({
   return (
     <AuthCard
       title="Welcome back"
-      intro="Sign in to manage your baby’s sizes, subscription and orders."
+      intro="Your orders, saved details and baby’s sizes, all in one place."
       footer={
         <>
           New to Bambino?{' '}

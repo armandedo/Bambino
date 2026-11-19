@@ -16,7 +16,7 @@ export default function PaymentsPage() {
       <PageTitle title="Payments" description="Mobile money wallets and the payment status of your orders." />
       <PaymentMethodsSection />
       <section aria-labelledby="history" className="flex flex-col gap-3">
-        <h2 id="history" className="font-display text-xl font-semibold text-primary">
+        <h2 id="history" className="text-lg font-semibold">
           Payment history
         </h2>
         <QueryState query={orders} what="your payment history">
@@ -24,7 +24,7 @@ export default function PaymentsPage() {
             list.length === 0 ? (
               <EmptyState
                 title="No payments yet"
-                description="Orders and subscription payments appear here."
+                description="Payments for your orders appear here."
                 level={3}
               />
             ) : (

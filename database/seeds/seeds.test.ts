@@ -44,7 +44,7 @@ describe('seeds', () => {
     expect(plans).toHaveLength(3);
     for (const plan of plans) expect(plan.code).toMatch(/^SEED-/);
     const sizes = await queryRows<{ label: string }>(db, sql`SELECT label FROM sizes`);
-    for (const size of sizes) expect(size.label).toMatch(/seed chart/);
+    for (const size of sizes) expect(size.label).toMatch(/seed chart|years/);
     const options = await queryRows<{ code: string }>(db, sql`SELECT code FROM delivery_options`);
     for (const option of options) expect(option.code).toMatch(/^SEED-/);
   });

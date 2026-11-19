@@ -1,28 +1,67 @@
 import { getMarket } from '@bambino/config';
 import { type Database, type Executor, schema } from '@bambino/database';
-import { and, asc, desc, eq, inArray, isNull, lt, sql } from '@bambino/database/orm';
-import { PAYMENT_PROVIDERS, type PaymentProviderCode, type PaymentStatus } from '@bambino/types';
+import { and, asc, desc, eq, inArray, isNotNull, isNull, lt, sql } from '@bambino/database/orm';
+import {
+  PAYMENT_PROVIDERS,
+  PAYMENT_REVIEW_RESOLUTIONS,
+  type PaymentProviderCode,
+  type PaymentReviewReason,
+  type PaymentStatus,
+} from '@bambino/types';
 import { phoneSchema } from '@bambino/validation';
 import { money, type CurrencyCode } from '@bambino/utils';
 import { z } from 'zod';
 import { paymentLifecycle } from '../domain/lifecycles';
 import type { Logger } from '../infra/logger';
 import type { RateLimiter } from '../infra/rate-limiter';
-import type { PaymentProviderRegistry, ProviderPaymentStatus } from '../providers/payments';
+import type { EmailProvider } from '../providers/email';
+import {
+  type PaymentProviderRegistry,
+  type ProviderPaymentStatus,
+  requestNeverSent,
+} from '../providers/payments';
 import { recordAudit } from './audit-service';
 import { type ServiceContext, requirePermission, requireUser } from './context';
 import { AppError, isUniqueViolation, parseInput } from './errors';
 import type { NotificationService } from './notification-service';
-import type { OrderService } from './order-service';
+import type { OrderRow, OrderService } from './order-service';
 import type { RefundService } from './refund-service';
 import { type Page, type PageRequest, decodeOffset, encodeOffset, pageSize } from './pagination';
 
 export type PaymentRow = typeof schema.payments.$inferSelect;
 export type PaymentTransactionRow = typeof schema.paymentTransactions.$inferSelect;
 export type PaymentMethodRow = typeof schema.paymentMethods.$inferSelect;
+export type PaymentReviewRow = typeof schema.paymentReviews.$inferSelect;
 
 /** Unanswered payments are re-checked with the provider after this long. */
 export const RECONCILE_AFTER_MS = 2 * 60_000;
+/** A payment whose request never had its answer recorded (the process stopped mid-call) is given up after this. */
+export const INITIATION_TIMEOUT_MS = 15 * 60_000;
+/**
+ * Our own deadline (EXPIRED), a cancellation, or a failed request does not decide what the provider did: the
+ * customer may still approve. These payments keep being checked with the provider for this long after they
+ * started. If the provider still has no final answer by then, the payment goes to staff review.
+ */
+export const PROVIDER_WATCH_MS = 24 * 3_600_000;
+/** How often reconciliation asks the provider about one payment it has stopped waiting for. */
+const WATCH_POLICY = { limit: 1, windowMs: 10 * 60_000 };
+const WATCHED_STATUSES = ['EXPIRED', 'CANCELLED', 'FAILED'] as const;
+
+/** Closed on our side, but the provider's final answer is not recorded yet. */
+function isWatched(payment: PaymentRow): boolean {
+  return (
+    (WATCHED_STATUSES as readonly string[]).includes(payment.status) &&
+    payment.providerSettledAt === null &&
+    payment.providerReference !== null
+  );
+}
+
+const resolveReviewSchema = z.object({
+  id: z.uuid(),
+  resolution: z.enum(PAYMENT_REVIEW_RESOLUTIONS),
+  note: z.string().trim().min(3).max(500),
+});
+
 /** Polling `payment(id)` asks the provider at most this often per payment. */
 const POLL_POLICY = { limit: 1, windowMs: 3_000 };
 
@@ -67,6 +106,9 @@ export interface PaymentServiceDependencies {
   marketCode: string;
   currency: CurrencyCode;
   allowMockProvider: boolean;
+  /** Tells staff by email when a payment needs review. Without it only the in-app notification is written. */
+  email?: EmailProvider;
+  adminOrigin?: string;
   now: () => Date;
 }
 
@@ -229,7 +271,23 @@ export class PaymentService {
         provider: providerCode,
         error,
       });
-      return this.applyTransition(payment.id, 'FAILED', 'INITIATION', { failureCode: 'PROVIDER_ERROR' });
+      // Certainly never sent (or refused outright): nothing can have been collected, so the payment is closed.
+      if (requestNeverSent(error)) {
+        return this.applyTransition(payment.id, 'FAILED', 'INITIATION', {
+          failureCode: 'PROVIDER_ERROR',
+          settled: true,
+        });
+      }
+      // Ambiguous: a timeout, a dropped connection or a lost response. The provider may have the request and the
+      // customer may approve it. Where its reference can be derived the payment stays watched; where it cannot,
+      // nothing could ever check it, so a person has to.
+      const reference = provider.referenceFor?.(payment.idempotencyKey);
+      return this.applyTransition(payment.id, 'FAILED', 'INITIATION', {
+        failureCode: 'PROVIDER_ERROR',
+        ...(reference
+          ? { providerReference: reference }
+          : { settled: true, review: 'OUTCOME_UNCONFIRMED' as const }),
+      });
     }
   }
 
@@ -377,6 +435,16 @@ export class PaymentService {
       return { status: 400 };
     }
 
+    // An unsigned event is refused before it is stored: otherwise a forged event could take the real event's id,
+    // and the real one would then be dropped as a replay.
+    if (!parsed.signatureValid) {
+      this.deps.logger.warn('webhook with invalid signature ignored', {
+        provider: code,
+        eventId: parsed.eventId,
+      });
+      return { status: 401 };
+    }
+
     const [stored] = await this.deps.db
       .insert(schema.webhookEvents)
       .values({
@@ -388,13 +456,6 @@ export class PaymentService {
       .onConflictDoNothing()
       .returning();
     if (!stored) return { status: 200 }; // replay: already received
-    if (!parsed.signatureValid) {
-      this.deps.logger.warn('webhook with invalid signature ignored', {
-        provider: code,
-        eventId: parsed.eventId,
-      });
-      return { status: 401 };
-    }
 
     const [payment] = await this.deps.db
       .select()
@@ -432,7 +493,7 @@ export class PaymentService {
   /** Re-checks unresolved payments with their providers and expires those past their deadline. */
   async reconcile(): Promise<{ checked: number; expired: number }> {
     const cutoff = new Date(this.deps.now().getTime() - RECONCILE_AFTER_MS);
-    const unresolved = await this.deps.db
+    const open = await this.deps.db
       .select()
       .from(schema.payments)
       .where(
@@ -442,10 +503,30 @@ export class PaymentService {
         ),
       )
       .limit(200);
+    // Closed on our side but not yet answered by the provider: a late approval must not be missed.
+    const watched = await this.deps.db
+      .select()
+      .from(schema.payments)
+      .where(
+        and(
+          inArray(schema.payments.status, [...WATCHED_STATUSES]),
+          isNull(schema.payments.providerSettledAt),
+          isNotNull(schema.payments.providerReference),
+          lt(schema.payments.initiatedAt, cutoff),
+        ),
+      )
+      .orderBy(asc(schema.payments.initiatedAt))
+      .limit(200);
+    const unresolved = [...open, ...watched];
     let expired = 0;
     for (const payment of unresolved) {
-      const after = await this.refreshFromProvider(payment.id, 'RECONCILIATION');
-      if (after.status === 'EXPIRED') expired += 1;
+      // One payment the provider cannot answer for must not stop the others, or the jobs that run after this one.
+      try {
+        const after = await this.refreshFromProvider(payment.id, 'RECONCILIATION');
+        if (after.status === 'EXPIRED') expired += 1;
+      } catch (error) {
+        this.deps.logger.error('payment reconciliation failed', { paymentId: payment.id, error });
+      }
     }
     return { checked: unresolved.length, expired };
   }
@@ -455,7 +536,8 @@ export class PaymentService {
     const id = parseInput(z.uuid(), rawId);
     const [payment] = await this.deps.db.select().from(schema.payments).where(eq(schema.payments.id, id));
     if (!payment) throw new AppError('NOT_FOUND', 'Payment not found.');
-    const result = await this.refreshFromProvider(id, 'RECONCILIATION');
+    // Asked by a person: the provider is consulted even after the automatic watch has ended.
+    const result = await this.refreshFromProvider(id, 'STATUS_CHECK', true);
     await this.deps.db.transaction((tx) =>
       recordAudit(tx, context, {
         action: 'payment.reconciled',
@@ -567,23 +649,56 @@ export class PaymentService {
   private async refreshFromProvider(
     paymentId: string,
     source: 'STATUS_CHECK' | 'WEBHOOK' | 'RECONCILIATION',
+    /** Ask the provider about a closed payment even when the automatic watch is over (staff asked). */
+    force = false,
   ): Promise<PaymentRow> {
-    const [payment] = await this.deps.db
+    const [found] = await this.deps.db
       .select()
       .from(schema.payments)
       .where(eq(schema.payments.id, paymentId));
-    if (!payment) throw new AppError('NOT_FOUND', 'Payment not found.');
-    if (payment.status !== 'PENDING' && payment.status !== 'INITIATED') return payment;
+    if (!found) throw new AppError('NOT_FOUND', 'Payment not found.');
+    const closed = (WATCHED_STATUSES as readonly string[]).includes(found.status);
+    if (isWatched(found) || (force && closed && found.providerReference)) {
+      return this.recheckClosed(found, source);
+    }
+    if (found.status !== 'PENDING' && found.status !== 'INITIATED') return found;
+    let payment = found;
+    const provider = this.deps.providers.get(payment.provider);
+
+    // The request was sent (or about to be) but its answer was never recorded: the process stopped mid-call.
+    if (payment.status === 'INITIATED' && !payment.providerReference) {
+      const deadline = new Date(payment.initiatedAt.getTime() + INITIATION_TIMEOUT_MS);
+      const reference = provider?.referenceFor?.(payment.idempotencyKey);
+      if (reference) {
+        // The provider may have the request, and the customer may have approved it: record it and ask as usual.
+        payment = await this.applyTransition(paymentId, 'PENDING', source, {
+          providerReference: reference,
+          expiresAt: deadline,
+        });
+        if (payment.status !== 'PENDING') return payment;
+      } else if (deadline <= this.deps.now()) {
+        // Nobody knows whether the request went out, and nothing can look it up: a person has to.
+        return this.applyTransition(paymentId, 'FAILED', source, {
+          failureCode: 'EXPIRED',
+          settled: true,
+          review: 'OUTCOME_UNCONFIRMED',
+        });
+      } else {
+        return payment;
+      }
+    }
 
     let answer: ProviderPaymentStatus = { status: 'PENDING' };
-    if (payment.providerReference) {
-      const provider = this.deps.providers.get(payment.provider);
-      if (provider) answer = await provider.getStatus(payment.providerReference);
+    if (payment.providerReference && provider) {
+      answer = await provider.getStatus(payment.providerReference, money(payment.amount, this.deps.currency));
     }
 
     if (answer.status === 'SUCCEEDED') return this.applyTransition(paymentId, 'SUCCEEDED', source, {});
     if (answer.status === 'FAILED')
-      return this.applyTransition(paymentId, 'FAILED', source, { failureCode: answer.failureCode });
+      return this.applyTransition(paymentId, 'FAILED', source, {
+        failureCode: answer.failureCode,
+        settled: true,
+      });
     if (payment.expiresAt && payment.expiresAt <= this.deps.now()) {
       return this.applyTransition(paymentId, payment.status === 'INITIATED' ? 'FAILED' : 'EXPIRED', source, {
         failureCode: 'EXPIRED',
@@ -593,26 +708,125 @@ export class PaymentService {
   }
 
   /**
-   * Moves a payment to a new status with its consequences, in one transaction under a row
-   * lock. If another process already moved it, the lifecycle refuses and the current row is returned.
+   * A payment we stopped waiting for (expired, cancelled, or its request failed). Our deadline is not the provider's:
+   * the customer may still approve it. So the provider is asked until it gives a final answer, and if it never does
+   * within PROVIDER_WATCH_MS the payment is handed to staff. Nothing here trusts anything but the provider's answer.
    */
-  private async applyTransition(
+  private async recheckClosed(
+    payment: PaymentRow,
+    source: 'STATUS_CHECK' | 'WEBHOOK' | 'RECONCILIATION',
+  ): Promise<PaymentRow> {
+    const provider = this.deps.providers.get(payment.provider);
+    if (!provider || !payment.providerReference) return payment;
+    const watchOver = payment.initiatedAt.getTime() + PROVIDER_WATCH_MS <= this.deps.now().getTime();
+    if (
+      source === 'RECONCILIATION' &&
+      !watchOver &&
+      !(await this.deps.rateLimiter.consume(`payment-watch:${payment.id}`, WATCH_POLICY))
+    ) {
+      return payment;
+    }
+    const answer = await provider.getStatus(
+      payment.providerReference,
+      money(payment.amount, this.deps.currency),
+    );
+    if (answer.status === 'SUCCEEDED') return this.applyTransition(payment.id, 'SUCCEEDED', source, {});
+    if (answer.status === 'FAILED') return this.settle(payment.id, source, 'FAILED', null);
+    if (!watchOver) return payment;
+    // Still no final answer after the whole watch. Even "no such request" is not proof that nothing was collected
+    // (the request may have been sent and the answer lost), so a person checks the provider account.
+    return this.settle(
+      payment.id,
+      source,
+      answer.unknown ? 'NOT_FOUND' : 'UNCONFIRMED',
+      'OUTCOME_UNCONFIRMED',
+    );
+  }
+
+  /** Records that a closed payment needs no more provider checks, and opens a staff review when one is due. */
+  private async settle(
     paymentId: string,
-    to: PaymentStatus,
-    source: 'INITIATION' | 'STATUS_CHECK' | 'WEBHOOK' | 'RECONCILIATION',
-    changes: { providerReference?: string; expiresAt?: Date | null; failureCode?: string },
+    source: 'STATUS_CHECK' | 'WEBHOOK' | 'RECONCILIATION',
+    providerOutcome: 'FAILED' | 'NOT_FOUND' | 'UNCONFIRMED',
+    reviewReason: PaymentReviewReason | null,
   ): Promise<PaymentRow> {
     const { db, now } = this.deps;
-    return db.transaction(async (tx) => {
+    const result = await db.transaction(async (tx) => {
       const [payment] = await tx
         .select()
         .from(schema.payments)
         .where(eq(schema.payments.id, paymentId))
         .for('update');
       if (!payment) throw new AppError('NOT_FOUND', 'Payment not found.');
-      if (!paymentLifecycle.canTransition(payment.status, to)) return payment;
+      if (!isWatched(payment)) return { row: payment, reviewId: null };
+      const [updated] = await tx
+        .update(schema.payments)
+        .set({ providerSettledAt: now() })
+        .where(eq(schema.payments.id, paymentId))
+        .returning();
+      if (!updated) throw new Error('Payment vanished during update');
+      await tx.insert(schema.paymentTransactions).values({
+        paymentId,
+        type: source,
+        resultingStatus: payment.status,
+        amount: payment.amount,
+        currency: payment.currency,
+        providerReference: payment.providerReference,
+        payload: { providerOutcome },
+      });
+      const reviewId = reviewReason ? await this.openReview(tx, updated, reviewReason) : null;
+      return { row: updated, reviewId };
+    });
+    if (result.reviewId) await this.alertStaff(result.reviewId);
+    return result.row;
+  }
+
+  /**
+   * Moves a payment to a new status with its consequences, in one transaction under a row
+   * lock. If another process already moved it, the lifecycle refuses and the current row is returned, so applying
+   * the same provider answer again changes nothing: no second stock deduction, delivery, notification or review.
+   */
+  private async applyTransition(
+    paymentId: string,
+    to: PaymentStatus,
+    source: 'INITIATION' | 'STATUS_CHECK' | 'WEBHOOK' | 'RECONCILIATION',
+    changes: {
+      providerReference?: string;
+      expiresAt?: Date | null;
+      failureCode?: string;
+      /** The provider gave its final answer, so the payment needs no more checks. Success always is one. */
+      settled?: boolean;
+      /** Opens a staff review with this reason in the same transaction. */
+      review?: PaymentReviewReason;
+    },
+  ): Promise<PaymentRow> {
+    const { db, now } = this.deps;
+    const result = await db.transaction(async (tx) => {
+      const [payment] = await tx
+        .select()
+        .from(schema.payments)
+        .where(eq(schema.payments.id, paymentId))
+        .for('update');
+      if (!payment) throw new AppError('NOT_FOUND', 'Payment not found.');
+      if (!paymentLifecycle.canTransition(payment.status, to)) return { row: payment, reviewId: null };
+
+      // Decided before the row changes: can the order still take this money? An order awaiting payment still holds
+      // its stock; a cancelled one has released it and an already paid one has used it. Those are never fulfilled
+      // from here: the money is recorded as received but unapplied, and a person reviews it.
+      let order: OrderRow | null = null;
+      let reviewReason: PaymentReviewReason | null = null;
+      if (to === 'SUCCEEDED' && payment.orderId) {
+        order = await this.deps.orders.lockOrder(tx, payment.orderId);
+        const awaiting = order?.status === 'PENDING_PAYMENT';
+        const atDoor =
+          Boolean(order?.payOnDeliveryProvider) && !order?.paidAt && order?.status === 'OUT_FOR_DELIVERY';
+        if (!awaiting && !atDoor) {
+          reviewReason = order?.status === 'CANCELLED' ? 'ORDER_CANCELLED' : 'ORDER_NOT_AWAITING_PAYMENT';
+        }
+      }
 
       const final = to === 'SUCCEEDED' || to === 'FAILED' || to === 'EXPIRED' || to === 'CANCELLED';
+      const settled = to === 'SUCCEEDED' || changes.settled === true;
       const [updated] = await tx
         .update(schema.payments)
         .set({
@@ -620,7 +834,11 @@ export class PaymentService {
           ...(changes.providerReference ? { providerReference: changes.providerReference } : {}),
           ...(changes.expiresAt !== undefined ? { expiresAt: changes.expiresAt } : {}),
           ...(changes.failureCode ? { failureCode: changes.failureCode } : {}),
+          // A late approval replaces the reason we had given up for: the payment did go through.
+          ...(to === 'SUCCEEDED' ? { failureCode: null } : {}),
           ...(final ? { completedAt: now() } : {}),
+          ...(settled ? { providerSettledAt: now() } : {}),
+          ...(reviewReason ? { unapplied: true } : {}),
         })
         .where(eq(schema.payments.id, paymentId))
         .returning();
@@ -632,40 +850,187 @@ export class PaymentService {
         amount: payment.amount,
         currency: payment.currency,
         providerReference: changes.providerReference ?? payment.providerReference,
-        payload: changes.failureCode ? { failureCode: changes.failureCode } : null,
+        payload: changes.failureCode
+          ? { failureCode: changes.failureCode }
+          : reviewReason
+            ? { unapplied: reviewReason, previousStatus: payment.status }
+            : null,
       });
 
-      if (to === 'SUCCEEDED') await this.onSucceeded(tx, updated);
+      let reviewId: string | null = null;
+      if (to === 'SUCCEEDED') reviewId = await this.onSucceeded(tx, updated, order, reviewReason);
       if (to === 'FAILED' || to === 'EXPIRED') {
         await this.deps.notifications.notify(tx, payment.userId, 'PAYMENT_FAILED', {});
       }
-      return updated;
+      if (changes.review) reviewId = await this.openReview(tx, updated, changes.review);
+      return { row: updated, reviewId };
     });
+    if (result.reviewId) await this.alertStaff(result.reviewId);
+    return result.row;
   }
 
-  private async onSucceeded(tx: Executor, payment: PaymentRow): Promise<void> {
+  /** What follows money arriving. Returns the id of the review it opened, if the order could not take the money. */
+  private async onSucceeded(
+    tx: Executor,
+    payment: PaymentRow,
+    order: OrderRow | null,
+    reviewReason: PaymentReviewReason | null,
+  ): Promise<string | null> {
     await tx.insert(schema.analyticsEvents).values({
       eventName: 'PAYMENT_COMPLETED',
       userId: payment.userId,
       properties: { paymentId: payment.id, provider: payment.provider, amount: payment.amount },
       occurredAt: this.deps.now(),
     });
-    await this.deps.notifications.notify(tx, payment.userId, 'PAYMENT_SUCCEEDED', {});
-    if (!payment.orderId) return;
-    const order = await this.deps.orders.lockOrder(tx, payment.orderId);
-    if (order?.status === 'PENDING_PAYMENT') {
-      await this.deps.orders.markPaid(tx, order, null);
-    } else if (order && order.payOnDeliveryProvider && !order.paidAt && order.status === 'OUT_FOR_DELIVERY') {
-      // Paid at the door: the order is already on its way, so only the paid time is recorded.
-      await tx.update(schema.orders).set({ paidAt: this.deps.now() }).where(eq(schema.orders.id, order.id));
-    } else {
-      // Money arrived for an order that can no longer take it. Recorded for staff to refund.
-      this.deps.logger.error('payment succeeded for an order that is not awaiting payment; refund needed', {
+    if (reviewReason) {
+      this.deps.logger.error('payment received for an order that cannot take it; staff review opened', {
         paymentId: payment.id,
         orderId: payment.orderId,
         orderStatus: order?.status,
+        reason: reviewReason,
+      });
+      return this.openReview(tx, payment, reviewReason);
+    }
+    await this.deps.notifications.notify(tx, payment.userId, 'PAYMENT_SUCCEEDED', {});
+    if (!order) return null;
+    if (order.status === 'PENDING_PAYMENT') {
+      await this.deps.orders.markPaid(tx, order, null);
+    } else {
+      // Paid at the door: the order is already on its way, so only the paid time is recorded.
+      await tx.update(schema.orders).set({ paidAt: this.deps.now() }).where(eq(schema.orders.id, order.id));
+    }
+    return null;
+  }
+
+  // --- staff review -------------------------------------------------------------
+
+  /** Opens the one review a payment can have and tells payment staff. A repeat opens nothing and tells nobody. */
+  private async openReview(
+    tx: Executor,
+    payment: PaymentRow,
+    reason: PaymentReviewReason,
+  ): Promise<string | null> {
+    const [created] = await tx
+      .insert(schema.paymentReviews)
+      .values({ paymentId: payment.id, orderId: payment.orderId, reason })
+      .onConflictDoNothing()
+      .returning({ id: schema.paymentReviews.id });
+    if (!created) return null;
+    for (const staff of await this.paymentStaff(tx)) {
+      await this.deps.notifications.notify(tx, staff.id, 'PAYMENT_REVIEW_REQUIRED', {
+        paymentId: payment.id,
       });
     }
+    return created.id;
+  }
+
+  /** Active staff whose role lets them act on payments. */
+  private async paymentStaff(db: Executor): Promise<{ id: string; email: string | null }[]> {
+    return db
+      .selectDistinct({ id: schema.users.id, email: schema.users.email })
+      .from(schema.users)
+      .innerJoin(schema.userRoles, eq(schema.userRoles.userId, schema.users.id))
+      .innerJoin(schema.rolePermissions, eq(schema.rolePermissions.roleId, schema.userRoles.roleId))
+      .innerJoin(schema.permissions, eq(schema.permissions.id, schema.rolePermissions.permissionId))
+      .where(and(eq(schema.permissions.key, 'payment:write'), eq(schema.users.status, 'ACTIVE')));
+  }
+
+  /** Emails payment staff after the review is saved. A failed email never undoes the review. */
+  private async alertStaff(reviewId: string): Promise<void> {
+    const { email, adminOrigin } = this.deps;
+    if (!email) return;
+    try {
+      for (const staff of await this.paymentStaff(this.deps.db)) {
+        if (!staff.email) continue;
+        await email.send({
+          to: staff.email,
+          template: 'staff.payment_review',
+          locale: 'en',
+          params: adminOrigin ? { link: `${adminOrigin}/admin/payments` } : {},
+        });
+      }
+    } catch (error) {
+      this.deps.logger.error('payment review email failed', { reviewId, error });
+    }
+  }
+
+  async listReviews(
+    context: ServiceContext,
+    open: boolean | null | undefined,
+    request: PageRequest,
+  ): Promise<Page<PaymentReviewRow> & { totalCount: number }> {
+    requirePermission(context, 'payment:read');
+    const size = pageSize(request);
+    const offset = decodeOffset(request.after);
+    const where =
+      open === null || open === undefined
+        ? undefined
+        : open
+          ? isNull(schema.paymentReviews.resolvedAt)
+          : isNotNull(schema.paymentReviews.resolvedAt);
+    const rows = await this.deps.db
+      .select()
+      .from(schema.paymentReviews)
+      .where(where)
+      .orderBy(desc(schema.paymentReviews.createdAt), desc(schema.paymentReviews.id))
+      .limit(size + 1)
+      .offset(offset);
+    const [count] = await this.deps.db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(schema.paymentReviews)
+      .where(where);
+    const items = rows.slice(0, size);
+    return {
+      items,
+      hasNextPage: rows.length > size,
+      endCursor: items.length ? encodeOffset(offset + items.length) : null,
+      totalCount: count?.n ?? 0,
+    };
+  }
+
+  /** Staff record how a review ended. It changes no payment or order: refunds go through the refund flow. */
+  async resolveReview(context: ServiceContext, rawInput: unknown): Promise<PaymentReviewRow> {
+    requirePermission(context, 'payment:write');
+    const actor = requireUser(context);
+    const input = parseInput(resolveReviewSchema, rawInput);
+    return this.deps.db.transaction(async (tx) => {
+      const [review] = await tx
+        .select()
+        .from(schema.paymentReviews)
+        .where(eq(schema.paymentReviews.id, input.id))
+        .for('update');
+      if (!review) throw new AppError('NOT_FOUND', 'Payment review not found.');
+      if (review.resolvedAt) {
+        throw new AppError('CONFLICT', 'This review is already resolved.', 'REVIEW_ALREADY_RESOLVED');
+      }
+      const [updated] = await tx
+        .update(schema.paymentReviews)
+        .set({
+          resolution: input.resolution,
+          resolutionNote: input.note,
+          resolvedBy: actor.userId,
+          resolvedAt: this.deps.now(),
+        })
+        .where(eq(schema.paymentReviews.id, review.id))
+        .returning();
+      if (!updated) throw new Error('Payment review vanished during update');
+      await recordAudit(tx, context, {
+        action: 'payment.review_resolved',
+        entityType: 'payment',
+        entityId: review.paymentId,
+        previousValue: { reason: review.reason },
+        newValue: { resolution: input.resolution, note: input.note },
+      });
+      return updated;
+    });
+  }
+
+  async byIds(ids: readonly string[]): Promise<PaymentRow[]> {
+    if (ids.length === 0) return [];
+    return this.deps.db
+      .select()
+      .from(schema.payments)
+      .where(inArray(schema.payments.id, [...ids]));
   }
 
   private providerFor(code: PaymentProviderCode) {

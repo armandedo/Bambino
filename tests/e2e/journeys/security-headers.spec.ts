@@ -5,16 +5,7 @@ import { expect, test } from '@playwright/test';
  * the per-request nonce, and photos and API calls come from allowed origins. Any violation fails the page.
  * Run against a production build (`pnpm --filter @bambino/web build && start`) to check the production policy.
  */
-const PAGES = [
-  '/',
-  '/how-it-works',
-  '/shop',
-  '/shop/seed-footed-romper',
-  '/plans',
-  '/fit',
-  '/login',
-  '/register',
-];
+const PAGES = ['/', '/how-it-works', '/shop', '/about', '/fit', '/login', '/register'];
 
 for (const path of PAGES) {
   test(`${path} sends the security headers and breaks no CSP rule`, async ({ page }) => {

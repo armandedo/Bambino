@@ -19,6 +19,17 @@ export const EXCHANGE_CREDIT_POLICY: Record<GarmentCondition, number> = {
   RECYCLE: 0,
 };
 
+/**
+ * How much one shopping bag can hold. The API enforces it and the website's controls stop at the same numbers,
+ * for a visitor's bag on their device and a customer's cart alike.
+ */
+export const BAG_POLICY = {
+  /** The most of one piece (one size and colour) in a bag, and so in an order. */
+  maxQuantityPerItem: 20,
+  /** The most different pieces in a bag. */
+  maxLines: 50,
+} as const;
+
 /** Subscription billing and renewal rules. Open question 6 covers how plan changes are charged. */
 export const SUBSCRIPTION_POLICY = {
   /** Every plan change, up or down, takes effect at the next renewal (no proration until decided). */

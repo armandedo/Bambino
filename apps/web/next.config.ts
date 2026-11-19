@@ -15,6 +15,21 @@ const config: NextConfig = {
     '@bambino/types',
   ],
   poweredByHeader: false,
+  images: {
+    formats: ['image/webp'],
+    // Product photos are large originals that rarely change: keep each resized copy for a day, not four hours.
+    minimumCacheTTL: 86_400,
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'pub-5b4610946f0245dfac06c02558e326a2.r2.dev',
+        pathname: '/products/**',
+      },
+      ...(process.env.STORAGE_PUBLIC_BASE_URL
+        ? [new URL(`${process.env.STORAGE_PUBLIC_BASE_URL.replace(/\/$/, '')}/**`)]
+        : []),
+    ],
+  },
   // A self-contained server for the container image (Dockerfile); traced from the monorepo root.
   output: 'standalone',
   outputFileTracingRoot: resolve(process.cwd(), '../..'),
@@ -25,17 +40,21 @@ const config: NextConfig = {
   // Earlier addresses keep working (emails, bookmarks, the tests) after the move to the spec's route names.
   async redirects() {
     return [
-      { source: '/subscriptions', destination: '/plans', permanent: true },
+      { source: '/subscriptions', destination: '/shop', permanent: true },
+      { source: '/plans', destination: '/shop', permanent: true },
+      { source: '/dashboard/subscription/:path*', destination: '/shop', permanent: true },
+      { source: '/dashboard/wardrobe', destination: '/dashboard/orders', permanent: true },
+      { source: '/dashboard/exchange', destination: '/delivery-returns', permanent: true },
+      { source: '/exchange', destination: '/delivery-returns', permanent: true },
+      { source: '/how-it-works', destination: '/delivery-returns', permanent: true },
+      { source: '/about', destination: '/shop', permanent: true },
+      { source: '/sustainability', destination: '/shop', permanent: true },
       { source: '/size-finder', destination: '/fit', permanent: true },
       { source: '/account/settings', destination: '/account', permanent: true },
       { source: '/account/baby', destination: '/dashboard/baby', permanent: true },
-      { source: '/account/exchanges', destination: '/dashboard/exchange', permanent: true },
+      { source: '/account/exchanges', destination: '/delivery-returns', permanent: true },
       { source: '/account/orders/:path*', destination: '/dashboard/orders/:path*', permanent: true },
-      {
-        source: '/account/subscription/:path*',
-        destination: '/dashboard/subscription/:path*',
-        permanent: true,
-      },
+      { source: '/account/subscription/:path*', destination: '/shop', permanent: true },
       { source: '/product/:slug', destination: '/shop/:slug', permanent: true },
     ];
   },

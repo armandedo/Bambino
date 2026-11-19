@@ -37,6 +37,7 @@
       "triggers": { "crons": ["* * * * *"] },
       "vars": {
         "NODE_ENV": "development",
+        "SUBSCRIPTIONS_ENABLED": "false",
         "LOG_LEVEL": "info",
         "MARKET_CODE": "RW",
         "WEB_ORIGIN": "https://bambino-web-preview.rwanyindoarmand.workers.dev",

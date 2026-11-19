@@ -114,12 +114,39 @@ describe('rules-based sizing', () => {
     });
   });
 
-  it('clamps measurements outside every range to the nearest size', () => {
-    expect(recommend({ heightMm: 900, weightG: 12_000 }).sizeCode).toBe('6-9M');
+  it('uses age when measurements exceed the configured measurement chart', () => {
+    expect(recommend({ heightMm: 900, weightG: 12_000, ageDays: 200 }).sizeCode).toBe('6-9M');
     expect(recommend({ heightMm: 300, weightG: 2_000, ageDays: 3 }).sizeCode).toBe('NB');
   });
 
   it('is deterministic', () => {
     expect(recommend()).toEqual(recommend());
   });
+});
+
+it('recommends adolescent age guidance without clamping to infant measurements', () => {
+  const older = Array.from({ length: 16 }, (_, i) => ({
+    code: `${i + 2}-${i + 3}Y`,
+    sortOrder: i + 8,
+    minAgeDays: Math.round((i + 2) * 365.25),
+    maxAgeDays: Math.round((i + 3) * 365.25),
+    minHeightMm: null,
+    maxHeightMm: null,
+    minWeightG: null,
+    maxWeightG: null,
+  }));
+  expect(
+    new RulesBasedSizingProvider().recommend(
+      {
+        ageDays: 6390,
+        heightMm: 1800,
+        weightG: 75000,
+        measurementAgeDays: 0,
+        fitPreference: 'REGULAR',
+        heightHistory: [],
+        fitHistory: {},
+      },
+      [...sizes, ...older],
+    ),
+  ).toMatchObject({ sizeCode: '17-18Y', nextSizeCode: null });
 });

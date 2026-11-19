@@ -36,6 +36,13 @@ export const payments = pgTable(
     initiatedAt: tstz('initiated_at').notNull().defaultNow(),
     expiresAt: tstz('expires_at'),
     completedAt: tstz('completed_at'),
+    /**
+     * When the provider's final answer was recorded (or the payment was handed to staff review). A payment we
+     * stopped waiting for (EXPIRED, CANCELLED, or FAILED without an answer) stays null and keeps being checked.
+     */
+    providerSettledAt: tstz('provider_settled_at'),
+    /** The money arrived but was not applied to the order (it was cancelled or already paid). A refund is due. */
+    unapplied: boolean('unapplied').notNull().default(false),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
@@ -52,9 +59,45 @@ export const payments = pgTable(
     // At most one successful payment per order: the database itself refuses a double charge.
     uniqueIndex('payments_one_success_per_order_uq')
       .on(t.orderId)
-      .where(sql`${t.status} = 'SUCCEEDED'`),
+      .where(sql`${t.status} = 'SUCCEEDED' AND NOT ${t.unapplied}`),
+    // Drives the late-outcome watch: closed locally, but the provider has not given its final answer.
+    index('payments_watched_idx')
+      .on(t.initiatedAt)
+      .where(
+        sql`${t.status} IN ('EXPIRED', 'CANCELLED', 'FAILED') AND ${t.providerSettledAt} IS NULL AND ${t.providerReference} IS NOT NULL`,
+      ),
     check('payments_amount_positive', sql`${t.amount} > 0`),
     check('payments_has_target', sql`${t.orderId} IS NOT NULL OR ${t.subscriptionId} IS NOT NULL`),
+  ],
+);
+
+/**
+ * A payment a person must look at: money that arrived for an order that could not take it, or a request whose
+ * outcome the provider never confirmed. One per payment. Open until staff record how it was resolved.
+ */
+export const paymentReviews = pgTable(
+  'payment_reviews',
+  {
+    id: id(),
+    paymentId: uuid('payment_id')
+      .notNull()
+      .references(() => payments.id, { onDelete: 'restrict' }),
+    orderId: uuid('order_id').references(() => orders.id, { onDelete: 'restrict' }),
+    /** One of PAYMENT_REVIEW_REASONS (text, so a new reason needs no migration). */
+    reason: text('reason').notNull(),
+    /** One of PAYMENT_REVIEW_RESOLUTIONS; null while open. */
+    resolution: text('resolution'),
+    resolutionNote: text('resolution_note'),
+    resolvedBy: uuid('resolved_by').references(() => users.id, { onDelete: 'restrict' }),
+    resolvedAt: tstz('resolved_at'),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex('payment_reviews_payment_uq').on(t.paymentId),
+    index('payment_reviews_open_idx')
+      .on(t.createdAt)
+      .where(sql`${t.resolvedAt} IS NULL`),
   ],
 );
 

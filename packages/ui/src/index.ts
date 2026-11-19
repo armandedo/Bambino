@@ -2,6 +2,7 @@ export * from './tokens';
 export { contrastRatio, relativeLuminance } from './contrast';
 export * from './components/alert';
 export * from './components/badge';
+export * from './components/brand-logo';
 export * from './components/button';
 export * from './components/card';
 export { cn } from './components/cn';

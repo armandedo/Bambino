@@ -22,6 +22,7 @@ const MOCK_WALLETS = [
   { msisdn: '+250780000001', label: 'Test wallet that approves' },
   { msisdn: '+250780000002', label: 'Test wallet that declines' },
   { msisdn: '+250780000003', label: 'Test wallet that never answers' },
+  { msisdn: '+250780000004', label: 'Test wallet that approves late, after the request expires' },
 ];
 
 const TERMINAL: readonly Payment['status'][] = ['SUCCEEDED', 'FAILED', 'CANCELLED', 'EXPIRED', 'REFUNDED'];
@@ -126,7 +127,7 @@ export function PaymentPanel({
         aria-live="polite"
       >
         <Spinner label={null} size="lg" className="text-primary" />
-        <h3 className="font-display text-xl font-semibold">Approve the payment on your phone</h3>
+        <h3 className="text-lg font-semibold">Approve the payment on your phone</h3>
         <p className="text-primary-soft-foreground">
           We asked your wallet for <MoneyText value={payment.amount} className="font-semibold" />. Enter your
           PIN on the prompt to confirm.

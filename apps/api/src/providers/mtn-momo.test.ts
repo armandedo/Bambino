@@ -132,9 +132,69 @@ describe('MtnMomoProvider payments', () => {
       await reply({ status: 'FAILED', reason: { code: 'APPROVAL_REJECTED' } }).provider.getStatus('id'),
     ).toEqual({ status: 'FAILED', failureCode: 'APPROVAL_REJECTED' });
     const missing = setup({ '/collection/v1_0/requesttopay/': () => new Response('', { status: 404 }) });
-    expect(await missing.provider.getStatus('id')).toEqual({ status: 'PENDING' });
+    expect(await missing.provider.getStatus('id')).toEqual({ status: 'PENDING', unknown: true });
     const broken = setup({ '/collection/v1_0/requesttopay/': () => new Response('', { status: 500 }) });
     await expect(broken.provider.getStatus('id')).rejects.toThrow(/status check failed/);
+  });
+
+  it('refuses a success that reports a different amount or currency than was asked for', async () => {
+    const reply = (body: unknown) => setup({ '/collection/v1_0/requesttopay/': () => Response.json(body) });
+    const asked = money(19_000, 'RWF');
+    expect(
+      await reply({ status: 'SUCCESSFUL', amount: '19000', currency: 'EUR' }).provider.getStatus('id', asked),
+    ).toEqual({ status: 'SUCCEEDED' });
+    await expect(
+      reply({ status: 'SUCCESSFUL', amount: '100', currency: 'EUR' }).provider.getStatus('id', asked),
+    ).rejects.toThrow(/different amount/);
+    await expect(
+      reply({ status: 'SUCCESSFUL', amount: '19000', currency: 'USD' }).provider.getStatus('id', asked),
+    ).rejects.toThrow(/different amount/);
+  });
+
+  it('says a request was never sent only when that is certain', async () => {
+    const failure = async (handlers: Record<string, () => Response>) => {
+      try {
+        await setup(handlers).provider.initiate(request('pay-9'));
+      } catch (error) {
+        return error as { notSent?: boolean };
+      }
+      throw new Error('expected the request to fail');
+    };
+    // Sign-in comes first: if it fails, the payment request was never made.
+    expect((await failure({ '/collection/token': () => new Response('', { status: 500 }) })).notSent).toBe(
+      true,
+    );
+    expect(
+      (
+        await failure({
+          '/collection/token': () => {
+            throw new TypeError('fetch failed');
+          },
+        })
+      ).notSent,
+    ).toBe(true);
+    // MTN answered with a refusal: no request exists.
+    expect(
+      (await failure({ '/collection/v1_0/requesttopay': () => new Response('', { status: 400 }) })).notSent,
+    ).toBe(true);
+    // A server error or a dropped connection says nothing about whether MTN created the request.
+    expect(
+      (await failure({ '/collection/v1_0/requesttopay': () => new Response('', { status: 500 }) })).notSent,
+    ).toBe(false);
+    expect(
+      (
+        await failure({
+          '/collection/v1_0/requesttopay': () => {
+            throw new TypeError('fetch failed');
+          },
+        })
+      ).notSent,
+    ).toBeUndefined();
+  });
+
+  it('can name the request a reference would have, to find one that was sent but never recorded', () => {
+    const { provider } = setup({});
+    expect(provider.referenceFor('pay-1')).toBe(referenceToUuid('pay-1'));
   });
 
   it('signs in again once when MTN rejects the cached token', async () => {

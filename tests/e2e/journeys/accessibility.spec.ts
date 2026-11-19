@@ -5,8 +5,7 @@ import { trackRequests } from '../support/settle';
 const PUBLIC_PAGES = [
   '/',
   '/shop',
-  '/shop/seed-footed-romper',
-  '/plans',
+  '/about',
   '/fit',
   '/how-it-works',
   '/sustainability',

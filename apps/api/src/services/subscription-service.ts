@@ -67,6 +67,8 @@ const planSchema = z.object({
 });
 
 export interface SubscriptionServiceDependencies {
+  /** Explicit opt-in for legacy subscription operations and automatic billing. */
+  enabled?: boolean;
   db: Database;
   orders: OrderService;
   payments: PaymentService;
@@ -88,6 +90,7 @@ export class SubscriptionService {
   constructor(private readonly deps: SubscriptionServiceDependencies) {}
 
   async listPlans(): Promise<PlanRow[]> {
+    if (!this.deps.enabled) return [];
     return this.deps.db
       .select()
       .from(schema.subscriptionPlans)
@@ -98,6 +101,16 @@ export class SubscriptionService {
         ),
       )
       .orderBy(asc(schema.subscriptionPlans.priceAmount));
+  }
+
+  private requireEnabled(): void {
+    if (!this.deps.enabled) {
+      throw new AppError(
+        'FORBIDDEN',
+        'Subscriptions are no longer offered. Please shop individual items.',
+        'SUBSCRIPTIONS_DISABLED',
+      );
+    }
   }
 
   async plansByIds(ids: readonly string[]): Promise<PlanRow[]> {
@@ -120,6 +133,7 @@ export class SubscriptionService {
 
   /** Creates a PENDING subscription and its first cycle order. Re-sending the same key returns the same subscription. */
   async create(context: ServiceContext, rawInput: unknown): Promise<SubscriptionRow> {
+    this.requireEnabled();
     const actor = requireUser(context);
     const input = parseInput(createSchema, rawInput);
     const { db, now, currency } = this.deps;
@@ -378,6 +392,7 @@ export class SubscriptionService {
   }
 
   async resume(context: ServiceContext, rawId: unknown): Promise<SubscriptionRow> {
+    this.requireEnabled();
     const actor = requireUser(context);
     return this.deps.db.transaction(async (tx) => {
       const subscription = await this.lockOwn(tx, actor.userId, rawId);
@@ -403,6 +418,7 @@ export class SubscriptionService {
 
   /** Plan changes take effect at the next renewal (SUBSCRIPTION_POLICY.planChangeTiming). */
   async changePlan(context: ServiceContext, rawId: unknown, rawPlanId: unknown): Promise<SubscriptionRow> {
+    this.requireEnabled();
     const actor = requireUser(context);
     const planId = parseInput(z.uuid(), rawPlanId);
     return this.deps.db.transaction(async (tx) => {
@@ -444,6 +460,7 @@ export class SubscriptionService {
     rawId: unknown,
     rawVariantIds: unknown,
   ): Promise<SubscriptionRow> {
+    this.requireEnabled();
     const actor = requireUser(context);
     const variantIds = parseInput(z.array(z.uuid()).min(1).max(30), rawVariantIds);
     return this.deps.db.transaction(async (tx) => {
@@ -610,6 +627,7 @@ export class SubscriptionService {
     const { db } = this.deps;
     const now = this.deps.now();
     const result = { renewalsCreated: 0, expired: 0, cancelled: 0, resumed: 0, reminded: 0 };
+    if (!this.deps.enabled) return result;
 
     const resumable = await db
       .select({ id: schema.subscriptions.id })

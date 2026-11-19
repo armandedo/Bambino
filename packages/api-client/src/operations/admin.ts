@@ -520,6 +520,8 @@ const PAYMENT_REFUND_FIELDS = `refundableAmount ${MONEY} refundMethods refunds @
 
 export interface AdminPayment {
   payment: Payment;
+  /** The provider collected this money but it was not applied to the order. */
+  unapplied: boolean;
   customer: CustomerRef;
   providerReference: string | null;
   refundableAmount: Money;
@@ -544,6 +546,7 @@ export const AdminPaymentsQuery = operation<
     adminPayments(status: $status, page: $page) {
       totalCount ${PAGE_INFO}
       items { providerReference ${CUSTOMER_REF} ${PAYMENT_REFUND_FIELDS}
+        unapplied
         payment { id orderId provider status amount ${MONEY} failureMessage initiatedAt expiresAt completedAt }
         transactions { id type resultingStatus amount ${MONEY} createdAt } }
     }
@@ -556,6 +559,50 @@ export const AdminReconcilePaymentMutation = operation<
 >(
   'AdminReconcilePayment',
   'mutation AdminReconcilePayment($id: ID!) { adminReconcilePayment(id: $id) { id status } }',
+);
+
+export type PaymentReviewReason = 'ORDER_CANCELLED' | 'ORDER_NOT_AWAITING_PAYMENT' | 'OUTCOME_UNCONFIRMED';
+export type PaymentReviewResolution = 'REFUNDED' | 'NO_MONEY_RECEIVED' | 'OTHER';
+
+/** A payment that needs a person: late money for a closed order, or an outcome the provider never confirmed. */
+export interface AdminPaymentReview {
+  id: string;
+  reason: PaymentReviewReason;
+  open: boolean;
+  resolution: PaymentReviewResolution | null;
+  resolutionNote: string | null;
+  createdAt: string;
+  resolvedAt: string | null;
+  payment: {
+    providerReference: string | null;
+    customer: CustomerRef;
+    payment: Pick<Payment, 'id' | 'provider' | 'status' | 'amount' | 'initiatedAt'>;
+  };
+  order: { id: string; orderNumber: string; status: string } | null;
+}
+
+const PAYMENT_REVIEW_FIELDS = `id reason open resolution resolutionNote createdAt resolvedAt
+  payment { providerReference ${CUSTOMER_REF} payment { id provider status amount ${MONEY} initiatedAt } }
+  order { id orderNumber status }`;
+
+export const AdminPaymentReviewsQuery = operation<
+  { adminPaymentReviews: AdminPage<AdminPaymentReview> },
+  { open?: boolean | null; page?: PageInput }
+>(
+  'AdminPaymentReviews',
+  `query AdminPaymentReviews($open: Boolean, $page: PageInput) {
+    adminPaymentReviews(open: $open, page: $page) { totalCount ${PAGE_INFO} items { ${PAYMENT_REVIEW_FIELDS} } }
+  }`,
+);
+
+export const AdminResolvePaymentReviewMutation = operation<
+  { adminResolvePaymentReview: AdminPaymentReview },
+  { input: { id: string; resolution: PaymentReviewResolution; note: string } }
+>(
+  'AdminResolvePaymentReview',
+  `mutation AdminResolvePaymentReview($input: ResolvePaymentReviewInput!) {
+    adminResolvePaymentReview(input: $input) { ${PAYMENT_REVIEW_FIELDS} }
+  }`,
 );
 
 export const AdminRefundsQuery = operation<

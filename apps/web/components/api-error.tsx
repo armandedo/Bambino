@@ -9,7 +9,7 @@ export function ApiErrorState({ error, what }: { error: ApiError; what: string }
       title={`We couldn't load ${what}`}
       description={
         unreachable
-          ? 'The Bambino API is not reachable right now. If you are running locally, start it with `pnpm --filter @bambino/api dev`.'
+          ? 'We’re having trouble connecting to the shop. Please refresh or try again in a moment.'
           : 'Something went wrong on our side. Please try again in a moment.'
       }
       requestId={error.requestId}

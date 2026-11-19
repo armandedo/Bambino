@@ -12,6 +12,7 @@ import NextLink from 'next/link';
 import { useRouter } from 'next/navigation';
 import { type ReactNode, useCallback, useEffect, useState } from 'react';
 import { AddressPicker, DeliveryPicker, TotalsTable } from '@/components/checkout-parts';
+import { BagNotices, useBag } from '@/components/bag';
 import { CART_KEY, useCart } from '@/components/header-actions';
 import { PayOnDeliveryPanel } from '@/components/pay-on-delivery-panel';
 import { PaymentPanel } from '@/components/payment-panel';
@@ -22,7 +23,7 @@ import { errorMessage } from '@/lib/messages';
 function Step({ number, title, children }: { number: number; title: string; children: ReactNode }) {
   return (
     <Card as="section" aria-labelledby={`step-${number}`} className="flex flex-col gap-4">
-      <h2 id={`step-${number}`} className="flex items-center gap-3 font-display text-xl font-semibold">
+      <h2 id={`step-${number}`} className="flex items-center gap-3 text-lg font-semibold">
         <span
           aria-hidden="true"
           className="flex size-8 items-center justify-center rounded-full bg-primary-soft text-base text-primary-soft-foreground"
@@ -45,6 +46,7 @@ function Checkout({ viewer }: { viewer: Viewer }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const cart = useCart(true);
+  const bag = useBag();
   const defaultAddress = viewer.addresses.find((a) => a.isDefault) ?? viewer.addresses[0];
   const [addressId, setAddressId] = useState<string | null>(defaultAddress?.id ?? null);
   const [deliveryCode, setDeliveryCode] = useState<string | null>(null);
@@ -96,20 +98,24 @@ function Checkout({ viewer }: { viewer: Viewer }) {
     if (order) router.push(`/dashboard/orders/${order.id}?placed=1`);
   }, [order, router, queryClient]);
 
-  if (cart.isPending) return <Skeleton className="h-64" />;
+  // A bag filled before signing in is on its way into the account: wait for it instead of calling the bag empty.
+  if (cart.isPending || bag.merging) return <Skeleton className="h-64" />;
   if (!order && (!cart.data || cart.data.items.length === 0)) {
     return (
-      <Alert
-        tone="info"
-        title="Your cart is empty"
-        action={
-          <NextLink href="/shop" className={buttonClasses({ size: 'sm' })}>
-            Go to the shop
-          </NextLink>
-        }
-      >
-        Add something before checking out.
-      </Alert>
+      <div className="flex flex-col gap-3">
+        <BagNotices className="flex flex-col gap-3" />
+        <Alert
+          tone="info"
+          title="Your bag is empty"
+          action={
+            <NextLink href="/shop" className={buttonClasses({ size: 'sm' })}>
+              Go to the shop
+            </NextLink>
+          }
+        >
+          Add something before checking out.
+        </Alert>
+      </div>
     );
   }
 
@@ -118,7 +124,7 @@ function Checkout({ viewer }: { viewer: Viewer }) {
       <div className="mx-auto flex w-full max-w-xl flex-col gap-6">
         <CheckoutSteps current={1} />
         <Card className="flex flex-col gap-4">
-          <h2 className="font-display text-2xl font-semibold">Pay for order {order.orderNumber}</h2>
+          <h2 className="text-lg font-semibold">Pay for order {order.orderNumber}</h2>
           <p className="text-foreground-muted">
             Your items are reserved while you pay. Total:{' '}
             <MoneyText value={order.totals.total} className="font-semibold text-foreground" />
@@ -157,6 +163,7 @@ function Checkout({ viewer }: { viewer: Viewer }) {
   return (
     <div className="flex flex-col gap-8">
       <CheckoutSteps current={0} />
+      <BagNotices className="flex flex-col gap-3" />
       <div className="grid gap-8 lg:grid-cols-[2fr_1fr]">
         <div className="flex flex-col gap-6">
           <Step number={1} title="Where should we deliver?">
@@ -201,7 +208,7 @@ function Checkout({ viewer }: { viewer: Viewer }) {
 
         <aside aria-labelledby="summary">
           <Card className="flex flex-col gap-4 lg:sticky lg:top-24">
-            <h2 id="summary" className="font-display text-xl font-semibold">
+            <h2 id="summary" className="text-lg font-semibold">
               Order summary
             </h2>
             <ul className="flex flex-col gap-2 text-sm">
@@ -235,7 +242,7 @@ function Checkout({ viewer }: { viewer: Viewer }) {
             ) : null}
             {unavailable ? (
               <Alert tone="warning">
-                Something in your cart is out of stock. Remove it from the cart to continue.
+                Something in your bag is sold out. Remove it from your bag to continue.
               </Alert>
             ) : null}
             <Button
@@ -262,12 +269,15 @@ const STEPS = ['Delivery', 'Payment', 'Confirmation'] as const;
 /** Delivery → Payment → Confirmation. Confirmation is the order page the parent lands on after paying. */
 function CheckoutSteps({ current }: { current: number }) {
   return (
-    <ol aria-label="Checkout steps" className="flex items-center gap-2 text-sm">
+    <ol
+      aria-label="Checkout steps"
+      className="grid grid-cols-3 items-start gap-2 text-xs sm:flex sm:items-center sm:text-sm"
+    >
       {STEPS.map((step, index) => (
         <li
           key={step}
           aria-current={index === current ? 'step' : undefined}
-          className="flex items-center gap-2"
+          className="flex min-w-0 flex-col items-center gap-1.5 sm:flex-row sm:gap-2"
         >
           <span
             aria-hidden="true"
@@ -276,7 +286,7 @@ function CheckoutSteps({ current }: { current: number }) {
                 ? 'flex size-7 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground'
                 : index === current
                   ? 'flex size-7 items-center justify-center rounded-full border-2 border-primary text-xs font-semibold text-primary'
-                  : 'flex size-7 items-center justify-center rounded-full border-2 border-sand-300 text-xs font-semibold text-foreground-muted'
+                  : 'flex size-7 items-center justify-center rounded-full border-2 border-border-strong text-xs font-semibold text-foreground-muted'
             }
           >
             {index + 1}
@@ -288,7 +298,7 @@ function CheckoutSteps({ current }: { current: number }) {
             </span>
           </span>
           {index < STEPS.length - 1 ? (
-            <span aria-hidden="true" className="mx-1 h-px w-6 bg-sand-300 sm:w-10" />
+            <span aria-hidden="true" className="mx-1 hidden h-px w-10 bg-border-strong sm:block" />
           ) : null}
         </li>
       ))}

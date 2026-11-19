@@ -1,26 +1,20 @@
 'use client';
 
-import { type Cart, RemoveFromCartMutation, UpdateCartItemMutation } from '@bambino/api-client';
-import { Alert, Button, Card, EmptyState, MoneyText, Skeleton, buttonClasses } from '@bambino/ui';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { CartLine } from '@bambino/api-client';
+import { Alert, Button, EmptyState, MoneyText, Skeleton, buttonClasses } from '@bambino/ui';
+import { useMutation } from '@tanstack/react-query';
 import NextLink from 'next/link';
-import { CART_KEY, useCart } from '@/components/header-actions';
-import { ProductArt } from '@/components/product-art';
-import { RequireAuth } from '@/components/require-auth';
-import { api } from '@/lib/browser-api';
+import { BagNotices, GUEST_CHECKOUT_HREF, useBag } from '@/components/bag';
+import { ProductPhoto } from '@/components/storefront/product-photo';
+import { MAX_BAG_QUANTITY } from '@/lib/guest-bag';
 import { errorMessage } from '@/lib/messages';
-
-const MAX_QUANTITY = 10;
+import { displaySizeLabel } from '@/lib/size-label';
 
 function CartContents() {
-  const cart = useCart(true);
-  const queryClient = useQueryClient();
+  const cart = useBag();
   const update = useMutation({
-    mutationFn: async (change: { itemId: string; quantity: number }) =>
-      change.quantity <= 0
-        ? (await api.request(RemoveFromCartMutation, { itemId: change.itemId })).removeFromCart
-        : (await api.request(UpdateCartItemMutation, change)).updateCartItem,
-    onSuccess: (next: Cart) => queryClient.setQueryData(CART_KEY, next),
+    mutationFn: (change: { line: CartLine; quantity: number }) =>
+      cart.setQuantity(change.line, change.quantity),
   });
 
   if (cart.isPending) {
@@ -33,109 +27,118 @@ function CartContents() {
   }
   if (cart.isError) {
     return (
-      <Alert tone="danger" title="We couldn't load your cart" live>
+      <Alert tone="danger" title="We couldn't load your bag" live>
         {errorMessage(cart.error)}
       </Alert>
     );
   }
-  const data = cart.data;
+  const data = cart.cart;
   if (!data || data.items.length === 0) {
     return (
-      <EmptyState
-        title="Your cart is empty"
-        description="Browse the shop and add pieces in your baby’s size."
-        action={
-          <NextLink href="/shop" className={buttonClasses()}>
-            Go to the shop
-          </NextLink>
-        }
-      />
+      <>
+        <BagNotices className="flex flex-col gap-3" />
+        <EmptyState
+          title="Your bag is empty"
+          description="Clothes you add wait here until you check out."
+          action={
+            <NextLink href="/shop" className={buttonClasses()}>
+              Keep shopping
+            </NextLink>
+          }
+        />
+      </>
     );
   }
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[2fr_1fr]">
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-10">
       <section aria-labelledby="items">
         <h2 id="items" className="sr-only">
           Items
         </h2>
+        <BagNotices className="mb-3 flex flex-col gap-3" />
         {update.isError ? (
-          <Alert tone="danger" live className="mb-4">
+          <Alert tone="danger" live className="mb-3">
             {errorMessage(update.error)}
           </Alert>
         ) : null}
-        <ul className="flex flex-col gap-3">
+        <ul className="divide-y divide-border border-y border-border">
           {data.items.map((item) => (
-            <li key={item.id}>
-              <Card padding="sm" className="flex gap-4">
-                <div className="w-20 shrink-0 overflow-hidden rounded-lg">
-                  <ProductArt seed={item.product.slug} className="aspect-square" />
-                </div>
-                <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <li key={item.id} className="flex gap-3 py-4">
+              <NextLink
+                href={`/shop/${item.product.slug}`}
+                tabIndex={-1}
+                aria-hidden="true"
+                className="block size-24 shrink-0 overflow-hidden rounded-md border border-border"
+              >
+                <ProductPhoto src={item.product.images[0]?.url} alt="" sizes="96px" />
+              </NextLink>
+              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <div className="flex items-start justify-between gap-3">
                   <NextLink
                     href={`/shop/${item.product.slug}`}
-                    className="font-semibold underline underline-offset-4 hover:decoration-2"
+                    className="rounded-sm text-[15px] leading-snug font-medium hover:underline"
                   >
                     {item.product.name}
                   </NextLink>
-                  <p className="text-sm text-foreground-muted">
-                    {item.variant.size.label} · {item.variant.color} ·{' '}
-                    <MoneyText value={item.variant.price} /> each
+                  <MoneyText value={item.lineTotal} className="shrink-0 font-semibold" />
+                </div>
+                <p className="text-sm text-foreground-muted">
+                  Size {displaySizeLabel(item.variant.size.label)}, {item.variant.color}
+                </p>
+                <p className="text-sm text-foreground-muted">
+                  <MoneyText value={item.variant.price} /> each
+                </p>
+                {!item.variant.inStock ? (
+                  <p className="text-sm font-medium text-danger">
+                    No longer in stock. Remove it to check out.
                   </p>
-                  {!item.variant.inStock ? (
-                    <p className="text-sm font-medium text-danger">
-                      No longer in stock. Remove it to check out.
-                    </p>
-                  ) : null}
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <div
-                      className="flex items-center rounded-full border border-border-strong"
-                      role="group"
-                      aria-label={`Quantity of ${item.product.name}`}
-                    >
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        aria-label="Decrease quantity"
-                        disabled={update.isPending}
-                        onClick={() => update.mutate({ itemId: item.id, quantity: item.quantity - 1 })}
-                      >
-                        −
-                      </Button>
-                      <span className="min-w-8 text-center tabular-nums" aria-live="polite">
-                        {item.quantity}
-                      </span>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        aria-label="Increase quantity"
-                        disabled={update.isPending || item.quantity >= MAX_QUANTITY}
-                        onClick={() => update.mutate({ itemId: item.id, quantity: item.quantity + 1 })}
-                      >
-                        +
-                      </Button>
-                    </div>
+                ) : null}
+                <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                  <div
+                    className="flex items-center rounded-full border border-border-strong"
+                    role="group"
+                    aria-label={`Quantity of ${item.product.name}`}
+                  >
                     <Button
                       size="sm"
                       variant="ghost"
+                      aria-label="Decrease quantity"
                       disabled={update.isPending}
-                      onClick={() => update.mutate({ itemId: item.id, quantity: 0 })}
+                      onClick={() => update.mutate({ line: item, quantity: item.quantity - 1 })}
                     >
-                      Remove
+                      −
+                    </Button>
+                    <span className="min-w-8 text-center tabular-nums" aria-live="polite">
+                      {item.quantity}
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      aria-label="Increase quantity"
+                      disabled={update.isPending || item.quantity >= MAX_BAG_QUANTITY}
+                      onClick={() => update.mutate({ line: item, quantity: item.quantity + 1 })}
+                    >
+                      +
                     </Button>
                   </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={update.isPending}
+                    onClick={() => update.mutate({ line: item, quantity: 0 })}
+                  >
+                    Remove<span className="sr-only"> {item.product.name}</span>
+                  </Button>
                 </div>
-                <p className="font-semibold">
-                  <MoneyText value={item.lineTotal} />
-                </p>
-              </Card>
+              </div>
             </li>
           ))}
         </ul>
       </section>
-      <aside aria-labelledby="summary">
-        <Card className="flex flex-col gap-4 lg:sticky lg:top-24">
-          <h2 id="summary" className="font-display text-xl font-semibold">
+      <aside aria-labelledby="summary" className="lg:sticky lg:top-24 lg:self-start">
+        <div className="flex flex-col gap-3 rounded-lg border border-border p-4">
+          <h2 id="summary" className="text-lg font-semibold">
             Summary
           </h2>
           <div className="flex justify-between">
@@ -145,17 +148,29 @@ function CartContents() {
             <MoneyText value={data.subtotal} className="font-semibold" />
           </div>
           <p className="text-sm text-foreground-muted">
-            Delivery, discounts and exchange credit are added at checkout.
+            {cart.isGuest
+              ? 'Sign in or create an account to check out. Your bag comes with you, and you choose delivery and review your total there.'
+              : 'Choose delivery and review your total at checkout.'}
           </p>
-          <NextLink href="/checkout" className={buttonClasses({ fullWidth: true, size: 'lg' })}>
-            Go to checkout
+          <NextLink
+            href={cart.isGuest ? GUEST_CHECKOUT_HREF : '/checkout'}
+            className={buttonClasses({ fullWidth: true, size: 'lg', className: 'cta' })}
+          >
+            {cart.isGuest ? 'Sign in to check out' : 'Go to checkout'}
           </NextLink>
-        </Card>
+          <NextLink
+            href="/shop"
+            className="self-center rounded-md py-1 text-sm font-medium underline underline-offset-4"
+          >
+            Keep shopping
+          </NextLink>
+        </div>
       </aside>
     </div>
   );
 }
 
+/** The bag page, for visitors and customers alike. Checking out is what needs an account. */
 export function CartView() {
-  return <RequireAuth>{() => <CartContents />}</RequireAuth>;
+  return <CartContents />;
 }

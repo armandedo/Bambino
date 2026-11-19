@@ -19,6 +19,7 @@ import { type PageRequest, decodeOffset, encodeKeyset, encodeOffset } from '../s
 import {
   type PaymentMethodRow,
   type PaymentRow,
+  type PaymentReviewRow,
   type PaymentTransactionRow,
   customerFailureMessage,
 } from '../services/payment-service';
@@ -91,6 +92,8 @@ export const commerceResolvers = {
     product: (_: unknown, args: { slug: string }, context: Ctx) =>
       context.services.catalogue.getProductBySlug(args.slug),
     myCart: (_: unknown, __: unknown, context: Ctx) => context.services.cart.getCart(context),
+    guestBag: (_: unknown, args: { items: unknown }, context: Ctx) =>
+      context.services.cart.previewGuestBag(args.items),
     checkoutPreview: (_: unknown, args: { input: unknown }, context: Ctx) =>
       context.services.orders.preview(context, args.input),
     myOrders: async (_: unknown, args: PageRequest, context: Ctx) => {
@@ -177,6 +180,18 @@ export const commerceResolvers = {
         totalCount: page.totalCount,
       };
     },
+    adminPaymentReviews: async (
+      _: unknown,
+      args: { open?: boolean | null; page?: PageRequest | null },
+      context: Ctx,
+    ) => {
+      const page = await context.services.payments.listReviews(context, args.open, args.page ?? {});
+      return {
+        items: page.items,
+        pageInfo: { endCursor: page.endCursor, hasNextPage: page.hasNextPage },
+        totalCount: page.totalCount,
+      };
+    },
     adminRefunds: async (
       _: unknown,
       args: { status?: RefundStatus | null; page?: PageRequest | null },
@@ -216,6 +231,8 @@ export const commerceResolvers = {
       context.services.cart.updateCartItem(context, args.itemId, args.quantity),
     removeFromCart: (_: unknown, args: { itemId: string }, context: Ctx) =>
       context.services.cart.removeFromCart(context, args.itemId),
+    mergeGuestBag: (_: unknown, args: { input: unknown }, context: Ctx) =>
+      context.services.cart.mergeGuestBag(context, args.input),
     createOrder: (_: unknown, args: { input: unknown }, context: Ctx) =>
       context.services.orders.createOrder(context, args.input),
     confirmPayOnDelivery: (_: unknown, args: { input: unknown }, context: Ctx) =>
@@ -276,6 +293,8 @@ export const commerceResolvers = {
       context.services.delivery.updateAsStaff(context, args.input),
     adminReconcilePayment: (_: unknown, args: { id: string }, context: Ctx) =>
       context.services.payments.reconcileOne(context, args.id),
+    adminResolvePaymentReview: (_: unknown, args: { input: unknown }, context: Ctx) =>
+      context.services.payments.resolveReview(context, args.input),
     adminRequestRefund: (_: unknown, args: { input: unknown }, context: Ctx) =>
       context.services.refunds.request(context, args.input),
     adminApproveRefund: (_: unknown, args: { id: string }, context: Ctx) =>
@@ -437,7 +456,18 @@ export const commerceResolvers = {
       ((await context.loaders.orderPayments.load(parent.order.id)) ?? []).map((payment) => ({ payment })),
   },
 
+  PaymentReview: {
+    open: (parent: PaymentReviewRow) => parent.resolvedAt === null,
+    payment: async (parent: PaymentReviewRow, _: unknown, context: Ctx) => {
+      const [payment] = await context.services.payments.byIds([parent.paymentId]);
+      if (!payment) throw new Error('Payment review without its payment');
+      return { payment };
+    },
+    order: async (parent: PaymentReviewRow, _: unknown, context: Ctx) =>
+      parent.orderId ? ((await context.services.orders.byIds([parent.orderId]))[0] ?? null) : null,
+  },
   AdminPayment: {
+    unapplied: (parent: { payment: PaymentRow }) => parent.payment.unapplied,
     customer: (parent: { payment: PaymentRow }, _: unknown, context: Ctx) =>
       customer(context, parent.payment.userId),
     providerReference: (parent: { payment: PaymentRow }) => parent.payment.providerReference,

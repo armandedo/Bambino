@@ -1,16 +1,19 @@
-import { ProductQuery } from '@bambino/api-client';
-import { Badge, Card, MoneyText } from '@bambino/ui';
+import { ProductQuery, ProductsQuery } from '@bambino/api-client';
+import { MoneyText } from '@bambino/ui';
 import type { Metadata } from 'next';
 import NextLink from 'next/link';
 import { notFound } from 'next/navigation';
 import { AddToCart } from '@/components/add-to-cart';
 import { ApiErrorState } from '@/components/api-error';
-import { ProductArt } from '@/components/product-art';
+import { ProductCard } from '@/components/product-card';
+import { ProductGallery } from '@/components/storefront/product-gallery';
+import { PRODUCT_GRID } from '@/components/storefront/shop-view';
 import { load } from '@/lib/api';
 
-export const revalidate = 60;
-
 type Params = Promise<{ slug: string }>;
+
+const CRUMB = 'rounded-sm underline underline-offset-4 hover:text-foreground';
+const MORE_COUNT = 5;
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { slug } = await params;
@@ -23,7 +26,7 @@ export default async function ProductPage({ params }: { params: Params }) {
   const result = await load(ProductQuery, { slug });
   if (!result.ok) {
     return (
-      <div className="mx-auto max-w-6xl px-4 py-12">
+      <div className="retail-container py-10">
         <ApiErrorState error={result.error} what="this product" />
       </div>
     );
@@ -31,23 +34,38 @@ export default async function ProductPage({ params }: { params: Params }) {
   const product = result.data.product;
   if (!product) notFound();
 
-  const image = product.images[0];
+  // More to browse from the same shelf. If this read fails the product page still stands on its own.
+  const related = await load(ProductsQuery, {
+    filter: { oneTimeEligible: true, inStockOnly: true, categorySlug: product.category.slug },
+    first: MORE_COUNT + 1,
+  });
+  const more = related.ok
+    ? related.data.products.edges
+        .map((edge) => edge.node)
+        .filter((item) => item.id !== product.id)
+        .slice(0, MORE_COUNT)
+    : [];
+
+  const details = [
+    { label: 'Material', value: product.material },
+    { label: 'Care', value: product.careInstructions },
+    { label: 'Sustainability', value: product.sustainabilityInfo },
+  ].filter((row): row is { label: string; value: string } => Boolean(row.value?.trim()));
+  const prices = new Set(product.variants.map((variant) => variant.price.amount));
+  const categoryHref = `/shop?category=${encodeURIComponent(product.category.slug)}`;
 
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-10">
-      <nav aria-label="Breadcrumb" className="text-sm">
-        <ol className="flex flex-wrap gap-2 text-foreground-muted">
+    <div className="retail-container flex flex-col gap-4 pt-3 pb-10 md:pt-4">
+      <nav aria-label="Breadcrumb" className="text-sm text-foreground-muted">
+        <ol className="flex flex-wrap items-center gap-x-2">
           <li>
-            <NextLink href="/shop" className="text-link underline underline-offset-4 hover:decoration-2">
+            <NextLink href="/shop" className={CRUMB}>
               Shop
             </NextLink>
           </li>
           <li aria-hidden="true">/</li>
           <li>
-            <NextLink
-              href={`/shop?category=${product.category.slug}`}
-              className="text-link underline underline-offset-4 hover:decoration-2"
-            >
+            <NextLink href={categoryHref} className={CRUMB}>
               {product.category.name}
             </NextLink>
           </li>
@@ -58,91 +76,82 @@ export default async function ProductPage({ params }: { params: Params }) {
         </ol>
       </nav>
 
-      <div className="grid gap-10 md:grid-cols-2">
-        <div className="self-start overflow-hidden rounded-2xl border border-border">
-          {image ? (
-            // Plain img: product photos come from object storage, and next/image needs its domain configured first.
-            <img src={image.url} alt={image.altText} className="aspect-square w-full object-cover" />
-          ) : (
-            <ProductArt seed={product.slug} className="aspect-square" />
-          )}
-        </div>
+      <div className="grid gap-5 md:grid-cols-2 md:gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:gap-12">
+        <ProductGallery
+          product={{
+            id: product.id,
+            slug: product.slug,
+            name: product.name,
+            images: product.images,
+            priceFrom: product.priceFrom,
+          }}
+        />
 
-        <div className="flex flex-col gap-6">
-          <div className="flex flex-col gap-2">
-            <p className="text-sm font-semibold text-primary">{product.brand}</p>
-            <h1 className="font-display text-3xl font-semibold sm:text-4xl">{product.name}</h1>
+        <div className="flex flex-col gap-5 lg:max-w-[32rem]">
+          <div className="flex flex-col gap-1">
+            {product.brand ? <p className="text-sm text-foreground-muted">{product.brand}</p> : null}
+            <h1 className="text-2xl leading-tight font-semibold tracking-[-0.015em]">{product.name}</h1>
             {product.priceFrom ? (
-              <p className="text-2xl font-semibold">
+              <p className="mt-1 text-xl font-semibold">
+                {prices.size > 1 ? (
+                  <span className="text-[15px] font-normal text-foreground-muted">From </span>
+                ) : null}
                 <MoneyText value={product.priceFrom} />
               </p>
             ) : null}
-            <div className="flex flex-wrap gap-2">
-              {product.subscriptionEligible ? <Badge tone="brand">Included in subscriptions</Badge> : null}
-              {product.oneTimeEligible ? <Badge>Buy once</Badge> : null}
-            </div>
           </div>
-
-          <p className="text-foreground-muted">{product.description}</p>
 
           <AddToCart variants={product.variants} oneTimeEligible={product.oneTimeEligible} />
 
-          <NextLink
-            href="/fit"
-            className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-brand-50 p-4 hover:border-brand-300 focus-visible:outline-2 focus-visible:outline-focus"
-          >
-            <span>
-              <span className="block font-semibold text-primary">Not sure which size?</span>
-              <span className="text-sm text-foreground-muted">
-                Get a recommendation from your baby’s measurements.
-              </span>
-            </span>
-            <span aria-hidden="true" className="text-xl text-primary">
-              →
-            </span>
-          </NextLink>
+          <p className="border-t border-border pt-4 text-[15px] text-foreground-muted">
+            Delivery options and your total are shown before you pay.{' '}
+            <NextLink
+              href="/delivery-returns"
+              className="rounded-sm font-medium text-foreground underline underline-offset-4"
+            >
+              Delivery and returns
+            </NextLink>
+          </p>
 
-          <section aria-labelledby="lifecycle" className="flex flex-col gap-3">
-            <h2 id="lifecycle" className="font-display text-lg font-semibold text-primary">
-              This piece’s life
-            </h2>
-            <ol className="flex flex-wrap items-center gap-2 text-sm">
-              {['Produced', 'Worn', 'Returned', 'Refurbished', 'Redistributed or recycled'].map(
-                (stage, index, all) => (
-                  <li key={stage} className="flex items-center gap-2">
-                    <span className="rounded-full bg-surface-muted px-3 py-1 font-medium">{stage}</span>
-                    {index < all.length - 1 ? (
-                      <span aria-hidden="true" className="text-foreground-muted">
-                        →
-                      </span>
-                    ) : null}
-                  </li>
-                ),
-              )}
-            </ol>
-            <p className="text-sm text-foreground-muted">
-              Every piece is tagged, inspected when it comes back, and only reused if it passes.
-            </p>
-          </section>
+          {product.description ? (
+            <div className="border-t border-border pt-4">
+              <h2 className="mb-1.5 text-[15px] font-semibold">About this piece</h2>
+              <p className="text-[15px] leading-relaxed text-foreground-muted">{product.description}</p>
+            </div>
+          ) : null}
 
-          <Card padding="sm">
-            <dl className="flex flex-col gap-3 text-sm">
-              <Detail label="Material" value={product.material} />
-              <Detail label="Care" value={product.careInstructions} />
-              <Detail label="Sustainability" value={product.sustainabilityInfo} />
+          {details.length > 0 ? (
+            <dl className="flex flex-col gap-2.5 border-t border-border pt-4 text-[15px]">
+              {details.map((row) => (
+                <div key={row.label} className="grid grid-cols-[7.5rem_1fr] gap-2">
+                  <dt className="font-semibold">{row.label}</dt>
+                  <dd className="text-foreground-muted">{row.value}</dd>
+                </div>
+              ))}
             </dl>
-          </Card>
+          ) : null}
         </div>
       </div>
-    </div>
-  );
-}
 
-function Detail({ label, value }: { label: string; value: string | null }) {
-  return (
-    <div className="grid grid-cols-[8rem_1fr] gap-2">
-      <dt className="font-semibold">{label}</dt>
-      <dd className="text-foreground-muted">{value ?? 'Not provided yet'}</dd>
+      {more.length > 0 ? (
+        <section aria-labelledby="more" className="mt-6 border-t border-border pt-5">
+          <div className="mb-3 flex items-baseline justify-between gap-4">
+            <h2 id="more" className="text-lg font-semibold">
+              More in {product.category.name}
+            </h2>
+            <NextLink href={categoryHref} className="text-sm font-medium underline underline-offset-4">
+              See all
+            </NextLink>
+          </div>
+          <ul className={PRODUCT_GRID}>
+            {more.map((item) => (
+              <li key={item.id} className="min-w-0">
+                <ProductCard product={item} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
     </div>
   );
 }

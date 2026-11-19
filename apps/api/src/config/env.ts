@@ -1,4 +1,4 @@
-import { isMarketCode } from '@bambino/config';
+import { getMarket, isMarketCode } from '@bambino/config';
 import { z } from 'zod';
 
 /** An empty value copied from .env.example means unset. */
@@ -9,6 +9,8 @@ const booleanString = z.enum(['true', 'false']).transform((value) => value === '
 const envSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+    /** Legacy billing is opt-in; Bambino now runs as a shopping-only store. */
+    SUBSCRIPTIONS_ENABLED: booleanString.default(false),
     MARKET_CODE: z.string().default('RW').refine(isMarketCode, 'is not a configured market'),
     DATABASE_URL: z.string().min(1),
     API_PORT: z.coerce.number().int().min(1).max(65_535).default(4000),
@@ -58,7 +60,11 @@ const envSchema = z
     MTN_MOMO_DISBURSEMENT_SUBSCRIPTION_KEY: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
     MTN_MOMO_DISBURSEMENT_API_USER: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
     MTN_MOMO_DISBURSEMENT_API_KEY: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
-    MOCK_PAYMENT_WEBHOOK_SECRET: z.string().min(16).default('development-mock-webhook-secret'),
+    /**
+     * Signs mock provider webhooks. There is no built-in value: without it mock payments still work (their status
+     * is polled) but mock webhooks are refused.
+     */
+    MOCK_PAYMENT_WEBHOOK_SECRET: z.preprocess(emptyToUndefined, z.string().min(16).optional()),
     PAYMENT_EXPIRY_MINUTES: z.coerce.number().int().min(1).max(60).default(10),
     RECONCILE_INTERVAL_SECONDS: z.coerce.number().int().min(10).max(3600).default(60),
     STORAGE_PUBLIC_BASE_URL: z.url().default('http://localhost:4000/media'),
@@ -106,6 +112,18 @@ const envSchema = z
     }
     if (env.PAYMENT_PROVIDERS_ENABLED.includes('mock')) {
       fail('PAYMENT_PROVIDERS_ENABLED', 'the mock payment provider cannot be enabled in production');
+    }
+    if (env.PAYMENT_PROVIDERS_ENABLED.length === 0) {
+      fail('PAYMENT_PROVIDERS_ENABLED', 'no payment provider is enabled, so no order could be paid');
+    }
+    if (env.PAYMENT_PROVIDERS_ENABLED.includes('mtn_momo')) {
+      if (env.MTN_MOMO_TARGET_ENVIRONMENT === 'sandbox') {
+        fail('MTN_MOMO_TARGET_ENVIRONMENT', 'the MTN sandbox target cannot be used in production');
+      }
+      const currency = getMarket(env.MARKET_CODE).currency;
+      if (env.MTN_MOMO_CURRENCY !== currency) {
+        fail('MTN_MOMO_CURRENCY', `must be ${currency}, the currency orders are priced in`);
+      }
     }
     for (const [key, value] of Object.entries(env)) {
       if (typeof value === 'string' && value.includes('CHANGE_ME')) fail(key, 'still contains a placeholder');

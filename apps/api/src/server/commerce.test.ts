@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { schema } from '@bambino/database';
 import { and, eq } from '@bambino/database/orm';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { MOCK_SIGNATURE_HEADER, MOCK_WALLETS } from '../providers/payments';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { MOCK_SIGNATURE_HEADER, MOCK_WALLETS, type PaymentProvider } from '../providers/payments';
 import { type TestApp, createTestApp, errorCode, errorReason } from '../testing/test-app';
 
 let t: TestApp;
@@ -515,6 +515,159 @@ describe('payments', () => {
     expect((await availability(variant.id))?.quantityReserved).toBe(reserved - 1);
   });
 
+  it('does not let a forged webhook take the id of the real one', async () => {
+    const customer = await shopper();
+    const { order } = await placeOrder(customer);
+    const payment = await pay(customer, order.id);
+    const [row] = await t.db.select().from(schema.payments).where(eq(schema.payments.id, payment.id));
+    const body = JSON.stringify({ eventId: `evt-race-${payment.id}`, reference: row?.providerReference });
+    const send = (signature: string) =>
+      t.app.handleWebhook(
+        new Request('http://api.test/webhooks/payments/mock', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', [MOCK_SIGNATURE_HEADER]: signature },
+          body,
+        }),
+      );
+
+    expect((await send('0'.repeat(64))).status).toBe(401);
+    const stored = await t.db
+      .select()
+      .from(schema.webhookEvents)
+      .where(eq(schema.webhookEvents.providerEventId, `evt-race-${payment.id}`));
+    expect(stored).toHaveLength(0);
+    const [unpaid] = await t.db.select().from(schema.orders).where(eq(schema.orders.id, order.id));
+    expect(unpaid?.status).toBe('PENDING_PAYMENT');
+
+    expect((await send(t.mockPayments.sign(body))).status).toBe(200);
+    const [paid] = await t.db.select().from(schema.orders).where(eq(schema.orders.id, order.id));
+    expect(paid?.status).toBe('PAID');
+  });
+
+  it('never marks an order paid from a signed webhook alone when the provider still says pending', async () => {
+    const customer = await shopper();
+    const { order } = await placeOrder(customer);
+    const payment = await pay(customer, order.id, MOCK_WALLETS.neverAnswers);
+    const [row] = await t.db.select().from(schema.payments).where(eq(schema.payments.id, payment.id));
+    const body = JSON.stringify({
+      eventId: `evt-claims-paid-${payment.id}`,
+      reference: row?.providerReference,
+      status: 'SUCCEEDED',
+    });
+    const response = await t.app.handleWebhook(
+      new Request('http://api.test/webhooks/payments/mock', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', [MOCK_SIGNATURE_HEADER]: t.mockPayments.sign(body) },
+        body,
+      }),
+    );
+    expect(response.status).toBe(200);
+    const [after] = await t.db.select().from(schema.payments).where(eq(schema.payments.id, payment.id));
+    expect(after?.status).toBe('PENDING');
+    const [unpaid] = await t.db.select().from(schema.orders).where(eq(schema.orders.id, order.id));
+    expect(unpaid).toMatchObject({ status: 'PENDING_PAYMENT', paidAt: null });
+  });
+
+  it('keeps reconciling other payments when the provider cannot answer for one', async () => {
+    const customer = await shopper();
+    const broken = await placeOrder(customer);
+    const brokenPayment = await pay(customer, broken.order.id, MOCK_WALLETS.neverAnswers);
+    const healthy = await placeOrder(customer);
+    const healthyPayment = await pay(customer, healthy.order.id);
+    const [brokenRow] = await t.db
+      .select()
+      .from(schema.payments)
+      .where(eq(schema.payments.id, brokenPayment.id));
+
+    const original = t.mockPayments.getStatus.bind(t.mockPayments);
+    const spy = vi.spyOn(t.mockPayments, 'getStatus').mockImplementation(async (reference) => {
+      if (reference === brokenRow?.providerReference) throw new Error('provider is down for this one');
+      return original(reference);
+    });
+    try {
+      t.advanceClock(3 * 60_000);
+      await expect(t.app.runJobs()).resolves.toBeDefined();
+    } finally {
+      spy.mockRestore();
+    }
+    const [paid] = await t.db.select().from(schema.payments).where(eq(schema.payments.id, healthyPayment.id));
+    expect(paid?.status).toBe('SUCCEEDED');
+    const [stillOpen] = await t.db
+      .select()
+      .from(schema.payments)
+      .where(eq(schema.payments.id, brokenPayment.id));
+    expect(stillOpen?.status).toBe('PENDING');
+  });
+
+  /** A payment row as it is left when the process stops between saving it and hearing back from the provider. */
+  async function strandedPayment(
+    order: { id: string; totals: { total: { amount: number } } },
+    userId: string,
+  ) {
+    const [row] = await t.db
+      .insert(schema.payments)
+      .values({
+        userId,
+        orderId: order.id,
+        provider: 'MOCK',
+        status: 'INITIATED',
+        amount: order.totals.total.amount,
+        currency: 'RWF',
+        idempotencyKey: randomUUID(),
+        payerMsisdn: MOCK_WALLETS.approves,
+        initiatedAt: t.now(),
+      })
+      .returning();
+    if (!row) throw new Error('no payment row');
+    return row;
+  }
+
+  it('gives up a payment whose request was never answered, so the order is not blocked for ever', async () => {
+    const customer = await shopper();
+    const { order, variant } = await placeOrder(customer);
+    const reserved = (await availability(variant.id))?.quantityReserved ?? 0;
+    const stranded = await strandedPayment(order, customer.userId);
+
+    t.advanceClock(5 * 60_000);
+    await t.app.runJobs();
+    const [waiting] = await t.db.select().from(schema.payments).where(eq(schema.payments.id, stranded.id));
+    expect(waiting?.status).toBe('INITIATED');
+
+    t.advanceClock(11 * 60_000);
+    await t.app.runJobs();
+    const [givenUp] = await t.db.select().from(schema.payments).where(eq(schema.payments.id, stranded.id));
+    expect(givenUp).toMatchObject({ status: 'FAILED', failureCode: 'EXPIRED' });
+    const [unpaid] = await t.db.select().from(schema.orders).where(eq(schema.orders.id, order.id));
+    expect(unpaid).toMatchObject({ status: 'PENDING_PAYMENT', paidAt: null });
+
+    t.advanceClock(25 * 3_600_000);
+    await t.app.runJobs();
+    const [cancelled] = await t.db.select().from(schema.orders).where(eq(schema.orders.id, order.id));
+    expect(cancelled?.status).toBe('CANCELLED');
+    expect((await availability(variant.id))?.quantityReserved).toBe(reserved - 1);
+  });
+
+  it('finds an unanswered request again at a provider with derived references, and applies its answer', async () => {
+    const customer = await shopper();
+    const { order } = await placeOrder(customer);
+    const stranded = await strandedPayment(order, customer.userId);
+    const provider = t.mockPayments as PaymentProvider;
+    provider.referenceFor = (reference) => `mock-approved-${reference}`;
+    try {
+      t.advanceClock(3 * 60_000);
+      await t.app.runJobs();
+    } finally {
+      delete provider.referenceFor;
+    }
+    const [recovered] = await t.db.select().from(schema.payments).where(eq(schema.payments.id, stranded.id));
+    expect(recovered).toMatchObject({
+      status: 'SUCCEEDED',
+      providerReference: `mock-approved-${stranded.idempotencyKey}`,
+    });
+    const [paid] = await t.db.select().from(schema.orders).where(eq(schema.orders.id, order.id));
+    expect(paid?.status).toBe('PAID');
+  });
+
   it('says plainly that MTN MoMo is not integrated yet', async () => {
     const customer = await shopper();
     const { order } = await placeOrder(customer);
@@ -797,4 +950,147 @@ describe('staff fulfilment', () => {
     );
     expect(orders.errors).toBeUndefined();
   });
+});
+
+it('preserves order prices and history across staff price edits and removal/restoration', async () => {
+  const customer = await shopper();
+  const { order, variant } = await placeOrder(customer);
+  const staff = await t.registerStaff('CONTENT_MANAGER');
+  const [before] = await t.db
+    .select()
+    .from(schema.productVariants)
+    .where(eq(schema.productVariants.id, variant.id));
+  if (!before) throw new Error('Missing variant');
+  const snapshot = await t.gql(
+    'query ($id: ID!) { order(id: $id) { items { unitPrice { amount } } statusHistory { status } } }',
+    { id: order.id },
+    { token: customer.accessToken },
+  );
+  const edit = 'mutation ($input: VariantInput!) { adminUpsertVariant(input: $input) { id } }';
+  const input = {
+    id: before.id,
+    productId: before.productId,
+    sku: before.sku,
+    sizeCode: before.sizeCode,
+    color: before.color,
+    priceAmount: before.priceAmount + 1000,
+  };
+  expect(errorCode(await t.gql(edit, { input }, { token: customer.accessToken }))).toBe('FORBIDDEN');
+  const reader = await t.registerStaff('CUSTOMER_SUPPORT');
+  expect(errorCode(await t.gql(edit, { input }, { token: reader.accessToken }))).toBe('FORBIDDEN');
+  expect((await t.gql(edit, { input }, { token: staff.accessToken })).errors).toBeUndefined();
+  const [product] = await t.db.select().from(schema.products).where(eq(schema.products.id, before.productId));
+  if (!product) throw new Error('Missing product');
+  const update =
+    'mutation ($id: ID!, $input: ProductInput!) { adminUpdateProduct(id: $id, input: $input) { id isActive } }';
+  const details = {
+    name: product.name,
+    description: product.description,
+    brand: product.brand,
+    categoryId: product.categoryId,
+    subscriptionEligible: product.subscriptionEligible,
+    oneTimeEligible: product.oneTimeEligible,
+    isActive: false,
+  };
+  expect(
+    errorCode(await t.gql(update, { id: product.id, input: details }, { token: customer.accessToken })),
+  ).toBe('FORBIDDEN');
+  expect(
+    errorCode(await t.gql(update, { id: product.id, input: details }, { token: reader.accessToken })),
+  ).toBe('FORBIDDEN');
+  for (const isActive of [false, true]) {
+    expect(
+      (await t.gql(update, { id: product.id, input: { ...details, isActive } }, { token: staff.accessToken }))
+        .errors,
+    ).toBeUndefined();
+    const publicResult = await t.gql(PRODUCT, { slug: product.slug });
+    expect(Boolean(publicResult.data?.product)).toBe(isActive);
+    expect(
+      await t.gql(
+        'query ($id: ID!) { order(id: $id) { items { unitPrice { amount } } statusHistory { status } } }',
+        { id: order.id },
+        { token: customer.accessToken },
+      ),
+    ).toMatchObject({ data: snapshot.data, errors: snapshot.errors });
+  }
+  const audit = await t.db
+    .select()
+    .from(schema.auditLogs)
+    .where(
+      and(eq(schema.auditLogs.entityId, before.id), eq(schema.auditLogs.action, 'variant.price_changed')),
+    );
+  expect(audit.length).toBeGreaterThan(0);
+});
+
+it('keeps other sizes available when one sells out, and relists restocked sizes', async () => {
+  const staff = await t.registerStaff('SUPER_ADMIN');
+  const initial = await t.gql(PRODUCT, { slug: 'seed-organic-cotton-bodysuit' });
+  const product = initial.data?.product as {
+    id: string;
+    variants: { id: string; inStock: boolean; size: { code: string } }[];
+  };
+  const target = product.variants[0];
+  if (!target) throw new Error('Missing variant');
+  const adjust =
+    'mutation ($input: InventoryAdjustmentInput!) { adminAdjustInventory(input: $input) { id } }';
+  const [stock] = await t.db
+    .select()
+    .from(schema.inventoryItems)
+    .where(eq(schema.inventoryItems.variantId, target.id));
+  if (!stock) throw new Error('Missing stock');
+  // Use the inventory service through GraphQL, as a staff adjustment after a sale/restock would.
+  const change = async (delta: number) =>
+    t.gql(
+      adjust,
+      {
+        input: {
+          variantId: target.id,
+          locationCode: stock.locationCode,
+          onHandDelta: delta,
+          note: 'Stock regression',
+        },
+      },
+      { token: staff.accessToken },
+    );
+  expect((await change(-stock.quantityOnHand)).errors).toBeUndefined();
+  const sold = (await t.gql(PRODUCT, { slug: 'seed-organic-cotton-bodysuit' })).data
+    ?.product as typeof product;
+  expect(sold.variants.find((v) => v.id === target.id)?.inStock).toBe(false);
+  expect(sold.variants.some((v) => v.id !== target.id && v.inStock)).toBe(true);
+  const listing = await t.gql(
+    '{ products(filter: {inStockOnly: true}, first: 100) { edges { node { id } } } }',
+  );
+  expect(JSON.stringify(listing.data)).toContain(product.id);
+  expect((await change(2)).errors).toBeUndefined();
+  const restocked = (await t.gql(PRODUCT, { slug: 'seed-organic-cotton-bodysuit' })).data
+    ?.product as typeof product;
+  expect(restocked.variants.find((v) => v.id === target.id)?.inStock).toBe(true);
+  for (const variant of product.variants) {
+    const [item] = await t.db
+      .select()
+      .from(schema.inventoryItems)
+      .where(eq(schema.inventoryItems.variantId, variant.id));
+    if (!item) throw new Error('Missing inventory');
+    expect(
+      (
+        await t.gql(
+          adjust,
+          {
+            input: {
+              variantId: variant.id,
+              locationCode: item.locationCode,
+              onHandDelta: -item.quantityOnHand,
+              note: 'Sold out regression',
+            },
+          },
+          { token: staff.accessToken },
+        )
+      ).errors,
+    ).toBeUndefined();
+  }
+  const query = '{ products(filter: {inStockOnly: true}, first: 100) { edges { node { id } } } }';
+  expect(JSON.stringify((await t.gql(query)).data)).not.toContain(product.id);
+  expect((await t.gql(PRODUCT, { slug: 'seed-organic-cotton-bodysuit' })).data?.product).toBeTruthy();
+  expect((await change(3)).errors).toBeUndefined();
+  expect(JSON.stringify((await t.gql(query)).data)).toContain(product.id);
 });

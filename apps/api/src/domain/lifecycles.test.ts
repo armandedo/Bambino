@@ -135,10 +135,17 @@ describe('payment lifecycle', () => {
     expect(walk(paymentLifecycle, ['PENDING', 'SUCCEEDED', 'REFUNDED'])).toBe('REFUNDED');
   });
 
+  it('lets the provider report a late approval for a payment we had stopped waiting for', () => {
+    expect(paymentLifecycle.canTransition('EXPIRED', 'SUCCEEDED')).toBe(true);
+    expect(paymentLifecycle.canTransition('CANCELLED', 'SUCCEEDED')).toBe(true);
+    expect(paymentLifecycle.canTransition('FAILED', 'SUCCEEDED')).toBe(true);
+    expect(paymentLifecycle.canTransition('EXPIRED', 'FAILED')).toBe(false);
+  });
+
   it('cannot flip a settled outcome', () => {
-    expect(paymentLifecycle.canTransition('FAILED', 'SUCCEEDED')).toBe(false);
     expect(paymentLifecycle.canTransition('SUCCEEDED', 'FAILED')).toBe(false);
-    expect(paymentLifecycle.canTransition('EXPIRED', 'SUCCEEDED')).toBe(false);
+    expect(paymentLifecycle.canTransition('SUCCEEDED', 'EXPIRED')).toBe(false);
+    expect(paymentLifecycle.canTransition('REFUNDED', 'SUCCEEDED')).toBe(false);
     expect(paymentLifecycle.canTransition('SUCCEEDED', 'PENDING')).toBe(false);
   });
 });

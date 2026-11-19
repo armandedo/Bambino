@@ -56,6 +56,13 @@ const EN: Record<EmailTemplate, Copy> = {
     body: 'As you asked, your Bambino account and personal details were deleted. Records we are required to keep, such as payments, were made anonymous.',
     footnote: 'Thank you for having been part of Bambino.',
   },
+  'staff.payment_review': {
+    subject: 'Bambino: a payment needs review',
+    heading: 'A payment needs review',
+    body: 'A mobile money payment could not be matched to an order that can take it, or its outcome was never confirmed. Nothing was fulfilled automatically. Open the admin to see the order, the payment reference and the amount, and to refund or close the case.',
+    action: 'Open payment reviews',
+    footnote: 'You receive this because your staff role can manage payments.',
+  },
 };
 
 const NAVY = '#16213A';

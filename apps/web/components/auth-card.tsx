@@ -13,11 +13,11 @@ export function AuthCard({
   footer?: ReactNode;
 }) {
   return (
-    <div className="mx-auto flex max-w-md flex-col gap-6 px-4 py-12">
+    <div className="mx-auto flex w-full max-w-md flex-col gap-5 px-4 py-8">
       <Card padding="lg" className="flex flex-col gap-6">
         <div className="flex flex-col gap-2">
-          <h1 className="font-display text-3xl font-semibold">{title}</h1>
-          {intro ? <p className="text-foreground-muted">{intro}</p> : null}
+          <h1 className="text-xl font-semibold md:text-2xl">{title}</h1>
+          {intro ? <p className="text-sm text-foreground-muted">{intro}</p> : null}
         </div>
         {children}
       </Card>

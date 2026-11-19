@@ -8,7 +8,11 @@ export function createPaymentProviders(env: Env): PaymentProviderRegistry {
   if (env.PAYMENT_PROVIDERS_ENABLED.includes('mock')) {
     providers.set(
       'MOCK',
-      new MockPaymentProvider(env.MOCK_PAYMENT_WEBHOOK_SECRET, env.PAYMENT_EXPIRY_MINUTES, () => new Date()),
+      new MockPaymentProvider(
+        env.MOCK_PAYMENT_WEBHOOK_SECRET ?? null,
+        env.PAYMENT_EXPIRY_MINUTES,
+        () => new Date(),
+      ),
     );
   }
   if (env.PAYMENT_PROVIDERS_ENABLED.includes('mtn_momo')) {

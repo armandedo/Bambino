@@ -6,7 +6,8 @@ export type EmailTemplate =
   | 'auth.password_reset'
   | 'auth.password_changed'
   | 'privacy.export_ready'
-  | 'privacy.account_deleted';
+  | 'privacy.account_deleted'
+  | 'staff.payment_review';
 
 /** Templates are rendered by the provider in the recipient's locale; services never build email text. */
 export interface EmailMessage {

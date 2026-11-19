@@ -13,14 +13,14 @@ export const MAX_BABY_PROFILES = 10;
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'validation.date.invalid');
 
-/** Lengths in mm and weight in grams, within ranges that are plausible for children up to about 6 years. */
+/** Lengths in mm and weight in grams, within ranges that are plausible for children through age 17. */
 const measurementSchema = z
   .object({
-    heightMm: z.number().int().min(300).max(1_300).nullish(),
-    weightG: z.number().int().min(1_000).max(30_000).nullish(),
-    chestMm: z.number().int().min(250).max(800).nullish(),
-    waistMm: z.number().int().min(250).max(800).nullish(),
-    footLengthMm: z.number().int().min(60).max(220).nullish(),
+    heightMm: z.number().int().min(300).max(2_300).nullish(),
+    weightG: z.number().int().min(1_000).max(200_000).nullish(),
+    chestMm: z.number().int().min(250).max(1_600).nullish(),
+    waistMm: z.number().int().min(250).max(1_600).nullish(),
+    footLengthMm: z.number().int().min(60).max(350).nullish(),
   })
   .refine((input) => Object.values(input).some((value) => value != null), {
     message: 'validation.measurement.empty',
@@ -243,8 +243,17 @@ export class BabyService {
   private assertDateOfBirth(value: string): void {
     const born = Date.parse(`${value}T00:00:00Z`);
     const ageDays = (this.now().getTime() - born) / 86_400_000;
-    // Allows an expected date up to ~9 months ahead (gift registries) and children up to 6 years.
-    if (Number.isNaN(born) || ageDays < -280 || ageDays > 6 * 366) {
+    // Allows an expected date up to ~9 months ahead (gift registries) and children younger than 18.
+    if (
+      Number.isNaN(born) ||
+      ageDays < -280 ||
+      value <=
+        new Date(
+          Date.UTC(this.now().getUTCFullYear() - 18, this.now().getUTCMonth(), this.now().getUTCDate()),
+        )
+          .toISOString()
+          .slice(0, 10)
+    ) {
       throw new AppError('VALIDATION_FAILED', 'Please check the date of birth.', 'INVALID_DATE_OF_BIRTH');
     }
   }

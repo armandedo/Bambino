@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import type { Money } from '@bambino/utils';
 import type {
   InitiatePaymentRequest,
   ParsedWebhook,
@@ -61,6 +62,8 @@ export class MomoError extends Error {
   constructor(
     message: string,
     readonly status: number,
+    /** True only when the request certainly never reached MTN or MTN refused it (see `requestNeverSent`). */
+    readonly notSent = false,
   ) {
     super(message);
     this.name = 'MomoError';
@@ -100,7 +103,12 @@ export class MtnMomoProvider implements PaymentProvider {
     });
     // 202 accepted; 409 means this reference was already sent, which is the same request.
     if (response.status !== 202 && response.status !== 409) {
-      throw new MomoError(`MTN MoMo refused the payment request (${response.status})`, response.status);
+      // A 4xx is a refusal: no request exists. A 5xx says nothing about whether one was created.
+      throw new MomoError(
+        `MTN MoMo refused the payment request (${response.status})`,
+        response.status,
+        response.status >= 400 && response.status < 500,
+      );
     }
     return {
       providerReference: id,
@@ -108,8 +116,13 @@ export class MtnMomoProvider implements PaymentProvider {
     };
   }
 
-  async getStatus(providerReference: string): Promise<ProviderPaymentStatus> {
-    return this.readStatus('collection', `/collection/v1_0/requesttopay/${providerReference}`);
+  async getStatus(providerReference: string, expected?: Money): Promise<ProviderPaymentStatus> {
+    return this.readStatus('collection', `/collection/v1_0/requesttopay/${providerReference}`, expected);
+  }
+
+  /** The request id is derived from our reference, so a request we sent but never recorded can be found again. */
+  referenceFor(reference: string): string {
+    return referenceToUuid(reference);
   }
 
   async refund(request: RefundRequest) {
@@ -142,15 +155,27 @@ export class MtnMomoProvider implements PaymentProvider {
     throw new Error('MTN MoMo webhooks are not accepted; payment status is polled');
   }
 
-  private async readStatus(product: Product, path: string): Promise<ProviderPaymentStatus> {
+  private async readStatus(product: Product, path: string, expected?: Money): Promise<ProviderPaymentStatus> {
     const response = await this.call(product, 'GET', path);
     // An unknown or not-yet-visible request is still pending as far as we know; reconciliation will expire it.
-    if (response.status === 404) return { status: 'PENDING' };
+    if (response.status === 404) return { status: 'PENDING', unknown: true };
     if (!response.ok)
       throw new MomoError(`MTN MoMo status check failed (${response.status})`, response.status);
-    const body = (await response.json()) as { status?: string; reason?: string | { code?: string } };
+    const body = (await response.json()) as {
+      status?: string;
+      reason?: string | { code?: string };
+      amount?: string | number;
+      currency?: string;
+    };
     switch (body.status) {
       case 'SUCCESSFUL':
+        // MTN reports what it collected. It must be what we asked for before anything is marked paid.
+        if (expected && body.amount !== undefined) {
+          const currencyDiffers = body.currency !== undefined && body.currency !== this.deps.config.currency;
+          if (Number(body.amount) !== expected.amount || currencyDiffers) {
+            throw new MomoError('MTN MoMo reports a different amount than the payment asked for', 502);
+          }
+        }
         return { status: 'SUCCEEDED' };
       case 'FAILED': {
         const reason = typeof body.reason === 'string' ? body.reason : (body.reason?.code ?? 'FAILED');
@@ -197,13 +222,24 @@ export class MtnMomoProvider implements PaymentProvider {
     const cached = this.tokens.get(product);
     if (cached && cached.expiresAt > this.now().getTime()) return cached.value;
     const basic = btoa(`${credentials.apiUser}:${credentials.apiKey}`);
-    const response = await this.http(`${this.deps.config.baseUrl}/${product}/token/`, {
-      method: 'POST',
-      headers: { authorization: `Basic ${basic}`, 'ocp-apim-subscription-key': credentials.subscriptionKey },
-    });
-    if (!response.ok) throw new MomoError(`MTN MoMo sign-in failed (${response.status})`, response.status);
+    // Signing in happens before the request itself, so a failure here means nothing was sent.
+    let response: Response;
+    try {
+      response = await this.http(`${this.deps.config.baseUrl}/${product}/token/`, {
+        method: 'POST',
+        headers: {
+          authorization: `Basic ${basic}`,
+          'ocp-apim-subscription-key': credentials.subscriptionKey,
+        },
+      });
+    } catch {
+      throw new MomoError('MTN MoMo sign-in could not be reached', 503, true);
+    }
+    if (!response.ok) {
+      throw new MomoError(`MTN MoMo sign-in failed (${response.status})`, response.status, true);
+    }
     const body = (await response.json()) as { access_token?: string; expires_in?: number };
-    if (!body.access_token) throw new MomoError('MTN MoMo sign-in returned no token', 502);
+    if (!body.access_token) throw new MomoError('MTN MoMo sign-in returned no token', 502, true);
     // Renew a minute early so a token never expires mid-request.
     const lifetimeMs = Math.max(((body.expires_in ?? 3600) - 60) * 1000, 0);
     this.tokens.set(product, { value: body.access_token, expiresAt: this.now().getTime() + lifetimeMs });

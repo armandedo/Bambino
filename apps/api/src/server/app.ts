@@ -28,6 +28,7 @@ import { ACCESS_COOKIE, CookieJar, parseCookies } from './cookies';
 export interface AppConfig {
   nodeEnv: 'development' | 'test' | 'production';
   marketCode: string;
+  subscriptionsEnabled?: boolean;
   webOrigin: string;
   adminOrigin: string;
   jwtSecret: string;

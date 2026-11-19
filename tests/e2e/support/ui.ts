@@ -19,6 +19,16 @@ export async function registerThroughUi(page: Page, label: string, next = '/fit'
   return email;
 }
 
+/** Signs an existing customer in through the website's form. */
+export async function signInThroughUi(page: Page, email: string, password: string, next = '/shop') {
+  await page.goto(`/login?next=${encodeURIComponent(next)}`);
+  await page.waitForLoadState('networkidle');
+  await page.getByLabel('Email').fill(email);
+  await page.getByLabel('Password').fill(password);
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await expect(page).toHaveURL(new RegExp(next.replace(/[/?]/g, '\\$&')), { timeout: 60_000 });
+}
+
 /** Fills the Rwandan address form shown when the customer has no saved address. */
 export async function addAddressThroughUi(page: Page) {
   const form = page.getByRole('form', { name: 'New address' });
@@ -34,8 +44,8 @@ export async function addAddressThroughUi(page: Page) {
 /** Pays on the payment panel with the mock wallet that approves, and waits for the provider's confirmation. */
 export async function payWithApprovingTestWallet(page: Page) {
   // The test-wallet provider is preselected in development builds; choose the number that approves.
-  await page.getByRole('radio', { name: /\+250780000001/ }).check();
-  await page.getByRole('button', { name: /^Pay / }).click();
+  await page.locator('input[name="mock-wallet"][value="+250780000001"]').check();
+  await page.getByRole('button', { name: /^Pay (?!on delivery)/ }).click();
 }
 
 /** A date of birth `months` months ago, as YYYY-MM-DD. */

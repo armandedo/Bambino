@@ -1,24 +1,21 @@
 import type { Metadata } from 'next';
-import { PageHero } from '@/components/page-hero';
 import { FitWizard } from '@/components/sizing/fit-wizard';
 
 export const metadata: Metadata = {
-  title: 'Find the right fit',
+  title: 'Find a size',
   description:
-    'Answer a few questions about your baby and get a size recommendation with the reasons behind it.',
+    'Answer a few questions about your child and get a size recommendation with the reasons behind it.',
 };
 
 export default function FitPage() {
   return (
-    <>
-      <PageHero
-        eyebrow="Find the right fit"
-        title="The right size, with the reasons behind it."
-        intro="About two minutes. We compare your baby’s age, height and weight with our size chart and explain every recommendation."
-      />
-      <section aria-label="Fit finder" className="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:py-16">
-        <FitWizard />
-      </section>
-    </>
+    <div className="retail-narrow">
+      <h1 className="text-xl font-semibold md:text-2xl">Find a size</h1>
+      <p className="mt-1 mb-5 text-sm text-foreground-muted">
+        About two minutes. We compare your child’s age, height and weight with our size chart and explain the
+        recommendation.
+      </p>
+      <FitWizard />
+    </div>
   );
 }
