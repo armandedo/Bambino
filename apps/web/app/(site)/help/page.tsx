@@ -33,7 +33,7 @@ export default function HelpPage() {
           heading: 'Do I need an account to buy?',
           body: (
             <p>
-              You can browse and save favourites without one. To add clothes to your bag and check out,{' '}
+              You can browse, save favourites and fill your bag without one. To check out,{' '}
               <NextLink href="/login" className={INFO_LINK}>
                 sign in
               </NextLink>{' '}
